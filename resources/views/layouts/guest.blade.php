@@ -1,30 +1,60 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ config('app.name', 'SiPasti') }}</title>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
-            </div>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
 
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                {{ $slot }}
-            </div>
-        </div>
-    </body>
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        @keyframes blobMove {
+            0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: scale(1); }
+            50%       { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: scale(1.05); }
+        }
+
+        .anim-fade-in-up { opacity: 0; animation: fadeInUp 0.65s ease-out forwards; }
+        .anim-fade-in    { opacity: 0; animation: fadeIn 0.8s ease-out forwards; }
+        .anim-blob       { animation: blobMove 9s ease-in-out infinite; }
+
+        .d-100 { animation-delay: 0.10s; }
+        .d-200 { animation-delay: 0.20s; }
+        .d-300 { animation-delay: 0.30s; }
+        .d-400 { animation-delay: 0.40s; }
+
+        .dot-bg {
+            background-image: radial-gradient(circle, rgba(1,69,142,0.18) 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#F9FAFC] flex flex-col overflow-x-hidden antialiased">
+
+    {{-- Background decorations --}}
+    <div class="fixed inset-0 pointer-events-none select-none" aria-hidden="true">
+        <div class="dot-bg absolute inset-0"></div>
+        <div class="anim-blob absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full blur-3xl"
+             style="background-color: rgba(1,69,142,0.10);"></div>
+        <div class="anim-blob absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full blur-3xl"
+             style="background-color: rgba(1,69,142,0.10); animation-delay:4s;"></div>
+    </div>
+
+    <div class="relative z-10 flex-1 flex flex-col items-center justify-center px-4 py-12">
+        {{ $slot }}
+    </div>
+
+</body>
 </html>

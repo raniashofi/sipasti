@@ -18,3 +18,8 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+require __DIR__.'/opd.php';
+require __DIR__.'/super_admin.php';
+require __DIR__.'/admin_helpdesk.php';
+require __DIR__.'/tim_teknis.php';
+require __DIR__.'/pimpinan.php';
