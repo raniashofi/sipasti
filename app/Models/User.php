@@ -19,7 +19,11 @@ class User extends Authenticatable
     public $timestamps = false;
 
     protected $fillable = [
-        'id','email','password','gambar','role'
+        'id','email','password','gambar','role','last_login_at'
+    ];
+
+    protected $casts = [
+        'last_login_at' => 'datetime',
     ];
 
     // RELASI

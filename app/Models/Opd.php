@@ -12,9 +12,6 @@ use Illuminate\Database\Eloquent\Model;
  * @property string|null $kdunit
  * @property string|null $parent_id
  * @property bool|null $is_bagian
- * @property string|null $nama_lengkap
- * @property string|null $bidang_id
- * @property string|null $status_teknisi
  */
 class Opd extends Model
 {
@@ -25,7 +22,7 @@ class Opd extends Model
 
     protected $fillable = [
         'id','user_id','kode_opd','nama_opd','kdunit','parent_id',
-        'is_bagian','nama_lengkap','bidang_id','status_teknisi'
+        'is_bagian',
     ];
 
     public function user()

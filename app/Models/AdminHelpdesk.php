@@ -22,4 +22,9 @@ class AdminHelpdesk extends Model
     {
         return $this->hasMany(Tiket::class, 'admin_id');
     }
+
+    public function bidang()
+    {
+        return $this->belongsTo(Bidang::class, 'bidang_id', 'id');
+    }
 }

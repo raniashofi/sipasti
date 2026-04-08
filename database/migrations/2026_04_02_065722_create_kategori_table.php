@@ -14,10 +14,16 @@ return new class extends Migration
         Schema::create('kategori', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('bidang_id')->nullable();
-            $table->string('nama_kategori')->nullable();
+            $table->string('nama_kategori');
             $table->text('deskripsi')->nullable();
+            $table->timestamps();
 
-            $table->foreign('bidang_id')->references('id')->on('bidang');
+            $table->foreign('bidang_id')
+                ->references('id')
+                ->on('bidang')
+                ->onDelete('set null');
+
+            $table->index('bidang_id');
         });
     }
 

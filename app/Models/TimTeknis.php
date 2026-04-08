@@ -22,4 +22,9 @@ class TimTeknis extends Model
     {
         return $this->hasMany(TiketTeknisi::class, 'teknis_id');
     }
+
+    public function bidang()
+    {
+        return $this->belongsTo(Bidang::class, 'bidang_id', 'id');
+    }
 }

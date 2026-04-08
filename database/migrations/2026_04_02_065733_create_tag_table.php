@@ -13,10 +13,9 @@ return new class extends Migration
     {
         Schema::create('tag', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->string('kb_id')->nullable();
-            $table->string('nama_tag')->nullable();
-
-            $table->foreign('kb_id')->references('id')->on('knowledge_base');
+            $table->string('nama_tag')->unique();
+            $table->string('slug')->unique();
+            $table->timestamps();
         });
     }
 

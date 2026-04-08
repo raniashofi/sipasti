@@ -1,3 +1,8 @@
+<style>
+    /* Menyembunyikan elemen Alpine sebelum benar-benar siap */
+    [x-cloak] { display: none !important; }
+</style>
+
 <aside class="fixed top-0 left-0 h-screen w-64 flex flex-col bg-white border-r border-gray-100 z-40"
        style="font-family:'Inter',sans-serif;">
 
@@ -30,16 +35,6 @@
                 ],
             ],
             [
-                'label'  => 'Konfigurasi Sistem',
-                'route'  => 'super_admin.konfigurasi.kategori',
-                'match'  => ['super_admin.konfigurasi.*'],
-                'icon'   => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
-                'sub'    => [
-                    ['label' => 'Kategori Gejala',   'route' => 'super_admin.konfigurasi.kategori'],
-                    ['label' => 'Alur Diagnosis',     'route' => 'super_admin.konfigurasi.diagnosis'],
-                ],
-            ],
-            [
                 'label'  => 'Pustaka Pengetahuan',
                 'route'  => 'super_admin.pustaka.opd',
                 'match'  => ['super_admin.pustaka.*'],
@@ -48,6 +43,16 @@
                     ['label' => 'KB untuk OPD',      'route' => 'super_admin.pustaka.opd'],
                     ['label' => 'KB Internal Teknis', 'route' => 'super_admin.pustaka.internal'],
                 ],
+            ],
+            [
+                'label'  => 'Konfigurasi Sistem',
+                'route'  => 'super_admin.konfigurasi.konfigurasiSistem',
+                'match'  => ['super_admin.konfigurasi.konfigurasiSistem'],
+                'icon'   => 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+                // 'sub'    => [
+                //     ['label' => 'Kategori Gejala',   'route' => 'super_admin.konfigurasi.konfigurasiSistem'],
+                //     ['label' => 'Alur Diagnosis',     'route' => 'super_admin.konfigurasi.diagnosis'],
+                // ],
             ],
             [
                 'label'  => 'Keamanan & Audit',
@@ -83,7 +88,7 @@
                 </svg>
             </button>
 
-            <div x-show="open"
+            <div x-show="open" x-cloak
                  x-transition:enter="transition ease-out duration-100"
                  x-transition:enter-start="opacity-0 -translate-y-1"
                  x-transition:enter-end="opacity-100 translate-y-0"

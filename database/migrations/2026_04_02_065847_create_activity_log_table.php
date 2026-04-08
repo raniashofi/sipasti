@@ -25,7 +25,7 @@ return new class extends Migration
             $table->json('data_before')->nullable();
             $table->json('data_after')->nullable();
 
-            $table->foreign('user_id')->references('id')->on('users');
+            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
     }
 

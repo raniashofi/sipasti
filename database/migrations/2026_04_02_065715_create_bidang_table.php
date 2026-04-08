@@ -18,6 +18,7 @@ return new class extends Migration
                 'infrastruktur_teknologi_informasi',
                 'statistik_persandian'
             ]);
+            $table->timestamps();
         });
     }
 
