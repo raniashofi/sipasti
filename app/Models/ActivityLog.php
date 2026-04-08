@@ -23,6 +23,20 @@ class ActivityLog extends Model
     protected $table = 'activity_log';
     public $timestamps = false;
 
+    protected $fillable = [
+        'user_id',
+        'role_pelaku',
+        'jenis_aktivitas',
+        'detail_tindakan',
+        'ip_address',
+        'session_id',
+        'waktu_eksekusi',
+        'nama_tabel',
+        'id_record',
+        'data_before',
+        'data_after',
+    ];
+
     protected $casts = [
         'waktu_eksekusi' => 'datetime',
         'data_before'    => 'array',

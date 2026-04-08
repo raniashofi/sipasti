@@ -115,8 +115,17 @@
 
         <nav class="flex items-center gap-5">
             @auth
-                <a href="{{ url('/dashboard') }}"
-                   class="text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium">
+                <a href="{{
+                        match(auth()->user()?->role) {
+                            'super_admin'    => route('super_admin.dashboard'),
+                            'admin_helpdesk' => route('admin_helpdesk.dashboard'),
+                            'tim_teknis'     => route('tim_teknis.dashboard'),
+                            'opd'            => route('opd.dashboard'),
+                            'pimpinan'       => route('pimpinan.dashboard'),
+                            default          => url('/'),
+                        }
+                }}"
+                class="text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium">
                     Dashboard
                 </a>
                 <form method="POST" action="{{ route('logout') }}" class="inline">
@@ -174,7 +183,16 @@
         {{-- CTA Buttons --}}
         <div class="anim-fade-in-up d-400 flex gap-3 justify-center flex-wrap">
             @auth
-                <a href="{{ url('/dashboard') }}"
+                <a href="{{
+                        match(auth()->user()?->role) {
+                            'super_admin'    => route('super_admin.dashboard'),
+                            'admin_helpdesk' => route('admin_helpdesk.dashboard'),
+                            'tim_teknis'     => route('tim_teknis.dashboard'),
+                            'opd'            => route('opd.dashboard'),
+                            'pimpinan'       => route('pimpinan.dashboard'),
+                            default          => url('/'),
+                        }
+                }}"
                    class="px-8 py-3 bg-[#01458E] text-white rounded-xl text-sm font-semibold shadow-sm btn-primary-glow">
                     Buka Dashboard &rarr;
                 </a>

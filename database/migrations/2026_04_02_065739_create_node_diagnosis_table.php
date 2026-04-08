@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('judul_solusi')->nullable();
             $table->text('penjelasan_solusi')->nullable();
             $table->enum('prioritas', ['rendah','sedang','tinggi'])->nullable();
+            $table->timestamps();
 
             $table->string('id_next_ya')->nullable();
             $table->string('id_next_tidak')->nullable();

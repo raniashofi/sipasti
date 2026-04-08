@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Requests\Auth\LoginRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,10 @@ class AuthenticatedSessionController extends Controller
 
         /** @var User $user */
         $user = Auth::user();
+        
+        // Mencatat aktivitas login ke activity_log
+        ActivityLogController::logLogin($user);
+        
         $role = $user->role;
 
         return match ($role) {
@@ -39,7 +44,14 @@ class AuthenticatedSessionController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+
         Auth::guard('web')->logout();
+
+        // Mencatat aktivitas logout ke activity_log
+        if ($user) {
+            ActivityLogController::logLogout($user);
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -17,6 +17,8 @@ class Kategori extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
+    protected $fillable = ['id', 'bidang_id', 'nama_kategori', 'deskripsi'];
+
     public function bidang()
     {
         return $this->belongsTo(Bidang::class);
@@ -25,5 +27,10 @@ class Kategori extends Model
     public function knowledgeBase()
     {
         return $this->hasMany(KnowledgeBase::class);
+    }
+
+    public function nodes()
+    {
+        return $this->hasMany(NodeDiagnosis::class, 'kategori_id');
     }
 }

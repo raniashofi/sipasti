@@ -21,7 +21,24 @@ class NodeDiagnosis extends Model
     protected $table = 'node_diagnosis';
     public $incrementing = false;
     protected $keyType = 'string';
-    public $timestamps = false;
+    public $timestamps = true;
+
+    protected $fillable = [
+        'id', 'kategori_id', 'kb_id', 'tipe_node',
+        'teks_pertanyaan', 'hint_konteks',
+        'judul_solusi', 'penjelasan_solusi', 'prioritas',
+        'id_next_ya', 'id_next_tidak',
+    ];
+
+    public function kategori()
+    {
+        return $this->belongsTo(Kategori::class, 'kategori_id');
+    }
+
+    public function knowledgeBase()
+    {
+        return $this->belongsTo(KnowledgeBase::class, 'kb_id');
+    }
 
     public function nextYa()
     {

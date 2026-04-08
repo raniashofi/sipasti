@@ -17,14 +17,15 @@ return new class extends Migration
             $table->string('kode_opd')->unique();
             $table->string('nama_opd')->nullable();
             $table->string('kdunit')->nullable();
-            $table->integer('parent_id')->nullable();
-            $table->enum('is_bagian', ['Y','N'])->nullable();
-            $table->string('nama_lengkap')->nullable();
-            $table->string('bidang_id')->nullable();
-            $table->enum('status_teknisi', ['online','offline'])->nullable();
 
-            $table->foreign('user_id')->references('id')->on('users');
-            $table->foreign('bidang_id')->references('id')->on('bidang');
+            $table->string('parent_id')->nullable();
+            $table->enum('is_bagian', ['Y','N'])->nullable();
+
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('set null');
+
+            $table->foreign('parent_id')->references('id')->on('opd')->onDelete('cascade');
         });
     }
 

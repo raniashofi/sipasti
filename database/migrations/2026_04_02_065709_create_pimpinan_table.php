@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('id')->primary();
             $table->string('user_id')->nullable();
             $table->string('nama_lengkap')->nullable();
+            $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users');
         });

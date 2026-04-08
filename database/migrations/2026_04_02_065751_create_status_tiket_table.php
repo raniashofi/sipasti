@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('rekomendasi')->nullable();
             $table->string('file_rekomendasi')->nullable();
             $table->text('catatan')->nullable();
+            $table->timestamps();
 
             $table->foreign('tiket_id')->references('id')->on('tiket');
         });

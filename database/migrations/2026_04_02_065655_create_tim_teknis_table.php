@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('bidang_id')->nullable();
             $table->string('nama_lengkap')->nullable();
             $table->enum('status_teknisi', ['online','offline'])->nullable();
+            $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('bidang_id')->references('id')->on('bidang');

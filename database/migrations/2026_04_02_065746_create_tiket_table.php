@@ -23,6 +23,7 @@ return new class extends Migration
             $table->text('spesifikasi_perangkat')->nullable();
             $table->text('alasan_revisi')->nullable();
             $table->text('instruksi_khusus')->nullable();
+            $table->timestamps();
 
             $table->foreign('opd_id')->references('id')->on('opd');
             $table->foreign('admin_id')->references('id')->on('admin_helpdesk');

@@ -16,8 +16,12 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            UserSeeder::class, // harus lebih dulu karena opd foreign key ke users
+            BidangSeeder::class,
+            UserSeeder::class,
             OpdSeeder::class,
+            TimTeknisSeeder::class,
+            AdminHelpdeskSeeder::class,
+            PimpinanSeeder::class,
         ]);
     }
 }
