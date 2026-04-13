@@ -18,7 +18,6 @@ return new class extends Migration
                 'verifikasi_admin','perlu_revisi','panduan_remote',
                 'perbaikan_teknis','rusak_berat','selesai'
             ]);
-            $table->text('analisis_kerusakan')->nullable();
             $table->string('spesifikasi_perangkat_rusak')->nullable();
             $table->string('rekomendasi')->nullable();
             $table->string('file_rekomendasi')->nullable();

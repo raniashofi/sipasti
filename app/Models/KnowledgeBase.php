@@ -30,7 +30,7 @@ class KnowledgeBase extends Model
         'id', 'kategori_id', 'nama_artikel_sop', 'deskripsi_singkat',
         'isi_konten', 'status_publikasi', 'visibilitas_akses',
         'header_image', 'lampiran_file',
-        'total_views', 'rating',
+        'total_views', 'rating', 'rating_count',
     ];
 
     protected $dates = ['deleted_at'];
@@ -65,5 +65,13 @@ class KnowledgeBase extends Model
     public function nodes()
     {
         return $this->hasMany(NodeDiagnosis::class, 'kb_id');
+    }
+
+    /**
+     * Relationship: Ratings dari OPD
+     */
+    public function ratings()
+    {
+        return $this->hasMany(KnowledgeBaseRating::class);
     }
 }

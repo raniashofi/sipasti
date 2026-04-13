@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             TimTeknisSeeder::class,
             AdminHelpdeskSeeder::class,
             PimpinanSeeder::class,
+            TiketSeeder::class,
         ]);
     }
 }

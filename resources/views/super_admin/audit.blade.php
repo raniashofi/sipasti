@@ -6,7 +6,6 @@
     <title>Keamanan & Audit — Super Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         * { font-family: 'Inter', sans-serif; }
 
@@ -355,7 +354,7 @@
                                 ];
                                 $action     = $actionMap[$log->jenis_aktivitas] ?? ['css' => 'ab-logout', 'icon' => '·', 'label' => strtoupper($log->jenis_aktivitas)];
                                 $isCritical = $log->jenis_aktivitas === 'delete';
-                                $userId     = $log->user_id ? strtoupper(substr($log->user_id, 0, 8)) : '—';
+                                $userId = $log->user_id ? strtoupper($log->user_id) : '—';
                             @endphp
                             <tr class="border-b border-gray-50 cursor-pointer transition-colors {{ $isCritical ? 'row-critical' : 'hover:bg-gray-50' }}"
                                 onclick="auditOpenDrawer({{ $i }})">
