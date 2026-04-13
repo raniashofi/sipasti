@@ -39,7 +39,7 @@
             {{-- Pusat Bantuan --}}
             <a href="{{ route('opd.bantuan') }}"
                class="relative flex items-center h-16 text-sm font-medium transition-colors border-b-2
-                      {{ request()->routeIs('opd.bantuan')
+                      {{ request()->routeIs('opd.bantuan') || request()->routeIs('opd.bantuan.*')
                            ? 'text-gray-900 font-semibold border-blue-600'
                            : 'text-gray-400 hover:text-gray-700 border-transparent' }}">
                 Pusat Bantuan

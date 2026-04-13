@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->string('gambar')->nullable();
             $table->enum('role', ['tim_teknis','opd','super_admin','admin_helpdesk','pimpinan']);
+            $table->rememberToken();
             $table->timestamps();
         });
     }

@@ -6,7 +6,6 @@
     <title>Dashboard — Super Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { font-family: 'Inter', sans-serif; }
@@ -95,11 +94,78 @@
                 @endforeach
             </div>
 
+            {{-- ── Metrik Kepuasan & KB ── --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in-up delay-100">
+
+                {{-- Rata-rata Penilaian Tiket --}}
+                <div class="bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:#FEF3C7;">
+                        <svg class="w-6 h-6" style="color:#D97706;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Kepuasan Tiket</p>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            @php $avg = $stats['avg_penilaian'] ?? 0; @endphp
+                            <span class="text-2xl font-extrabold text-gray-900">{{ $avg > 0 ? number_format($avg, 1) : '—' }}</span>
+                            @if($avg > 0)
+                            <span class="text-sm text-gray-400">/ 5</span>
+                            @endif
+                        </div>
+                        <div class="flex items-center gap-0.5 mt-1">
+                            @for($i = 1; $i <= 5; $i++)
+                            <svg class="w-3.5 h-3.5 {{ $i <= round($avg) ? 'text-yellow-400' : 'text-gray-200' }}" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            @endfor
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-1">{{ $stats['tiket_selesai'] }} tiket telah selesai</p>
+                    </div>
+                </div>
+
+                {{-- Tiket Dibuka Kembali --}}
+                @php $dibukakembali = $tiketPerStatus['Dibuka Kembali'] ?? 0; @endphp
+                <div class="bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:#FEE2E2;">
+                        <svg class="w-6 h-6" style="color:#DC2626;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Dibuka Kembali</p>
+                        <p class="text-2xl font-extrabold text-gray-900 mt-1">{{ number_format($dibukakembali) }}</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Tiket yang dibuka ulang OPD</p>
+                    </div>
+                    @if($dibukakembali > 0)
+                    <span class="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full" style="background:#FEE2E2;color:#DC2626;">Perlu Perhatian</span>
+                    @endif
+                </div>
+
+                {{-- Knowledge Base Terbit --}}
+                <div class="bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:#D1FAE5;">
+                        <svg class="w-6 h-6" style="color:#059669;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">KB Terbit</p>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-2xl font-extrabold text-gray-900">{{ number_format($stats['kb_published']) }}</span>
+                            <span class="text-sm text-gray-400">/ {{ number_format($stats['total_kb']) }}</span>
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-1">{{ number_format($stats['total_kb_ratings']) }} penilaian diterima</p>
+                    </div>
+                </div>
+
+            </div>
+
             {{-- ── Chart + Activity ── --}}
-            <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-fade-in-up delay-100">
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-fade-in-up delay-200">
 
                 {{-- Donut chart (2 cols) --}}
-                <div class="xl:col-span-2 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow">
+                <div id="card-distribusi" class="xl:col-span-2 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 flex flex-col self-start hover:shadow-md transition-shadow">
                     <h2 class="text-base font-bold text-gray-800">Distribusi Status Tiket</h2>
                     <p class="text-sm text-gray-400 mb-6 mt-1">Sebaran tiket berdasarkan status saat ini</p>
 
@@ -109,7 +175,7 @@
                         </div>
 
                         @php
-                        $chartColors = ['#01458E','#0263C8','#38BDF8','#D97706','#EF4444','#059669'];
+                        $chartColors = ['#01458E','#0263C8','#38BDF8','#D97706','#EF4444','#059669','#DC2626'];
                         $ci = 0;
                         @endphp
                         <div class="mt-8 space-y-3 px-2">
@@ -129,8 +195,8 @@
                 </div>
 
                 {{-- Recent Activity (3 cols) with Timeline UI --}}
-                <div class="xl:col-span-3 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-50">
+                <div id="card-activity" class="xl:col-span-3 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col self-start overflow-hidden">
+                    <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-50 shrink-0">
                         <div>
                             <h2 class="text-base font-bold text-gray-800">Log Aktivitas Terbaru</h2>
                             <p class="text-sm text-gray-400 mt-1">Sistem mencatat aktivitas admin dan pengguna</p>
@@ -152,6 +218,7 @@
                         <p class="text-sm font-medium text-gray-500">Belum ada aktivitas tercatat</p>
                     </div>
                     @else
+                    <div class="overflow-y-auto flex-1 pr-1" style="scrollbar-width:thin;scrollbar-color:#E5E7EB transparent;">
                     <div class="relative border-l-2 border-gray-100 ml-4 space-y-6 mt-2">
                         @foreach($recentActivity as $log)
                         @php
@@ -196,12 +263,13 @@
                         </div>
                         @endforeach
                     </div>
+                    </div>
                     @endif
                 </div>
             </div>
 
             {{-- ── Quick Access ── --}}
-            <div class="animate-fade-in-up delay-200">
+            <div class="animate-fade-in-up delay-200" style="animation-delay:300ms;">
                 <div class="flex items-center justify-between mb-5">
                     <h2 class="text-base font-bold text-gray-800">Akses Cepat</h2>
                 </div>
@@ -276,7 +344,7 @@
     (function () {
         const labels = @json(array_keys($tiketPerStatus));
         const data   = @json(array_values($tiketPerStatus));
-        const colors = ['#01458E','#0263C8','#38BDF8','#D97706','#EF4444','#059669'];
+        const colors = ['#01458E','#0263C8','#38BDF8','#D97706','#EF4444','#059669','#DC2626'];
         const total  = data.reduce((a, b) => a + b, 0);
 
         new Chart(document.getElementById('tiketChart'), {
@@ -329,6 +397,23 @@
                 }
             }]
         });
+    })();
+
+    // Samakan tinggi card Log Aktivitas dengan card Distribusi Status Tiket
+    (function syncCardHeight() {
+        const donutCard    = document.getElementById('card-distribusi');
+        const activityCard = document.getElementById('card-activity');
+        if (!donutCard || !activityCard) return;
+
+        function sync() {
+            const h = donutCard.offsetHeight;
+            activityCard.style.maxHeight = h + 'px';
+            activityCard.style.height    = h + 'px';
+        }
+
+        // Jalankan setelah chart selesai render
+        requestAnimationFrame(() => requestAnimationFrame(sync));
+        window.addEventListener('resize', sync);
     })();
     </script>
 

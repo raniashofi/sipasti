@@ -26,14 +26,29 @@ class UserSeeder extends Seeder
             'role'     => 'super_admin',
         ];
 
-        // Admin Helpdesk
-        $users[] = [
-            'id'       => 'USR-ADMIN-HELPDESK',
-            'email'    => 'helpdesk@padang.go.id',
-            'password' => Hash::make('helpdesk123'),
-            'gambar'   => null,
-            'role'     => 'admin_helpdesk',
+        // Admin Helpdesk — 2 akun per bidang (3 bidang = 6 akun)
+        $helpdeskAccounts = [
+            // Bidang E-Government
+            ['id' => 'USR-HD-EGV-001', 'email' => 'helpdesk.egov1@padang.go.id',      'password' => 'egov1123'],
+            ['id' => 'USR-HD-EGV-002', 'email' => 'helpdesk.egov2@padang.go.id',      'password' => 'egov2123'],
+            // Bidang Infrastruktur Teknologi Informasi
+            ['id' => 'USR-HD-ITI-001', 'email' => 'helpdesk.infra1@padang.go.id',     'password' => 'infra1123'],
+            ['id' => 'USR-HD-ITI-002', 'email' => 'helpdesk.infra2@padang.go.id',     'password' => 'infra2123'],
+            // Bidang Statistik & Persandian
+            ['id' => 'USR-HD-SPS-001', 'email' => 'helpdesk.statistik1@padang.go.id', 'password' => 'statistik1123'],
+            ['id' => 'USR-HD-SPS-002', 'email' => 'helpdesk.statistik2@padang.go.id', 'password' => 'statistik2123'],
         ];
+
+        foreach ($helpdeskAccounts as $hd) {
+            $this->command->line("  email: {$hd['email']} | password: {$hd['password']}");
+            $users[] = [
+                'id'       => $hd['id'],
+                'email'    => $hd['email'],
+                'password' => Hash::make($hd['password']),
+                'gambar'   => null,
+                'role'     => 'admin_helpdesk',
+            ];
+        }
 
         // Tim Teknis
         $users[] = [

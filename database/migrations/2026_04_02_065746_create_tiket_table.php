@@ -14,20 +14,20 @@ return new class extends Migration
         Schema::create('tiket', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->string('opd_id')->nullable();
-            $table->string('admin_id')->nullable();
+            $table->string('admin_id')->nullable();  // Admin yang SEDANG memegang tiket
             $table->string('kb_id')->nullable();
+            $table->string('kategori_id')->nullable(); // FK ke tabel kategori (dari hasil diagnosis mandiri)
             $table->string('subjek_masalah')->nullable();
             $table->text('detail_masalah')->nullable();
             $table->string('lokasi')->nullable();
             $table->string('foto_bukti')->nullable();
             $table->text('spesifikasi_perangkat')->nullable();
-            $table->text('alasan_revisi')->nullable();
-            $table->text('instruksi_khusus')->nullable();
             $table->timestamps();
 
             $table->foreign('opd_id')->references('id')->on('opd');
             $table->foreign('admin_id')->references('id')->on('admin_helpdesk');
             $table->foreign('kb_id')->references('id')->on('knowledge_base');
+            $table->foreign('kategori_id')->references('id')->on('kategori')->onDelete('set null');
         });
     }
 

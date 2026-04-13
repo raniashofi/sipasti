@@ -10,6 +10,8 @@ class ChatRoom extends Model
     public $incrementing = false;
     protected $keyType = 'string';
 
+    protected $fillable = ['id', 'tiket_id', 'nama_roomchat'];
+
     public function tiket()
     {
         return $this->belongsTo(Tiket::class);

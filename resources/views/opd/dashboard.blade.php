@@ -3,10 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Home</title>
+    <title>Dashboard — SiPasti</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
         * { font-family: 'Inter', sans-serif; }
 
@@ -17,65 +16,51 @@
             from { opacity: 0; transform: translateY(14px); }
             to   { opacity: 1; transform: translateY(0); }
         }
-        .fu  { animation: fadeUp 0.45s ease-out forwards; opacity: 0; }
+        .fu  { animation: fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
         .fu1 { animation-delay: 0.04s; }
         .fu2 { animation-delay: 0.10s; }
         .fu3 { animation-delay: 0.16s; }
         .fu4 { animation-delay: 0.22s; }
         .fu5 { animation-delay: 0.28s; }
-        .fu6 { animation-delay: 0.34s; }
 
         /* Card base */
         .card {
             background: #fff;
-            border-radius: 16px;
+            border-radius: 20px;
             border: 1px solid #EAECF0;
-            box-shadow: 0 1px 4px rgba(16,24,40,0.04);
-            transition: box-shadow 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 2px 6px rgba(16,24,40,0.02);
+            transition: box-shadow 0.25s ease, transform 0.25s ease;
         }
-        .card:hover { box-shadow: 0 6px 24px rgba(1,69,142,0.09); }
+        .card:hover { box-shadow: 0 10px 30px rgba(1,69,142,0.06); }
 
         /* Stat card lift */
-        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card:hover { transform: translateY(-3px); }
 
         /* Primary button */
         .btn-blue {
             background-color: #01458E;
             color: #fff;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 13px;
-            padding: 9px 18px;
-            transition: background-color 0.18s, box-shadow 0.18s, transform 0.18s;
+            padding: 10px 20px;
+            transition: all 0.2s;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
         .btn-blue:hover {
             background-color: #013a78;
-            box-shadow: 0 6px 18px rgba(1,69,142,0.25);
+            box-shadow: 0 6px 16px rgba(1,69,142,0.25);
             transform: translateY(-1px);
         }
-
-        /* Action card */
-        .action-card {
-            border-radius: 14px;
-            padding: 18px 20px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-decoration: none;
-        }
-        .action-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(1,69,142,0.12); }
 
         /* Status pill */
         .pill {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 3px 10px;
+            gap: 6px;
+            padding: 4px 10px;
             border-radius: 9999px;
             font-size: 11px;
             font-weight: 600;
@@ -85,285 +70,181 @@
 
         /* Scrollbar for table */
         .table-wrap { overflow-x: auto; }
-        .table-wrap::-webkit-scrollbar { height: 4px; }
-        .table-wrap::-webkit-scrollbar-track { background: #f1f1f1; }
-        .table-wrap::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .table-wrap::-webkit-scrollbar { height: 6px; }
+        .table-wrap::-webkit-scrollbar-track { background: #f8fafc; border-radius: 8px; }
+        .table-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .table-wrap::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         /* Dot grid bg */
         .dot-grid {
-            background-image: radial-gradient(circle, rgba(1,69,142,0.08) 1.2px, transparent 1.2px);
-            background-size: 22px 22px;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1.5px, transparent 1.5px);
+            background-size: 24px 24px;
         }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen flex flex-col">
 
     {{-- Navbar --}}
-    <div class="sticky top-0 z-30 shadow-sm">
+    <div class="sticky top-0 z-30 shadow-sm border-b border-gray-100">
         @include('layouts.topBarOpd')
     </div>
 
-    <div class="max-w-screen-xl mx-auto px-6 lg:px-8 py-7 space-y-6">
+    <main class="flex-1 max-w-screen-xl w-full mx-auto px-5 md:px-8 py-8 space-y-7">
 
         {{-- ── Hero Banner ── --}}
-        <div class="fu fu1 relative overflow-hidden rounded-2xl text-white"
-             style="background: linear-gradient(120deg, #01458E 0%, #0263C8 60%, #1d84c8 100%);">
+        <div class="fu fu1 relative overflow-hidden rounded-3xl text-white shadow-lg"
+             style="background: linear-gradient(135deg, #01458E 0%, #0263C8 60%, #2A93D5 100%);">
 
             {{-- decorative circles --}}
-            <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full opacity-10"
-                 style="background: rgba(255,255,255,0.3);"></div>
-            <div class="absolute -right-6 bottom-0 w-40 h-40 rounded-full opacity-10"
-                 style="background: rgba(255,255,255,0.2);"></div>
-            <div class="dot-grid absolute inset-0 opacity-30"></div>
+            <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full opacity-10 bg-white blur-2xl"></div>
+            <div class="absolute -left-10 -bottom-10 w-40 h-40 rounded-full opacity-10 bg-white blur-xl"></div>
+            <div class="dot-grid absolute inset-0 opacity-40"></div>
 
-            <div class="relative z-10 px-8 py-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+            <div class="relative z-10 px-8 py-9 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div>
-                    <p class="text-white/60 text-xs font-medium mb-1 tracking-wide">
+                    <p class="text-blue-100 text-xs font-semibold uppercase tracking-widest mb-2">
                         {{ now()->locale('id')->isoFormat('dddd, D MMMM YYYY') }}
                     </p>
-                    <h1 class="text-2xl font-bold leading-snug mb-1">
+                    <h1 class="text-3xl md:text-4xl font-bold leading-tight mb-2">
                         Selamat Datang,<br>
-                        <span class="text-white/90 font-extrabold">{{ $opd->nama_opd }}</span>
+                        <span class="text-white font-extrabold">{{ $opd->nama_opd }}</span>
                     </h1>
-                    <p class="text-white/60 text-sm">
-                        Kelola dan pantau seluruh pengaduan layanan TIK Anda di sini.
+                    <p class="text-blue-50 text-sm md:text-base max-w-xl">
+                        Kelola, pantau, dan selesaikan seluruh pengaduan layanan TIK Anda dengan mudah melalui dasbor ini.
                     </p>
                 </div>
-                <div class="shrink-0">
+                <div class="shrink-0 mt-2 md:mt-0">
                     <a href="{{ route('opd.diagnosis.index') }}"
-                       class="inline-flex items-center gap-2 bg-white font-semibold text-sm px-5 py-3 rounded-xl shadow-md transition hover:shadow-lg hover:-translate-y-0.5"
-                       style="color: #01458E;">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                       class="inline-flex items-center gap-2 bg-white text-[#01458E] font-bold text-sm px-6 py-3.5 rounded-xl shadow-md transition-all hover:shadow-xl hover:scale-105">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Buat Pengaduan
+                        Buat Pengaduan Baru
                     </a>
                 </div>
             </div>
         </div>
 
         {{-- ── Stat Cards ── --}}
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
             @php
             $statCards = [
-                [
-                    'label'   => 'Total Pengaduan',
-                    'value'   => $stats['total'],
-                    'badge'   => 'Semua',
-                    'badgeCls'=> 'bg-slate-100 text-slate-500',
-                    'iconBg'  => 'rgba(1,69,142,0.09)',
-                    'iconClr' => '#01458E',
-                    'icon'    => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
-                ],
-                [
-                    'label'   => 'Sedang Diproses',
-                    'value'   => $stats['aktif'],
-                    'badge'   => 'Aktif',
-                    'badgeCls'=> 'bg-amber-50 text-amber-600',
-                    'iconBg'  => 'rgba(245,158,11,0.10)',
-                    'iconClr' => '#F59E0B',
-                    'icon'    => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-                ],
-                [
-                    'label'   => 'Perlu Revisi',
-                    'value'   => $stats['revisi'],
-                    'badge'   => 'Revisi',
-                    'badgeCls'=> 'bg-red-50 text-red-500',
-                    'iconBg'  => 'rgba(239,68,68,0.09)',
-                    'iconClr' => '#EF4444',
-                    'icon'    => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-                ],
-                [
-                    'label'   => 'Pengaduan Selesai',
-                    'value'   => $stats['selesai'],
-                    'badge'   => 'Selesai',
-                    'badgeCls'=> 'bg-emerald-50 text-emerald-600',
-                    'iconBg'  => 'rgba(16,185,129,0.10)',
-                    'iconClr' => '#10B981',
-                    'icon'    => 'M5 13l4 4L19 7',
-                ],
+                ['label' => 'Total Pengaduan',   'value' => $stats['total'],   'badge' => 'Semua',   'badgeCls'=> 'bg-slate-100 text-slate-500',   'iconBg' => 'rgba(1,69,142,0.08)', 'iconClr' => '#01458E', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+                ['label' => 'Sedang Diproses',   'value' => $stats['aktif'],   'badge' => 'Aktif',   'badgeCls'=> 'bg-amber-50 text-amber-600',    'iconBg' => 'rgba(245,158,11,0.12)', 'iconClr' => '#D97706', 'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+                ['label' => 'Perlu Revisi',      'value' => $stats['revisi'],  'badge' => 'Revisi',  'badgeCls'=> 'bg-red-50 text-red-500',        'iconBg' => 'rgba(239,68,68,0.10)',  'iconClr' => '#DC2626', 'icon' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'],
+                ['label' => 'Pengaduan Selesai', 'value' => $stats['selesai'], 'badge' => 'Selesai', 'badgeCls'=> 'bg-emerald-50 text-emerald-600','iconBg' => 'rgba(16,185,129,0.12)','iconClr' => '#059669', 'icon' => 'M5 13l4 4L19 7'],
             ];
             @endphp
 
             @foreach($statCards as $i => $s)
-            <div class="fu fu{{ $i+2 }} card stat-card p-5">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                         style="background-color: {{ $s['iconBg'] }};">
-                        <svg class="w-[18px] h-[18px]" style="color:{{ $s['iconClr'] }};"
-                             fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <div class="fu fu{{ $i+2 }} card stat-card p-6 flex flex-col justify-between">
+                <div class="flex items-start justify-between mb-5">
+                    <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style="background-color: {{ $s['iconBg'] }};">
+                        <svg class="w-5 h-5" style="color:{{ $s['iconClr'] }};" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="{{ $s['icon'] }}"/>
                         </svg>
                     </div>
                     <span class="pill {{ $s['badgeCls'] }} text-[10px]">{{ $s['badge'] }}</span>
                 </div>
-                <p class="text-[32px] font-extrabold text-gray-900 leading-none mb-1">{{ $s['value'] }}</p>
-                <p class="text-xs text-gray-400 font-medium">{{ $s['label'] }}</p>
+                <div>
+                    <p class="text-3xl font-extrabold text-gray-900 leading-none mb-1.5">{{ $s['value'] }}</p>
+                    <p class="text-xs text-gray-500 font-medium">{{ $s['label'] }}</p>
+                </div>
             </div>
             @endforeach
         </div>
 
         {{-- ── Main 2-col grid ── --}}
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {{-- LEFT col --}}
-            <div class="lg:col-span-2 space-y-5">
-
-                {{-- Quick Actions --}}
-                <div class="fu fu3 card p-5">
-                    <p class="text-[13px] font-semibold text-gray-700 mb-4">Aksi Cepat</p>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-
-                        {{-- Buat Pengaduan --}}
-                        <a href="{{ route('opd.diagnosis.index') }}" class="action-card"
-                           style="background: linear-gradient(135deg,#01458E,#0263C8);">
-                            <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor"
-                                     stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-white">Buat Pengaduan</p>
-                                <p class="text-[11px] text-white/60 mt-0.5">Laporkan insiden baru</p>
-                            </div>
-                        </a>
-
-                        {{-- Diagnosis Mandiri --}}
-                        <a href="{{ route('opd.bantuan') }}" class="action-card bg-white border border-gray-200">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style="background-color: rgba(1,69,142,0.08);">
-                                <svg class="w-5 h-5" style="color:#01458E;" fill="none" stroke="currentColor"
-                                     stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-800">Diagnosis Mandiri</p>
-                                <p class="text-[11px] text-gray-400 mt-0.5">Coba selesaikan sendiri</p>
-                            </div>
-                        </a>
-
-                        {{-- Pusat Bantuan --}}
-                        <a href="{{ route('opd.bantuan') }}" class="action-card bg-white border border-gray-200">
-                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                 style="background-color: rgba(1,69,142,0.08);">
-                                <svg class="w-5 h-5" style="color:#01458E;" fill="none" stroke="currentColor"
-                                     stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-sm font-semibold text-gray-800">Pusat Bantuan</p>
-                                <p class="text-[11px] text-gray-400 mt-0.5">Panduan & Knowledge Base</p>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-
-                {{-- Recent Tickets --}}
-                <div class="fu fu4 card overflow-hidden">
-                    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                        <div class="flex items-center gap-2">
-                            <div class="w-1.5 h-4 rounded-full" style="background-color:#01458E;"></div>
-                            <p class="text-[13px] font-semibold text-gray-800">Pengaduan Terbaru</p>
+            {{-- LEFT col (Table) --}}
+            <div class="lg:col-span-2">
+                <div class="fu fu4 card overflow-hidden flex flex-col h-full">
+                    <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
+                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Pengaduan Terbaru</h2>
                         </div>
-                        <a href="{{ route('opd.tiket.index') }}"
-                           class="text-[12px] font-semibold hover:underline flex items-center gap-1"
-                           style="color:#01458E;">
+                        <a href="{{ route('opd.tiket.index') }}" class="text-xs font-semibold text-[#01458E] hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors">
                             Lihat Semua
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                             </svg>
                         </a>
                     </div>
 
-                    <div class="table-wrap">
-                        <table class="w-full">
+                    <div class="table-wrap flex-1">
+                        <table class="w-full whitespace-nowrap">
                             <thead>
-                                <tr style="background-color:#F8FAFC;">
-                                    <th class="px-5 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">No. Tiket</th>
-                                    <th class="px-5 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Judul Pengaduan</th>
-                                    <th class="px-5 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Kategori</th>
-                                    <th class="px-5 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Tanggal</th>
-                                    <th class="px-5 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Status</th>
-                                    <th class="px-5 py-3"></th>
+                                <tr class="bg-gray-50/80 border-b border-gray-100">
+                                    <th class="px-6 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">No. Tiket</th>
+                                    <th class="px-6 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Judul Pengaduan</th>
+                                    <th class="px-6 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Kategori</th>
+                                    <th class="px-6 py-3.5 text-left text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3.5"></th>
                                 </tr>
                             </thead>
                             @php
                             $statusMap = [
-                                'verifikasi_admin' => ['label'=>'Verifikasi Admin', 'pill'=>'bg-blue-50 text-blue-600',   'dot'=>'bg-blue-400'],
-                                'perlu_revisi'     => ['label'=>'Perlu Revisi',     'pill'=>'bg-red-50 text-red-500',     'dot'=>'bg-red-400'],
-                                'panduan_remote'   => ['label'=>'Panduan Remote',   'pill'=>'bg-purple-50 text-purple-600','dot'=>'bg-purple-400'],
-                                'perbaikan_teknis' => ['label'=>'Perbaikan Teknis', 'pill'=>'bg-amber-50 text-amber-600', 'dot'=>'bg-amber-400'],
-                                'rusak_berat'      => ['label'=>'Rusak Berat',      'pill'=>'bg-orange-50 text-orange-600','dot'=>'bg-orange-400'],
-                                'selesai'          => ['label'=>'Selesai',          'pill'=>'bg-emerald-50 text-emerald-600','dot'=>'bg-emerald-400'],
+                                'verifikasi_admin' => ['label'=>'Verifikasi Admin', 'pill'=>'bg-blue-50 text-blue-600',   'dot'=>'bg-blue-500'],
+                                'perlu_revisi'     => ['label'=>'Perlu Revisi',     'pill'=>'bg-red-50 text-red-600',     'dot'=>'bg-red-500'],
+                                'panduan_remote'   => ['label'=>'Panduan Remote',   'pill'=>'bg-purple-50 text-purple-600','dot'=>'bg-purple-500'],
+                                'perbaikan_teknis' => ['label'=>'Perbaikan Teknis', 'pill'=>'bg-amber-50 text-amber-600', 'dot'=>'bg-amber-500'],
+                                'rusak_berat'      => ['label'=>'Rusak Berat',      'pill'=>'bg-orange-50 text-orange-600','dot'=>'bg-orange-500'],
+                                'selesai'          => ['label'=>'Selesai',          'pill'=>'bg-emerald-50 text-emerald-600','dot'=>'bg-emerald-500'],
                             ];
                             @endphp
-                            <tbody class="divide-y divide-gray-50">
+                            <tbody class="divide-y divide-gray-100">
                                 @forelse($tiketTerbaru as $tiket)
-                                <tr class="hover:bg-gray-50/70 transition-colors">
-                                    <td class="px-5 py-4">
-                                        <span class="font-mono text-[11px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                                <tr class="hover:bg-blue-50/30 transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
                                             #{{ strtoupper(substr($tiket->id, 0, 8)) }}
                                         </span>
                                     </td>
-                                    <td class="px-5 py-4 max-w-[200px]">
-                                        <p class="text-[13px] font-medium text-gray-900 truncate">
+                                    <td class="px-6 py-4 max-w-[220px]">
+                                        <p class="text-sm font-semibold text-gray-900 truncate">
                                             {{ $tiket->subjek_masalah ?? '-' }}
                                         </p>
+                                        <p class="text-[11px] text-gray-400 mt-0.5">{{ $tiket->created_at->diffForHumans() }}</p>
                                     </td>
-                                    <td class="px-5 py-4">
-                                        <span class="text-[12px] text-gray-500">{{ $tiket->lokasi ?? '-' }}</span>
+                                    <td class="px-6 py-4">
+                                        <span class="text-xs text-gray-600 font-medium">{{ $tiket->kategori?->nama_kategori ?? '—' }}</span>
                                     </td>
-                                    <td class="px-5 py-4">
-                                        <span class="text-[12px] text-gray-400">—</span>
-                                    </td>
-                                    <td class="px-5 py-4">
+                                    <td class="px-6 py-4">
                                         @if($tiket->latestStatus)
-                                            @php $st = $statusMap[$tiket->latestStatus->status_tiket] ?? ['label'=>$tiket->latestStatus->status_tiket,'pill'=>'bg-gray-100 text-gray-500','dot'=>'bg-gray-400']; @endphp
+                                            @php $st = $statusMap[$tiket->latestStatus->status_tiket] ?? ['label'=>$tiket->latestStatus->status_tiket,'pill'=>'bg-gray-100 text-gray-600','dot'=>'bg-gray-400']; @endphp
                                             <span class="pill {{ $st['pill'] }}">
                                                 <span class="pill-dot {{ $st['dot'] }}"></span>
                                                 {{ $st['label'] }}
                                             </span>
                                         @else
-                                            <span class="pill bg-slate-100 text-slate-500">
+                                            <span class="pill bg-slate-100 text-slate-600">
                                                 <span class="pill-dot bg-slate-400"></span> Menunggu
                                             </span>
                                         @endif
                                     </td>
-                                    <td class="px-5 py-4 text-right">
-                                        <a href="#" class="text-[12px] font-semibold hover:underline" style="color:#01458E;">
-                                            Detail →
+                                    <td class="px-6 py-4 text-right">
+                                        <a href="#" class="inline-flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-[#01458E] hover:bg-blue-50 transition-colors">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                            </svg>
                                         </a>
                                     </td>
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="6" class="py-16 text-center">
-                                        <div class="flex flex-col items-center gap-3">
-                                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center"
-                                                 style="background-color:rgba(1,69,142,0.07);">
-                                                <svg class="w-6 h-6" style="color:#01458E;" fill="none"
-                                                     stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    <td colspan="5" class="px-6 py-20 text-center">
+                                        <div class="flex flex-col items-center gap-4">
+                                            <div class="w-16 h-16 rounded-2xl flex items-center justify-center bg-blue-50/50">
+                                                <svg class="w-8 h-8 text-[#01458E] opacity-70" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                                                 </svg>
                                             </div>
-                                            <p class="text-sm font-semibold text-gray-700">Belum ada pengaduan</p>
-                                            <p class="text-xs text-gray-400 max-w-xs">
-                                                Buat pengaduan baru untuk melaporkan gangguan layanan TIK Anda.
-                                            </p>
-                                            <a href="{{ route('opd.diagnosis.index') }}" class="btn-blue mt-1">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor"
-                                                     stroke-width="2.5" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                                                </svg>
-                                                Buat Pengaduan
-                                            </a>
+                                            <div>
+                                                <p class="text-sm font-bold text-gray-800">Belum ada pengaduan</p>
+                                                <p class="text-xs text-gray-500 mt-1">Laporan pengaduan Anda akan muncul di sini.</p>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -374,54 +255,55 @@
                 </div>
             </div>
 
-            {{-- RIGHT col --}}
-            <div class="space-y-5">
+            {{-- RIGHT col (Alur & Tips) --}}
+            <div class="space-y-6">
 
                 {{-- Alur Pengaduan --}}
-                <div class="fu fu3 card p-5">
-                    <div class="flex items-center gap-2 mb-5">
-                        <div class="w-1.5 h-4 rounded-full" style="background-color:#01458E;"></div>
-                        <p class="text-[13px] font-semibold text-gray-800">Alur Pengaduan</p>
+                <div class="fu fu5 card p-6 bg-white">
+                    <div class="flex items-center gap-2.5 mb-6">
+                        <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
+                        <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Alur Pengaduan</h2>
                     </div>
 
                     @php
                     $steps = [
-                        ['no'=>'1','label'=>'Pengaduan Dikirim',  'desc'=>'Tiket berhasil dibuat & dikirim.',       'clr'=>'#01458E','bg'=>'rgba(1,69,142,0.10)'],
-                        ['no'=>'2','label'=>'Verifikasi Admin',   'desc'=>'Admin helpdesk meninjau tiket Anda.',   'clr'=>'#F59E0B','bg'=>'rgba(245,158,11,0.10)'],
-                        ['no'=>'3','label'=>'Penanganan Teknisi', 'desc'=>'Tim teknis melakukan perbaikan.',        'clr'=>'#3B82F6','bg'=>'rgba(59,130,246,0.10)'],
-                        ['no'=>'4','label'=>'Konfirmasi Selesai', 'desc'=>'Anda mengonfirmasi masalah teratasi.',  'clr'=>'#10B981','bg'=>'rgba(16,185,129,0.10)'],
+                        ['no'=>'1','label'=>'Diagnosis Mandiri',  'desc'=>'Jawab pertanyaan sistem untuk mendeteksi akar masalah.', 'clr'=>'#8B5CF6','bg'=>'rgba(139,92,246,0.10)'],
+                        ['no'=>'2','label'=>'Panduan Solusi',     'desc'=>'Terapkan perbaikan awal berdasarkan instruksi sistem.', 'clr'=>'#14B8A6','bg'=>'rgba(20,184,166,0.10)'],
+                        ['no'=>'3','label'=>'Pengajuan Tiket',    'desc'=>'Kirim tiket jika masalah tidak teratasi mandiri.', 'clr'=>'#01458E','bg'=>'rgba(1,69,142,0.10)'],
+                        ['no'=>'4','label'=>'Verifikasi Admin',   'desc'=>'Admin Helpdesk memvalidasi tiket Anda.', 'clr'=>'#F59E0B','bg'=>'rgba(245,158,11,0.10)'],
+                        ['no'=>'5','label'=>'Penanganan Teknisi', 'desc'=>'Tim teknis melakukan perbaikan di lapangan.', 'clr'=>'#3B82F6','bg'=>'rgba(59,130,246,0.10)'],
+                        ['no'=>'6','label'=>'Konfirmasi Selesai', 'desc'=>'Anda mengonfirmasi layanan kembali normal.', 'clr'=>'#10B981','bg'=>'rgba(16,185,129,0.10)'],
                     ];
                     @endphp
 
-                    <div class="space-y-4">
+                    <div class="space-y-0">
                         @foreach($steps as $s)
-                        <div class="flex items-start gap-3">
-                            {{-- number badge + connecting line --}}
-                            <div class="flex flex-col items-center shrink-0">
-                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
+                        <div class="flex items-start gap-4 group">
+                            <div class="flex flex-col items-center shrink-0 mt-0.5">
+                                <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-transform group-hover:scale-110"
                                      style="background-color:{{ $s['bg'] }}; color:{{ $s['clr'] }};">
                                     {{ $s['no'] }}
                                 </div>
                                 @if(!$loop->last)
-                                <div class="w-px flex-1 mt-1 mb-1" style="min-height:20px; background-color:#E5E7EB;"></div>
+                                <div class="w-px flex-1 my-1.5 bg-gray-200" style="min-height:24px;"></div>
                                 @endif
                             </div>
-                            <div class="{{ $loop->last ? '' : 'pb-4' }}">
-                                <p class="text-[12px] font-semibold text-gray-800">{{ $s['label'] }}</p>
-                                <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">{{ $s['desc'] }}</p>
+                            <div class="{{ $loop->last ? '' : 'pb-5' }}">
+                                <p class="text-[13px] font-bold text-gray-800 leading-none">{{ $s['label'] }}</p>
+                                <p class="text-xs text-gray-500 mt-1.5 leading-relaxed">{{ $s['desc'] }}</p>
                             </div>
                         </div>
                         @endforeach
                     </div>
                 </div>
 
-                {{-- Tips --}}
-                <div class="fu fu4 card p-5">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-1.5 h-4 rounded-full" style="background-color:#01458E;"></div>
-                        <p class="text-[13px] font-semibold text-gray-800">Tips Pengaduan</p>
+                {{-- Tips Pengaduan --}}
+                <div class="fu fu5 card p-6 bg-white">
+                    <div class="flex items-center gap-2.5 mb-5">
+                        <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
+                        <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Tips Pengaduan</h2>
                     </div>
-                    <ul class="space-y-3">
+                    <ul class="space-y-3.5">
                         @php
                         $tips = [
                             'Coba diagnosis mandiri sebelum membuat tiket untuk masalah yang umum.',
@@ -431,22 +313,23 @@
                         ];
                         @endphp
                         @foreach($tips as $tip)
-                        <li class="flex items-start gap-2.5">
-                            <svg class="w-3.5 h-3.5 mt-0.5 shrink-0" style="color:#01458E;"
+                        <li class="flex items-start gap-3">
+                            <svg class="w-4 h-4 mt-0.5 shrink-0 text-[#01458E]"
                                  fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/>
                             </svg>
-                            <p class="text-[12px] text-gray-500 leading-relaxed">{{ $tip }}</p>
+                            <p class="text-xs text-gray-500 leading-relaxed font-medium">{{ $tip }}</p>
                         </li>
                         @endforeach
                     </ul>
                 </div>
+
             </div>
         </div>
-    </div>
+    </main>
 
     {{-- Footer --}}
-    <footer class="text-center py-5 mt-4 border-t border-gray-200/60 text-gray-400 text-[11px]">
+    <footer class="text-center py-6 mt-auto border-t border-gray-200 bg-white text-gray-400 text-xs font-medium">
         &copy; {{ date('Y') }} SiPasti &mdash; Dinas Komunikasi dan Informatika Kota Padang
     </footer>
 

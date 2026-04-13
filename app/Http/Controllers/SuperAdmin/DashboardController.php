@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\AdminHelpdesk;
 use App\Models\KnowledgeBase;
+use App\Models\KnowledgeBaseRating;
 use App\Models\User;
 use App\Models\Opd;
 use App\Models\StatusTiket;
@@ -17,10 +18,17 @@ class DashboardController extends Controller
     public function index()
     {
         $stats = [
-            'total_opd'      => User::where('role', 'opd')->count(),
-            'total_internal' => User::whereIn('role', ['admin_helpdesk', 'tim_teknis', 'pimpinan'])->count(),
-            'total_tiket'    => Tiket::count(),
-            'total_kb'       => KnowledgeBase::count(),
+            'total_opd'         => User::where('role', 'opd')->count(),
+            'total_internal'    => User::whereIn('role', ['admin_helpdesk', 'tim_teknis', 'pimpinan'])->count(),
+            'total_tiket'       => Tiket::count(),
+            'total_kb'          => KnowledgeBase::count(),
+            // Metrik baru
+            'kb_published'      => KnowledgeBase::where('status_publikasi', 'published')->count(),
+            'total_kb_ratings'  => KnowledgeBaseRating::count(),
+            'avg_penilaian'     => round(Tiket::whereNotNull('penilaian')->avg('penilaian') ?? 0, 1),
+            'tiket_selesai'     => Tiket::whereHas('statusTiket', fn($q) =>
+                                       $q->where('status_tiket', 'selesai')
+                                   )->count(),
         ];
 
         // Tiket per status for chart
@@ -31,6 +39,7 @@ class DashboardController extends Controller
             'rusak_berat'       => 'Rusak Berat',
             'perlu_revisi'      => 'Perlu Revisi',
             'selesai'           => 'Selesai',
+            'dibuka_kembali'    => 'Dibuka Kembali',
         ];
 
         $tiketPerStatus = [];
