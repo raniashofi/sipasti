@@ -16,7 +16,23 @@
         {{-- Session status --}}
         <x-auth-session-status class="mb-4 text-sm text-green-600" :status="session('status')" />
 
-        <form method="POST" action="{{ route('login') }}">
+        {{-- Error: kredensial salah --}}
+        @if ($errors->has('email'))
+        <div class="flex items-start gap-3 mb-5 px-4 py-3.5 rounded-xl border border-red-200 bg-red-50">
+            <div class="shrink-0 mt-0.5">
+                <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-xs font-semibold text-red-700 leading-snug">Login gagal</p>
+                <p class="text-xs text-red-500 mt-0.5">{{ $errors->first('email') }}</p>
+            </div>
+        </div>
+        @endif
+
+        <form id="loginForm" method="POST" action="{{ route('login') }}">
             @csrf
 
             {{-- Email --}}
@@ -36,7 +52,6 @@
                               rounded-lg outline-none transition-all duration-200
                               focus:border-[#01458E] focus:ring-2 focus:ring-[#01458E]/10
                               placeholder:text-gray-300">
-                <x-input-error :messages="$errors->get('email')" class="mt-1.5 text-xs text-red-500" />
             </div>
 
             {{-- Password --}}
@@ -95,5 +110,50 @@
             Kembali ke Beranda
         </a>
     </div>
+
+    {{-- Ingat Saya: simpan & baca email dari cookie --}}
+    <script>
+        (function () {
+            const COOKIE_NAME = 'sipasti_remember_email';
+            const COOKIE_DAYS = 30;
+
+            function getCookie(name) {
+                const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+                return match ? decodeURIComponent(match[1]) : null;
+            }
+
+            function setCookie(name, value, days) {
+                const expires = new Date(Date.now() + days * 864e5).toUTCString();
+                document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; SameSite=Lax';
+            }
+
+            function deleteCookie(name) {
+                document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+            }
+
+            const emailInput    = document.getElementById('email');
+            const rememberCheck = document.getElementById('remember_me');
+            const form          = document.getElementById('loginForm');
+
+            // Baca cookie saat halaman dibuka
+            const savedEmail = getCookie(COOKIE_NAME);
+            if (savedEmail) {
+                // Hanya isi jika server tidak mengembalikan old('email')
+                if (!emailInput.value) {
+                    emailInput.value = savedEmail;
+                }
+                rememberCheck.checked = true;
+            }
+
+            // Saat submit: simpan atau hapus cookie
+            form.addEventListener('submit', function () {
+                if (rememberCheck.checked && emailInput.value) {
+                    setCookie(COOKIE_NAME, emailInput.value, COOKIE_DAYS);
+                } else {
+                    deleteCookie(COOKIE_NAME);
+                }
+            });
+        })();
+    </script>
 
 </x-guest-layout>

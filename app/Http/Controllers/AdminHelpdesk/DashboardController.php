@@ -13,12 +13,22 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $adminProfile = AdminHelpdesk::where('user_id', Auth::id())->first();
+        $adminProfile = AdminHelpdesk::with('bidang')->where('user_id', Auth::id())->first();
         $adminId      = $adminProfile?->id;
+        $bidangId     = $adminProfile?->bidang_id;
 
-        // Stat cards
+        // Helper: filter tiket berdasarkan bidang admin (via kb → kategori → bidang)
+        $filterBidang = function ($query) use ($bidangId) {
+            if ($bidangId) {
+                $query->whereNotNull('kb_id')
+                      ->whereHas('kb.kategori', fn($q) => $q->where('bidang_id', $bidangId));
+            }
+        };
+
+        // Stat cards — semua difilter per bidang admin
         $menungguVerif = StatusTiket::where('status_tiket', 'verifikasi_admin')
             ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'))
+            ->whereHas('tiket', $filterBidang)
             ->count();
 
         $pandуanRemote = $adminId
@@ -50,7 +60,7 @@ class DashboardController extends Controller
             'total_kb'       => KnowledgeBase::where('status_publikasi', 'published')->count(),
         ];
 
-        // Distribution of statuses for tickets handled by this admin
+        // Distribusi status — semua difilter per bidang admin
         $statusLabels = [
             'verifikasi_admin' => 'Menunggu Verif',
             'perlu_revisi'     => 'Perlu Revisi',
@@ -65,7 +75,11 @@ class DashboardController extends Controller
             $query = StatusTiket::where('status_tiket', $key)
                 ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'));
 
-            if ($adminId && $key !== 'verifikasi_admin') {
+            if ($key === 'verifikasi_admin') {
+                // Belum ada admin_id → filter lewat bidang (kb → kategori → bidang)
+                $query->whereHas('tiket', $filterBidang);
+            } elseif ($adminId) {
+                // Sudah diterima admin ini → filter lewat admin_id
                 $query->whereHas('tiket', fn($q) => $q->where('admin_id', $adminId));
             }
 

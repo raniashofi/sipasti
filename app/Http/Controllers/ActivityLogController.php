@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\AdminHelpdesk;
+use App\Models\TimTeknis;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ActivityLogController extends Controller
 {
@@ -309,6 +312,235 @@ class ActivityLogController extends Controller
         'pimpinan'       => 'Pimpinan',
         'opd'            => 'OPD',
     ];
+
+    // ─────────────────────────────────────────────────────────────
+    // Admin Helpdesk — Log Aktivitas (admin_helpdesk + tim_teknis, bidang sama)
+    // ─────────────────────────────────────────────────────────────
+
+    public function showAdminLog(Request $request)
+    {
+        $search  = $request->query('search', '');
+        $role    = $request->query('role_pelaku', '');
+        $jenis   = $request->query('jenis_aktivitas', '');
+        $tanggal = $request->query('tanggal', '');
+
+        $bidangId   = Auth::user()->adminHelpdesk?->bidang_id;
+        $adminIds   = AdminHelpdesk::where('bidang_id', $bidangId)->pluck('user_id');
+        $teknisiIds = TimTeknis::where('bidang_id', $bidangId)->pluck('user_id');
+
+        $totalAktivitas  = $this->bidangLogQuery($adminIds, $teknisiIds)->count();
+        $loginBerhasil   = $this->bidangLogQuery($adminIds, $teknisiIds)->where('jenis_aktivitas', 'login')->count();
+        $aktivitasKritis = $this->bidangLogQuery($adminIds, $teknisiIds)->where('jenis_aktivitas', 'delete')->count();
+
+        $query = $this->bidangLogQuery($adminIds, $teknisiIds)
+            ->with(['user.adminHelpdesk.bidang', 'user.timTeknis.bidang'])
+            ->orderByDesc('waktu_eksekusi');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('detail_tindakan', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%")
+                  ->orWhere('id_record', 'like', "%{$search}%")
+                  ->orWhere('user_id', 'like', "%{$search}%");
+            });
+        }
+        if ($role)    { $query->where('role_pelaku', $role); }
+        if ($jenis)   { $query->where('jenis_aktivitas', $jenis); }
+        if ($tanggal) { $query->whereDate('waktu_eksekusi', $tanggal); }
+
+        $logs   = $query->paginate(20)->withQueryString();
+        $logsJs = $logs->getCollection()->map(fn($l) => $this->toJs($l))->values();
+
+        return view('admin_helpdesk.log', compact(
+            'logs', 'logsJs',
+            'totalAktivitas', 'loginBerhasil', 'aktivitasKritis',
+            'search', 'role', 'jenis', 'tanggal'
+        ));
+    }
+
+    public function exportAdminCsv(Request $request)
+    {
+        $search  = $request->query('search', '');
+        $role    = $request->query('role_pelaku', '');
+        $jenis   = $request->query('jenis_aktivitas', '');
+        $tanggal = $request->query('tanggal', '');
+
+        $bidangId   = Auth::user()->adminHelpdesk?->bidang_id;
+        $adminIds   = AdminHelpdesk::where('bidang_id', $bidangId)->pluck('user_id');
+        $teknisiIds = TimTeknis::where('bidang_id', $bidangId)->pluck('user_id');
+
+        $query = $this->bidangLogQuery($adminIds, $teknisiIds)
+            ->with(['user.adminHelpdesk.bidang', 'user.timTeknis.bidang'])
+            ->orderByDesc('waktu_eksekusi');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('detail_tindakan', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%")
+                  ->orWhere('id_record', 'like', "%{$search}%");
+            });
+        }
+        if ($role)    { $query->where('role_pelaku', $role); }
+        if ($jenis)   { $query->where('jenis_aktivitas', $jenis); }
+        if ($tanggal) { $query->whereDate('waktu_eksekusi', $tanggal); }
+
+        $logs     = $query->get();
+        $filename = 'log_admin_helpdesk_' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($logs) {
+            $f = fopen('php://output', 'w');
+            fputcsv($f, ['Waktu', 'User ID', 'Nama', 'Role', 'Bidang', 'Jenis Aktivitas', 'Detail', 'IP Address', 'Tabel', 'ID Record']);
+            foreach ($logs as $log) {
+                $bidangNama = $log->user?->adminHelpdesk?->bidang?->nama_bidang
+                           ?? $log->user?->timTeknis?->bidang?->nama_bidang
+                           ?? '';
+                fputcsv($f, [
+                    $log->waktu_eksekusi?->format('Y-m-d H:i:s') ?? '',
+                    $log->user_id ?? '',
+                    $this->namaUser($log),
+                    self::$roleLabel[$log->role_pelaku] ?? $log->role_pelaku,
+                    self::$bidangLabel[$bidangNama] ?? $bidangNama,
+                    $log->jenis_aktivitas,
+                    $log->detail_tindakan ?? '',
+                    $log->ip_address ?? '',
+                    $log->nama_tabel ?? '',
+                    $log->id_record ?? '',
+                ]);
+            }
+            fclose($f);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Pimpinan — Log Aktivitas (semua admin_helpdesk + tim_teknis)
+    // ─────────────────────────────────────────────────────────────
+
+    public function showPimpinanLog(Request $request)
+    {
+        $search  = $request->query('search', '');
+        $role    = $request->query('role_pelaku', '');
+        $bidang  = $request->query('bidang', '');
+        $jenis   = $request->query('jenis_aktivitas', '');
+        $tanggal = $request->query('tanggal', '');
+
+        $totalAktivitas  = ActivityLog::whereIn('role_pelaku', ['admin_helpdesk', 'tim_teknis'])->count();
+        $loginBerhasil   = ActivityLog::whereIn('role_pelaku', ['admin_helpdesk', 'tim_teknis'])->where('jenis_aktivitas', 'login')->count();
+        $aktivitasKritis = ActivityLog::whereIn('role_pelaku', ['admin_helpdesk', 'tim_teknis'])->where('jenis_aktivitas', 'delete')->count();
+
+        $query = ActivityLog::with(['user.adminHelpdesk.bidang', 'user.timTeknis.bidang'])
+            ->whereIn('role_pelaku', ['admin_helpdesk', 'tim_teknis'])
+            ->orderByDesc('waktu_eksekusi');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('detail_tindakan', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%")
+                  ->orWhere('id_record', 'like', "%{$search}%")
+                  ->orWhere('user_id', 'like', "%{$search}%");
+            });
+        }
+        if ($role)    { $query->where('role_pelaku', $role); }
+        if ($jenis)   { $query->where('jenis_aktivitas', $jenis); }
+        if ($tanggal) { $query->whereDate('waktu_eksekusi', $tanggal); }
+        if ($bidang) {
+            $query->where(function ($q) use ($bidang) {
+                $q->whereHas('user.adminHelpdesk.bidang', fn($q2) => $q2->where('nama_bidang', $bidang))
+                  ->orWhereHas('user.timTeknis.bidang', fn($q2) => $q2->where('nama_bidang', $bidang));
+            });
+        }
+
+        $logs   = $query->paginate(20)->withQueryString();
+        $logsJs = $logs->getCollection()->map(fn($l) => $this->toJs($l))->values();
+
+        return view('pimpinan.log', compact(
+            'logs', 'logsJs',
+            'totalAktivitas', 'loginBerhasil', 'aktivitasKritis',
+            'search', 'role', 'bidang', 'jenis', 'tanggal'
+        ));
+    }
+
+    public function exportPimpinanCsv(Request $request)
+    {
+        $search  = $request->query('search', '');
+        $role    = $request->query('role_pelaku', '');
+        $bidang  = $request->query('bidang', '');
+        $jenis   = $request->query('jenis_aktivitas', '');
+        $tanggal = $request->query('tanggal', '');
+
+        $query = ActivityLog::with(['user.adminHelpdesk.bidang', 'user.timTeknis.bidang'])
+            ->whereIn('role_pelaku', ['admin_helpdesk', 'tim_teknis'])
+            ->orderByDesc('waktu_eksekusi');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('detail_tindakan', 'like', "%{$search}%")
+                  ->orWhere('ip_address', 'like', "%{$search}%")
+                  ->orWhere('id_record', 'like', "%{$search}%");
+            });
+        }
+        if ($role)    { $query->where('role_pelaku', $role); }
+        if ($jenis)   { $query->where('jenis_aktivitas', $jenis); }
+        if ($tanggal) { $query->whereDate('waktu_eksekusi', $tanggal); }
+        if ($bidang) {
+            $query->where(function ($q) use ($bidang) {
+                $q->whereHas('user.adminHelpdesk.bidang', fn($q2) => $q2->where('nama_bidang', $bidang))
+                  ->orWhereHas('user.timTeknis.bidang', fn($q2) => $q2->where('nama_bidang', $bidang));
+            });
+        }
+
+        $logs     = $query->get();
+        $filename = 'log_pimpinan_' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($logs) {
+            $f = fopen('php://output', 'w');
+            fputcsv($f, ['Waktu', 'User ID', 'Nama', 'Role', 'Bidang', 'Jenis Aktivitas', 'Detail', 'IP Address', 'Tabel', 'ID Record']);
+            foreach ($logs as $log) {
+                $bidangNama = $log->user?->adminHelpdesk?->bidang?->nama_bidang
+                           ?? $log->user?->timTeknis?->bidang?->nama_bidang
+                           ?? '';
+                fputcsv($f, [
+                    $log->waktu_eksekusi?->format('Y-m-d H:i:s') ?? '',
+                    $log->user_id ?? '',
+                    $this->namaUser($log),
+                    self::$roleLabel[$log->role_pelaku] ?? $log->role_pelaku,
+                    self::$bidangLabel[$bidangNama] ?? $bidangNama,
+                    $log->jenis_aktivitas,
+                    $log->detail_tindakan ?? '',
+                    $log->ip_address ?? '',
+                    $log->nama_tabel ?? '',
+                    $log->id_record ?? '',
+                ]);
+            }
+            fclose($f);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function bidangLogQuery(
+        \Illuminate\Support\Collection $adminIds,
+        \Illuminate\Support\Collection $teknisiIds
+    ): \Illuminate\Database\Eloquent\Builder {
+        return ActivityLog::where(function ($q) use ($adminIds, $teknisiIds) {
+            $q->where(function ($q2) use ($adminIds) {
+                $q2->where('role_pelaku', 'admin_helpdesk')->whereIn('user_id', $adminIds);
+            })->orWhere(function ($q2) use ($teknisiIds) {
+                $q2->where('role_pelaku', 'tim_teknis')->whereIn('user_id', $teknisiIds);
+            });
+        });
+    }
 
     public function showAudit(Request $request)
     {

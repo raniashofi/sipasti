@@ -20,6 +20,10 @@ class StatusTiket extends Model
     protected $keyType  = 'string';
     public $timestamps  = false;
 
+    protected $casts = [
+        'created_at' => 'datetime',
+    ];
+
     protected $fillable = [
         'id', 'tiket_id', 'status_tiket',
         'spesifikasi_perangkat_rusak',

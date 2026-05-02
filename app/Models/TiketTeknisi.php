@@ -11,6 +11,10 @@ class TiketTeknisi extends Model
 
     protected $fillable = ['tiket_id', 'teknis_id', 'peran_teknisi', 'waktu_ditugaskan', 'status_tugas', 'alasan_dibatalkan'];
 
+    protected $casts = [
+        'waktu_ditugaskan' => 'datetime',
+    ];
+
     public function tiket()
     {
         return $this->belongsTo(Tiket::class, 'tiket_id');

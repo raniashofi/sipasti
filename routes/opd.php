@@ -5,6 +5,7 @@ use App\Http\Controllers\Opd\ChatController;
 use App\Http\Controllers\Opd\DashboardController;
 use App\Http\Controllers\Opd\DiagnosisMandiriController;
 use App\Http\Controllers\Opd\PengaduanSayaController;
+use App\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('opd')->name('opd.')->middleware(['auth', 'role:opd'])->group(function () {
@@ -40,5 +41,6 @@ Route::prefix('opd')->name('opd.')->middleware(['auth', 'role:opd'])->group(func
     Route::post('/bantuan/artikel/{id}/rating',   [BantuanController::class, 'rating'])->name('bantuan.rating');
 
     // Profil
-    Route::get('/profil',     fn() => view('opd.dashboard'))->name('profile');
+    Route::get('/profil',                [UserProfileController::class, 'show'])->name('profile');
+    Route::post('/profil/ubah-password', [UserProfileController::class, 'updatePassword'])->name('profile.password');
 });

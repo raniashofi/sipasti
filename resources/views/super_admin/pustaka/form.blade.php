@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $article ? 'Edit Artikel' : 'Tambah Artikel' }} — Super Admin</title>
+    @php
+        $isEdit        = $article !== null;
+        $visibilityVal = $article?->visibilitas_akses ?? $visibility;
+        $isInternal    = $visibilityVal === 'internal';
+    @endphp
+    <title>{{ $article ? ($isInternal ? 'Edit SOP' : 'Edit Artikel') : ($visibility === 'internal' ? 'Tambah SOP' : 'Tambah Artikel') }} — Super Admin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -113,9 +118,17 @@
     @include('layouts.sidebarSuperAdmin')
 
     @php
-        $isEdit      = $article !== null;
-        $isInternal  = ($article?->visibilitas_akses ?? $visibility) === 'internal';
-        $listRoute   = $isInternal ? route('super_admin.pustaka.internal') : route('super_admin.pustaka.opd');
+        $hasContext    = !empty($kategoriId) || !empty($bidangId);
+
+        // Breadcrumb back URL — kembali ke sub-halaman kategori/bidang jika ada konteks
+        if (!empty($kategoriId)) {
+            $listRoute = route('super_admin.pustaka.opd.kategori', $kategoriId);
+        } elseif (!empty($bidangId)) {
+            $listRoute = route('super_admin.pustaka.internal.bidang', $bidangId);
+        } else {
+            $listRoute = $isInternal ? route('super_admin.pustaka.internal') : route('super_admin.pustaka.opd');
+        }
+
         $formAction  = $isEdit
             ? route('super_admin.pustaka.update', $article->id)
             : route('super_admin.pustaka.store');
@@ -143,10 +156,10 @@
     </script>
 
 
-    <div class="ml-64 min-h-screen flex flex-col"
+    <div class="ml-0 lg:ml-64 min-h-screen flex flex-col"
         x-data="{
             status: '{{ $article?->status_publikasi ?? 'draft' }}',
-            visibility: '{{ $article?->visibilitas_akses ?? 'opd' }}',
+            visibility: '{{ $article?->visibilitas_akses ?? $visibility }}',
             tags: window.kbData.tags,
             tagInput: '',
             deleteConfirmOpen: false,
@@ -185,7 +198,7 @@
         x-cloak>
 
         {{-- ── Header ── --}}
-        <header class="bg-white border-b border-gray-100 px-6 py-3.5 flex items-center justify-between shrink-0 sticky top-0 z-30">
+        <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-6 py-3.5 flex items-center justify-between shrink-0 sticky top-0 z-30">
             <div class="flex items-center gap-2 text-sm">
                 <a href="{{ $listRoute }}" class="text-gray-400 text-xs hover:text-gray-600 transition-colors">
                     Pustaka Pengetahuan
@@ -194,7 +207,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                 </svg>
                 <span class="font-semibold text-gray-800 text-sm">
-                    {{ $isEdit ? 'Edit Artikel' : 'Artikel Baru' }}
+                    {{ $isEdit ? ($isInternal ? 'Edit SOP' : 'Edit Artikel') : ($visibility === 'internal' ? 'SOP Baru' : 'Artikel Baru') }}
                 </span>
             </div>
 
@@ -231,7 +244,7 @@
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                     </svg>
-                    Simpan Artikel
+                    Simpan {{ $visibility === 'internal' ? 'SOP' : 'Artikel' }}
                 </button>
             </div>
         </header>
@@ -243,7 +256,7 @@
             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
             </svg>
-            <span><strong>Mode INTERNAL</strong> — Artikel ini hanya bisa diakses oleh staf IT dan tidak akan muncul di portal OPD</span>
+            <span><strong>Mode INTERNAL</strong> — SOP ini hanya bisa diakses oleh staf IT dan tidak akan muncul di portal OPD</span>
         </div>
 
         {{-- ── Main Content ── --}}
@@ -268,6 +281,12 @@
                 <input type="hidden" name="status_publikasi"  :value="status">
                 <input type="hidden" name="visibilitas_akses" :value="visibility">
                 <input type="hidden" name="tags_raw"          :value="tagsRaw">
+                @if(!empty($kategoriId))
+                <input type="hidden" name="kategori_artikel_id" value="{{ $kategoriId }}">
+                @endif
+                @if(!empty($bidangId))
+                <input type="hidden" name="bidang_id" value="{{ $bidangId }}">
+                @endif
 
                 <div class="flex gap-8 items-start">
 
@@ -279,7 +298,7 @@
                             <input type="text" name="nama_artikel_sop"
                                    value="{{ old('nama_artikel_sop', $article?->nama_artikel_sop) }}"
                                    placeholder="Tulis judul artikel di sini..."
-                                   class="w-full text-3xl font-bold text-gray-900 border-0 pb-4 focus:outline-none placeholder-gray-300 bg-transparent">
+                                   class="w-full text-3xl font-bold text-gray-900 border-0 pb-4 rounded-xl focus:outline-none placeholder-gray-300 bg-transparent">
                         </div>
 
                         {{-- Deskripsi Singkat --}}
@@ -331,6 +350,25 @@
                         {{-- Visibility --}}
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
                             <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Visibilitas Akses</p>
+                            @if($hasContext)
+                            {{-- Context-locked: tampilkan read-only --}}
+                            @if(!$isInternal)
+                            <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-200">
+                                <svg class="w-3.5 h-3.5 text-[#01458E] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-[#01458E]">Publik (OPD)</span>
+                            </div>
+                            @else
+                            <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-50 border border-red-200">
+                                <svg class="w-3.5 h-3.5 text-red-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-red-500">Internal (Rahasia)</span>
+                            </div>
+                            @endif
+                            @else
+                            {{-- No context: toggle bebas --}}
                             <div class="space-y-2">
                                 <label @click="visibility = 'opd'"
                                        :class="visibility === 'opd' ? 'border-[#01458E] bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'"
@@ -355,22 +393,52 @@
                                     <p class="text-[11px] text-gray-400 mt-1">Hanya staf IT. Tersembunyi dari pencarian dan portal OPD</p>
                                 </label>
                             </div>
+                            @endif
                         </div>
 
-                        {{-- Kategori --}}
+                        {{-- Kategori / Bidang --}}
+                        @if(!empty($kategoriId))
+                        {{-- Konteks OPD: kategori sudah ditentukan --}}
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
-                            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Kategori</p>
-                            <select name="kategori_id"
+                            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Kategori Artikel</p>
+                            <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-[#EEF3F9] border border-blue-100">
+                                <svg class="w-3.5 h-3.5 text-[#01458E] shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-[#01458E]">
+                                    {{ $kategoris->firstWhere('id', $kategoriId)?->nama_kategori ?? 'Kategori' }}
+                                </span>
+                            </div>
+                        </div>
+                        @elseif(!empty($bidangId))
+                        {{-- Konteks Internal: bidang sudah ditentukan --}}
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
+                            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Bidang Tujuan</p>
+                            <div class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-100">
+                                <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-amber-700">
+                                    {{ ucwords(str_replace('_', ' ', $bidangs->firstWhere('id', $bidangId)?->nama_bidang ?? 'Bidang')) }}
+                                </span>
+                            </div>
+                        </div>
+                        @else
+                        {{-- Tanpa konteks: tampilkan dropdown kategori --}}
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
+                            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Kategori Artikel</p>
+                            <select name="kategori_artikel_id"
                                     class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] bg-white text-gray-700">
                                 <option value="">— Pilih Kategori —</option>
                                 @foreach($kategoris as $k)
                                 <option value="{{ $k->id }}"
-                                    {{ old('kategori_id', $article?->kategori_id) === $k->id ? 'selected' : '' }}>
+                                    {{ old('kategori_artikel_id', $article?->kategori_artikel_id) === $k->id ? 'selected' : '' }}>
                                     {{ $k->nama_kategori }}
                                 </option>
                                 @endforeach
                             </select>
                         </div>
+                        @endif
 
                         {{-- Header Image --}}
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
@@ -621,7 +689,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="font-bold text-sm">Hapus Artikel?</p>
+                                <p class="font-bold text-sm">Hapus {{ $visibility === 'internal' ? 'SOP' : 'Artikel' }}?</p>
                                 <p class="text-xs mt-0.5" style="color:#FECACA;">Tindakan tidak dapat dibatalkan</p>
                             </div>
                         </div>
@@ -635,7 +703,7 @@
 
                 {{-- Modal Body --}}
                 <div class="p-6">
-                    <p class="text-sm text-gray-700 mb-2">Anda yakin ingin menghapus artikel ini?</p>
+                    <p class="text-sm text-gray-700 mb-2">Anda yakin ingin menghapus {{ $visibility === 'internal' ? 'SOP' : 'artikel' }} ini?</p>
                     <div class="px-4 py-3 rounded-xl bg-red-50 border border-red-200 mb-4">
                         <p class="text-sm font-semibold text-red-900">"{{ $article?->nama_artikel_sop }}"</p>
                         <p class="text-xs text-red-700 mt-1.5">Data yang dihapus tidak dapat dipulihkan kembali.</p>

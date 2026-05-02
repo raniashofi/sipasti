@@ -12,33 +12,42 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $user = Auth::user();
+        $opd  = $user->opd;
+
+        if (!$opd) {
+            $stats        = ['total' => 0, 'aktif' => 0, 'revisi' => 0, 'selesai' => 0];
+            $tiketAktif   = 0;
+            $tiketSelesai = 0;
+            $tiketTotal   = 0;
+            $tiketTerbaru = collect();
+            $lastLogin    = null;
+            return view('opd.dashboard', compact('opd', 'stats', 'tiketAktif', 'tiketSelesai', 'tiketTotal', 'tiketTerbaru', 'lastLogin'));
+        }
+
         try {
-            $user = Auth::user();
-            $opd  = $user->opd;
-
-            if (!$opd) {
-                abort(403, 'Data OPD tidak ditemukan untuk user ini.');
-            }
-
             $opdId = $opd->id;
 
-            // Ambil last login dari activity_log
-            $lastLogin = $user->id ? ActivityLogController::getLastLoginFormatted($user->id) : null;
+            $lastLogin = ActivityLogController::getLastLoginFormatted($user->id);
 
             $aktifStatus = ['verifikasi_admin', 'panduan_remote', 'perbaikan_teknis', 'rusak_berat'];
 
             $stats = [
-                'total'    => Tiket::where('opd_id', $opdId)->count(),
-                'aktif'    => Tiket::where('opd_id', $opdId)
+                'total'   => Tiket::where('opd_id', $opdId)->count(),
+                'aktif'   => Tiket::where('opd_id', $opdId)
                                   ->whereHas('statusTiket', fn($q) => $q->whereIn('status_tiket', $aktifStatus))
                                   ->count(),
-                'revisi'   => Tiket::where('opd_id', $opdId)
+                'revisi'  => Tiket::where('opd_id', $opdId)
                                   ->whereHas('statusTiket', fn($q) => $q->where('status_tiket', 'perlu_revisi'))
                                   ->count(),
-                'selesai'  => Tiket::where('opd_id', $opdId)
+                'selesai' => Tiket::where('opd_id', $opdId)
                                   ->whereHas('statusTiket', fn($q) => $q->where('status_tiket', 'selesai'))
                                   ->count(),
             ];
+
+            $tiketAktif   = $stats['aktif'];
+            $tiketSelesai = $stats['selesai'];
+            $tiketTotal   = $stats['total'];
 
             $tiketTerbaru = Tiket::where('opd_id', $opdId)
                 ->with('latestStatus')
@@ -46,10 +55,16 @@ class DashboardController extends Controller
                 ->limit(5)
                 ->get();
 
-            return view('opd.dashboard', compact('opd', 'stats', 'tiketTerbaru', 'lastLogin'));
+            return view('opd.dashboard', compact('opd', 'stats', 'tiketAktif', 'tiketSelesai', 'tiketTotal', 'tiketTerbaru', 'lastLogin'));
         } catch (\Exception $e) {
             Log::error('Opd Dashboard Error: ' . $e->getMessage());
-            return view('dashboard');
+            $stats        = ['total' => 0, 'aktif' => 0, 'revisi' => 0, 'selesai' => 0];
+            $tiketAktif   = 0;
+            $tiketSelesai = 0;
+            $tiketTotal   = 0;
+            $tiketTerbaru = collect();
+            $lastLogin    = null;
+            return view('opd.dashboard', compact('opd', 'stats', 'tiketAktif', 'tiketSelesai', 'tiketTotal', 'tiketTerbaru', 'lastLogin'));
         }
     }
 }

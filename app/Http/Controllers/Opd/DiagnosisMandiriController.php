@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Opd;
 
 use App\Http\Controllers\Controller;
-use App\Models\Kategori;
+use App\Models\AdminHelpdesk;
+use App\Models\KategoriSistem;
 use App\Models\KnowledgeBase;
 use App\Models\NodeDiagnosis;
 use App\Models\StatusTiket;
 use App\Models\Tiket;
+use App\Notifications\TiketMasukNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -15,25 +17,26 @@ use Illuminate\Support\Str;
 
 class DiagnosisMandiriController extends Controller
 {
-    /**
-     * Step 1 — Pilih kategori masalah.
-     */
     public function index()
     {
-        $kategori = Kategori::with('bidang')->get();
+        $kategori = KategoriSistem::whereHas('nodes')
+            ->whereDoesntHave('nodes', function ($q) {
+                $q->where('tipe_node', 'solusi')
+                  ->where(function ($q2) {
+                      $q2->whereNull('kb_id')
+                         ->orWhereNull('sop_internal_id')
+                         ->orWhereNull('bidang_id');
+                  });
+            })
+            ->get();
 
         return view('opd.buat-pengaduan.index', compact('kategori'));
     }
 
-    /**
-     * Step 2 — Cari root node (pertanyaan pertama) dari kategori ini,
-     * lalu redirect ke showNode.
-     */
     public function mulai(string $kategoriId)
     {
-        $kategori = Kategori::findOrFail($kategoriId);
+        $kategori = KategoriSistem::findOrFail($kategoriId);
 
-        // Semua node milik kategori ini
         $allNodes = NodeDiagnosis::where('kategori_id', $kategoriId)->get();
 
         if ($allNodes->isEmpty()) {
@@ -45,14 +48,12 @@ class DiagnosisMandiriController extends Controller
             ])->with('info', 'Belum ada alur diagnosis untuk kategori ini. Silakan buat tiket langsung.');
         }
 
-        // Node yang BUKAN root = node yang dirujuk sebagai id_next_ya atau id_next_tidak
         $referencedIds = $allNodes
             ->flatMap(fn($n) => [$n->id_next_ya, $n->id_next_tidak])
             ->filter()
             ->unique()
             ->toArray();
 
-        // Root node = node pertanyaan yang tidak dirujuk oleh node manapun
         $rootNode = $allNodes
             ->where('tipe_node', 'pertanyaan')
             ->whereNotIn('id', $referencedIds)
@@ -78,9 +79,6 @@ class DiagnosisMandiriController extends Controller
         );
     }
 
-    /**
-     * Step 2+ — Tampilkan node (pertanyaan atau solusi).
-     */
     public function showNode(string $nodeId, Request $request)
     {
         $node = NodeDiagnosis::findOrFail($nodeId);
@@ -93,12 +91,12 @@ class DiagnosisMandiriController extends Controller
 
         if ($node->tipe_node === 'solusi') {
             $kb = $node->kb_id ? KnowledgeBase::find($node->kb_id) : null;
+            $bidangId = $node->bidang_id ?? '';
             return view('opd.buat-pengaduan.solusi', compact(
-                'node', 'kb', 'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'diagnosa'
+                'node', 'kb', 'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'diagnosa', 'bidangId'
             ));
         }
 
-        // Siapkan URL jawaban Ya dan Tidak untuk dipakai di view (Alpine.js navigates to these)
         $baseQuery = [
             'kategori_id'        => $kategoriId,
             'kategori_nama'      => $kategoriNama,
@@ -123,15 +121,13 @@ class DiagnosisMandiriController extends Controller
         ));
     }
 
-    /**
-     * Step 3b — Simpan tiket ke database.
-     */
     public function storeTiket(Request $request)
     {
         $request->validate([
-            'subjek_masalah' => 'required|string|max:255',
-            'detail_masalah' => 'required|string',
-            'foto_bukti'     => 'nullable|image|mimes:jpg,jpeg,png|max:10240',
+            'subjek_masalah'  => 'required|string|max:255',
+            'detail_masalah'  => 'required|string',
+            'foto_bukti'      => 'nullable|array|max:5',
+            'foto_bukti.*'    => 'image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
         $opd = Auth::user()->opd;
@@ -139,51 +135,74 @@ class DiagnosisMandiriController extends Controller
             abort(403, 'Data OPD tidak ditemukan.');
         }
 
-        // Generate ID: TKT-{10 char random}
-        $tiketId = 'TKT-' . strtoupper(Str::random(10));
+        $tiketId   = 'TKT-' . strtoupper(Str::random(10));
+        $fotoPaths = [];
 
-        // Handle file upload
-        $fotoPath = null;
         if ($request->hasFile('foto_bukti')) {
-            $fotoPath = $request->file('foto_bukti')
-                                ->store('tiket/foto', 'public');
+            foreach ($request->file('foto_bukti') as $foto) {
+                $fotoPaths[] = $foto->store('tiket/foto', 'public');
+            }
+        }
+
+        $rekomendasi = $request->input('rekomendasi_penanganan');
+        if (!in_array($rekomendasi, ['admin', 'eskalasi'])) {
+            $rekomendasi = null;
         }
 
         $tiket = Tiket::create([
-            'id'                    => $tiketId,
-            'opd_id'                => $opd->id,
-            'kb_id'                 => $request->input('kb_id') ?: null,
-            'kategori_id'           => $request->input('kategori_id') ?: null,
-            'subjek_masalah'        => $request->input('subjek_masalah'),
-            'detail_masalah'        => $request->input('detail_masalah'),
-            'spesifikasi_perangkat' => $request->input('spesifikasi_perangkat'),
-            'lokasi'                => $request->input('lokasi'),
-            'foto_bukti'            => $fotoPath,
+            'id'                      => $tiketId,
+            'opd_id'                  => $opd->id,
+            'kb_id'                   => $request->input('kb_id') ?: null,
+            'sop_internal_id'         => $request->input('sop_internal_id') ?: null,
+            'bidang_id'               => $request->input('bidang_id') ?: null,
+            'rekomendasi_penanganan'  => $rekomendasi,
+            'kategori_id'             => $request->input('kategori_id') ?: null,
+            'subjek_masalah'          => $request->input('subjek_masalah'),
+            'detail_masalah'          => $request->input('detail_masalah'),
+            'spesifikasi_perangkat'   => $request->input('spesifikasi_perangkat'),
+            'lokasi'                  => $request->input('lokasi'),
+            'foto_bukti'              => $fotoPaths ?: null,
         ]);
 
-        // Set status awal: verifikasi_admin
         StatusTiket::create([
             'id'           => 'STS-' . strtoupper(Str::random(10)),
             'tiket_id'     => $tiket->id,
             'status_tiket' => 'verifikasi_admin',
+            'created_at'   => now(),
         ]);
+
+        // Notifikasi ke Admin Helpdesk sesuai bidang dari node solusi
+        $adminQuery = AdminHelpdesk::with('user');
+        $bidangId = $request->input('bidang_id');
+        if ($bidangId) {
+            $adminQuery->where('bidang_id', $bidangId);
+        }
+        $namaOpd = $opd->nama_opd ?? 'OPD';
+        $url     = route('admin_helpdesk.tiket.menunggu');
+        $adminQuery->get()->each(function ($admin) use ($tiket, $namaOpd, $url) {
+            $admin->user?->notify(new TiketMasukNotification($tiket->id, $namaOpd, $url));
+        });
 
         return redirect()->route('opd.tiket.index')
                          ->with('success', 'Tiket #' . $tiketId . ' berhasil dikirim! Admin Helpdesk akan memverifikasi pengaduan Anda.');
     }
 
-    /**
-     * Step 3 — Tampilkan formulir pengaduan (setelah solusi tidak berhasil).
-     */
     public function showTiket(Request $request)
     {
         $kategoriId        = $request->query('kategori_id', '');
         $kategoriNama      = $request->query('kategori_nama', '');
         $kategoriDeskripsi = $request->query('kategori_deskripsi', '');
         $kbId              = $request->query('kb_id', '');
+        $sopInternalId     = $request->query('sop_internal_id', '');
+        $bidangId          = $request->query('bidang_id', '');
+        $rekomendasi       = $request->query('rekomendasi_penanganan', 'admin');
+
+        if (!in_array($rekomendasi, ['admin', 'eskalasi'])) {
+            $rekomendasi = 'admin';
+        }
 
         return view('opd.buat-pengaduan.tiket', compact(
-            'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'kbId'
+            'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'kbId', 'sopInternalId', 'bidangId', 'rekomendasi'
         ));
     }
 }

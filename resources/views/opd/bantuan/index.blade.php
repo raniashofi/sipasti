@@ -32,7 +32,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
                 </svg>
                 <input type="text" name="search" value="{{ $search }}"
-                       placeholder="Ketik masalah Anda..."
+                       placeholder="Ketik masalah, kata kunci, atau tag..."
                        class="w-full pl-11 pr-4 py-3 rounded-xl text-sm bg-white border-0 focus:outline-none focus:ring-2 focus:ring-white/40 text-gray-800 placeholder-gray-400">
             </div>
             <button type="submit"
@@ -76,9 +76,9 @@
                     @if($artikel->deskripsi_singkat)
                     <p class="text-xs text-gray-400 mt-0.5 truncate">{{ $artikel->deskripsi_singkat }}</p>
                     @endif
-                    @if($artikel->kategori)
+                    @if($artikel->kategoriArtikel)
                     <span class="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          style="background:#EEF3F9;color:#01458E;">{{ $artikel->kategori->nama_kategori }}</span>
+                          style="background:#EEF3F9;color:#01458E;">{{ $artikel->kategoriArtikel->nama_kategori }}</span>
                     @endif
                 </div>
                 <svg class="w-4 h-4 text-gray-300 group-hover:text-[#01458E] shrink-0 ml-4 transition-colors" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">

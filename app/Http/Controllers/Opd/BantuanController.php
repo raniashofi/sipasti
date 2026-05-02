@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Opd;
 
 use App\Http\Controllers\Controller;
-use App\Models\Kategori;
+use App\Models\KategoriArtikel;
 use App\Models\KnowledgeBase;
 use App\Models\KnowledgeBaseRating;
 use Illuminate\Http\Request;
@@ -15,27 +15,28 @@ class BantuanController extends Controller
     {
         $search = $request->query('search', '');
 
-        // Kategori dengan jumlah artikel published
-        $kategoris = Kategori::withCount([
-            'knowledgeBase as artikel_count' => fn($q) =>
+        $kategoris = KategoriArtikel::withCount([
+            'knowledgeBases as artikel_count' => fn($q) =>
                 $q->where('status_publikasi', 'published'),
-        ])->get();
+        ])
+        ->whereHas('knowledgeBases', fn($q) => $q->where('status_publikasi', 'published'))
+        ->orderBy('nama_kategori')
+        ->get();
 
-        // Artikel paling sering dibaca (top 4)
         $topArtikel = KnowledgeBase::where('status_publikasi', 'published')
             ->orderByDesc('total_views')
             ->limit(4)
             ->get();
 
-        // Hasil pencarian global
         $hasilCari = collect();
         if ($search) {
             $hasilCari = KnowledgeBase::where('status_publikasi', 'published')
                 ->where(fn($q) =>
                     $q->where('nama_artikel_sop', 'like', "%{$search}%")
                       ->orWhere('deskripsi_singkat', 'like', "%{$search}%")
+                      ->orWhereHas('tags', fn($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
                 )
-                ->with('kategori')
+                ->with('kategoriArtikel', 'tags')
                 ->limit(20)
                 ->get();
         }
@@ -45,16 +46,17 @@ class BantuanController extends Controller
 
     public function kategori(string $id, Request $request)
     {
-        $kategori = Kategori::findOrFail($id);
+        $kategori = KategoriArtikel::findOrFail($id);
         $search   = $request->query('search', '');
 
-        $query = KnowledgeBase::where('kategori_id', $id)
+        $query = KnowledgeBase::where('kategori_artikel_id', $id)
             ->where('status_publikasi', 'published');
 
         if ($search) {
             $query->where(fn($q) =>
                 $q->where('nama_artikel_sop', 'like', "%{$search}%")
                   ->orWhere('deskripsi_singkat', 'like', "%{$search}%")
+                  ->orWhereHas('tags', fn($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
             );
         }
 
@@ -66,13 +68,11 @@ class BantuanController extends Controller
     public function artikel(string $id)
     {
         $artikel = KnowledgeBase::where('status_publikasi', 'published')
-            ->with('kategori')
+            ->with('kategoriArtikel')
             ->findOrFail($id);
 
-        // Increment view counter
         $artikel->increment('total_views');
 
-        // Parse headings dari isi_konten untuk daftar isi
         $toc = [];
         preg_match_all('/<h([1-3])[^>]*>(.*?)<\/h[1-3]>/i', $artikel->isi_konten, $matches, PREG_SET_ORDER);
         foreach ($matches as $i => $m) {
@@ -83,7 +83,6 @@ class BantuanController extends Controller
             ];
         }
 
-        // Tambahkan id ke setiap heading dalam konten
         $konten = preg_replace_callback(
             '/<h([1-3])([^>]*)>(.*?)<\/h[1-3]>/i',
             function ($m) use (&$i) {
@@ -94,14 +93,12 @@ class BantuanController extends Controller
             $artikel->isi_konten
         );
 
-        // Artikel terkait (kategori sama, bukan artikel ini)
-        $terkait = KnowledgeBase::where('kategori_id', $artikel->kategori_id)
+        $terkait = KnowledgeBase::where('kategori_artikel_id', $artikel->kategori_artikel_id)
             ->where('id', '!=', $artikel->id)
             ->where('status_publikasi', 'published')
             ->limit(4)
             ->get();
 
-        // Rating milik user yang sedang login untuk artikel ini
         $myRating = KnowledgeBaseRating::where('knowledge_base_id', $artikel->id)
             ->where('user_id', Auth::id())
             ->value('rating');
@@ -109,10 +106,6 @@ class BantuanController extends Controller
         return view('opd.bantuan.artikel', compact('artikel', 'konten', 'toc', 'terkait', 'myRating'));
     }
 
-    /**
-     * OPD memberi / mengubah rating artikel KB.
-     * 1 user = 1 rating per artikel (upsert).
-     */
     public function rating(Request $request, string $id)
     {
         $request->validate(['rating' => 'required|integer|min:1|max:5']);
@@ -126,7 +119,6 @@ class BantuanController extends Controller
             ->first();
 
         if ($existing) {
-            // Update: hitung ulang rata-rata dengan mengganti nilai lama
             $oldValue  = $existing->rating;
             $newRating = round(
                 (($artikel->rating ?? 0) * $artikel->rating_count - $oldValue + $newValue)
@@ -134,10 +126,8 @@ class BantuanController extends Controller
                 1
             );
             $existing->update(['rating' => $newValue]);
-
             $artikel->update(['rating' => $newRating]);
         } else {
-            // Insert baru
             KnowledgeBaseRating::create([
                 'knowledge_base_id' => $id,
                 'user_id'           => $userId,

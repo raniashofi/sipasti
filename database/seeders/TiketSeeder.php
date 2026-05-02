@@ -11,7 +11,6 @@ class TiketSeeder extends Seeder
     public function run(): void
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-        DB::table('riwayat_transfer_tiket')->truncate();
         DB::table('status_tiket')->truncate();
         DB::table('tiket')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
@@ -26,7 +25,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Selama 3 hari terakhir koneksi internet di lantai 3 gedung kantor sangat tidak stabil, sering putus dan kecepatan sangat lambat sehingga mengganggu pekerjaan.',
                 'lokasi'                => 'Gedung Kantor Lantai 3, Ruang Pelayanan',
                 'spesifikasi_perangkat' => 'Router TP-Link TL-ER6120, Switch Cisco SG110-16HP',
-                'prioritas'             => 'sedang',
                 'status_tiket'          => 'verifikasi_admin',
                 'created_at'            => '2026-04-01 08:15:00',
             ],
@@ -38,7 +36,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Komputer di meja staf administrasi tidak menampilkan gambar sama sekali. Lampu power menyala tapi layar tetap hitam. Sudah dicoba ganti kabel monitor namun hasilnya sama.',
                 'lokasi'                => 'Ruang Administrasi, Meja 4',
                 'spesifikasi_perangkat' => 'PC Dell OptiPlex 3070, Monitor Samsung 22 inch, RAM 8GB DDR4',
-                'prioritas'             => 'tinggi',
                 'status_tiket'          => 'panduan_remote',
                 'created_at'            => '2026-04-02 09:30:00',
             ],
@@ -50,7 +47,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Staf keuangan tidak bisa masuk ke aplikasi SIMDA sejak kemarin pagi. Muncul pesan error "Koneksi database gagal" padahal internet normal. Sudah dicoba restart aplikasi dan restart komputer tapi tetap sama.',
                 'lokasi'                => 'Ruang Keuangan',
                 'spesifikasi_perangkat' => 'PC Lenovo ThinkCentre M720, Windows 10 Pro, SIMDA v2.14.7',
-                'prioritas'             => 'rendah',
                 'status_tiket'          => 'perlu_revisi',
                 'created_at'            => '2026-04-03 10:00:00',
             ],
@@ -62,7 +58,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Printer di ruang kepala bidang tidak bisa digunakan. Komputer tidak mendeteksi printer meski kabel USB sudah terhubung. Driver sudah diinstall ulang tapi tetap tidak terdeteksi.',
                 'lokasi'                => 'Ruang Kepala Bidang TIK',
                 'spesifikasi_perangkat' => 'Printer HP LaserJet Pro MFP M130fw, PC HP EliteDesk 800 G4, Windows 10',
-                'prioritas'             => 'sedang',
                 'status_tiket'          => 'perbaikan_teknis',
                 'created_at'            => '2026-04-04 13:20:00',
             ],
@@ -74,7 +69,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Laptop milik kepala seksi tiba-tiba mati saat digunakan dan tidak bisa dinyalakan kembali. Sudah dicoba charger berbeda tapi tidak ada respon sama sekali. Lampu indikator tidak menyala.',
                 'lokasi'                => 'Ruang Kepala Seksi Infrastruktur',
                 'spesifikasi_perangkat' => 'Laptop ASUS VivoBook 15, Intel Core i5-1135G7, RAM 8GB, SSD 512GB',
-                'prioritas'             => 'tinggi',
                 'status_tiket'          => 'rusak_berat',
                 'created_at'            => '2026-04-05 08:45:00',
             ],
@@ -86,7 +80,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Seluruh staf tidak bisa mengakses email dinas (@padang.go.id) sejak pagi hari. Halaman login tidak bisa dibuka dan muncul pesan timeout. Email personal bisa diakses normal.',
                 'lokasi'                => 'Seluruh Ruangan Kantor',
                 'spesifikasi_perangkat' => 'Server Email Zimbra, Semua unit komputer kantor',
-                'prioritas'             => 'rendah',
                 'status_tiket'          => 'selesai',
                 'created_at'            => '2026-04-06 07:30:00',
             ],
@@ -98,7 +91,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Membutuhkan instalasi Microsoft Office 365 berlisensi pada 5 unit komputer baru yang baru diterima dari pengadaan. Komputer masih belum terinstal software apapun selain Windows.',
                 'lokasi'                => 'Ruang Pelayanan Informasi',
                 'spesifikasi_perangkat' => '5 unit PC Acer Veriton ES2710G, Windows 11 Pro, RAM 4GB, HDD 1TB',
-                'prioritas'             => 'sedang',
                 'status_tiket'          => 'verifikasi_admin',
                 'created_at'            => '2026-04-07 14:00:00',
             ],
@@ -110,7 +102,6 @@ class TiketSeeder extends Seeder
                 'detail_masalah'        => 'Komputer staf bagian kepegawaian menunjukkan perilaku aneh: muncul iklan tiba-tiba, performa sangat lambat, dan ada file yang berubah ekstensi menjadi .encrypted. Khawatir ada data penting yang terdampak.',
                 'lokasi'                => 'Ruang Kepegawaian, Meja 2',
                 'spesifikasi_perangkat' => 'PC Dell Inspiron 3471, Windows 10, Antivirus Avast Free (kadaluarsa)',
-                'prioritas'             => 'tinggi',
                 'status_tiket'          => 'perbaikan_teknis',
                 'created_at'            => '2026-04-08 09:10:00',
             ],
