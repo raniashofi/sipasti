@@ -63,8 +63,6 @@
         .btn-detail:hover { background: #B45309; }
         .btn-konfirm{ background: #059669; color: #fff; }
         .btn-konfirm:hover{ background: #047857; }
-        .btn-unduh  { background: #DC2626; color: #fff; }
-        .btn-unduh:hover  { background: #B91C1C; }
 
         /* Search input */
         .search-input {
@@ -246,15 +244,16 @@
                         'verifikasi_admin'  => ['label' => 'Verifikasi Admin',  'cls' => 'badge-verifikasi'],
                         'panduan_remote'    => ['label' => 'Panduan Remote',    'cls' => 'badge-panduan'],
                         'perbaikan_teknis'  => ['label' => 'Perbaikan Teknis',  'cls' => 'badge-perbaikan'],
-                        'selesai'           => ['label' => 'Selesai',           'cls' => 'badge-selesai'],
+                        'selesai',
+                        'tiket_ditutup'     => ['label' => 'Selesai',           'cls' => 'badge-selesai'],
                         'rusak_berat'       => ['label' => 'Rusak Berat',       'cls' => 'badge-rusak'],
                         'perlu_revisi'      => ['label' => 'Perlu Revisi',      'cls' => 'badge-revisi'],
+                        'dibuka_kembali'    => ['label' => 'Dibuka Kembali',    'cls' => 'badge-perbaikan'],
                         default             => ['label' => 'Menunggu',          'cls' => 'badge-default'],
                     };
 
                     $showChat   = in_array($status, ['panduan_remote', 'perbaikan_teknis']);
-                    $showKonfirm= $status === 'selesai';
-                    $showUnduh  = $status === 'rusak_berat';
+                    $showKonfirm= in_array($status, ['selesai', 'tiket_ditutup']) && $tiket->penilaian === null;
                     @endphp
 
                     <tr class="hover:bg-blue-50/20 transition-colors">
@@ -306,24 +305,13 @@
 
                                 @if($showKonfirm)
                                 <button type="button"
-                                        onclick="konfirmasiSelesai('{{ $tiket->id }}')"
+                                        onclick="bukaModalRating('{{ $tiket->id }}')"
                                         class="btn-action btn-konfirm">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
-                                    Konfirm
+                                    Selesai
                                 </button>
-                                @endif
-
-                                @if($showUnduh)
-                                <a href="{{ $tiket->latestStatus?->file_rekomendasi ? Storage::url($tiket->latestStatus->file_rekomendasi) : '#' }}"
-                                   target="_blank"
-                                   class="btn-action btn-unduh">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m.75 12l3 3m0 0l3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
-                                    </svg>
-                                    Unduh
-                                </a>
                                 @endif
 
                                 <a href="{{ route('opd.tiket.show', $tiket->id) }}"
@@ -429,56 +417,99 @@
     &copy; {{ date('Y') }} SiPasti &mdash; Dinas Komunikasi dan Informatika Kota Padang
 </footer>
 
-{{-- Konfirmasi selesai modal --}}
-<div x-data="konfirmModal()" x-show="open" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+{{-- Modal Rating Tutup Tiket --}}
+<div x-data="ratingModal()" x-show="open"
      x-transition:enter="transition ease-out duration-200"
      x-transition:enter-start="opacity-0"
      x-transition:enter-end="opacity-100"
-     style="display:none;">
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="open = false"></div>
-    <div class="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full p-7"
+     x-transition:leave="transition ease-in duration-150"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
+     @click.self="open = false"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4"
+     style="background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:none;">
+
+    <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 flex flex-col overflow-hidden"
+         @click.stop
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0 scale-95"
          x-transition:enter-end="opacity-100 scale-100">
-        <div class="flex items-center gap-3 mb-5">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
-            <div>
-                <h3 class="text-base font-bold text-gray-900">Konfirmasi Selesai</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Pastikan masalah Anda sudah benar-benar teratasi</p>
+
+        {{-- Header --}}
+        <div class="px-6 py-4 text-white shrink-0" style="background:#059669;border-radius:1.5rem 1.5rem 0 0;">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(255,255,255,.2);">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Konfirmasi & Penilaian Layanan</p>
+                        <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.75);" x-text="'Tiket #' + tiketId"></p>
+                    </div>
+                </div>
+                <button @click="open = false" class="hover:text-white/60 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
         </div>
-        <p class="text-sm text-gray-600 mb-6 leading-relaxed">
-            Dengan mengkonfirmasi, tiket ini akan ditutup dan dianggap selesai. Tindakan ini tidak dapat dibatalkan.
-        </p>
-        <form :action="'/opd/pengaduan-saya/' + tiketId + '/konfirm'" method="POST" class="flex gap-3">
-            @csrf
-            <button type="button" @click="open = false"
-                    class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
-                Batal
-            </button>
-            <button type="submit"
-                    class="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
-                Ya, Konfirmasi
-            </button>
-        </form>
+
+        {{-- Body --}}
+        <div class="px-6 py-5 space-y-5">
+            <p class="text-sm text-gray-600 text-center leading-relaxed">
+                Terima kasih! Tiket akan ditutup. Seberapa puas Anda dengan
+                kecepatan dan hasil perbaikan dari tim kami?
+            </p>
+
+            {{-- Bintang --}}
+            <div class="flex justify-center gap-2">
+                <template x-for="i in 5" :key="i">
+                    <button type="button"
+                            @click="rating = i"
+                            @mouseenter="ratingHover = i"
+                            @mouseleave="ratingHover = 0"
+                            class="text-4xl transition-transform hover:scale-110 focus:outline-none">
+                        <span :class="(ratingHover || rating) >= i ? 'text-yellow-400' : 'text-gray-200'">★</span>
+                    </button>
+                </template>
+            </div>
+
+            <form :action="'/opd/pengaduan-saya/' + tiketId + '/konfirm'" method="POST">
+                @csrf
+                <input type="hidden" name="penilaian" :value="rating">
+                <button type="submit"
+                        :disabled="rating === 0"
+                        :class="rating === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-95'"
+                        class="w-full py-3 rounded-xl text-sm font-bold text-white transition flex items-center justify-center gap-2"
+                        style="background:#059669;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                    </svg>
+                    KIRIM & TUTUP TIKET
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
 <script>
-function konfirmasiSelesai(id) {
-    window.dispatchEvent(new CustomEvent('open-konfirm', { detail: { id } }));
+function bukaModalRating(id) {
+    window.dispatchEvent(new CustomEvent('open-rating', { detail: { id } }));
 }
 document.addEventListener('alpine:init', () => {
-    Alpine.data('konfirmModal', () => ({
+    Alpine.data('ratingModal', () => ({
         open: false,
         tiketId: '',
+        rating: 0,
+        ratingHover: 0,
         init() {
-            window.addEventListener('open-konfirm', (e) => {
+            window.addEventListener('open-rating', (e) => {
                 this.tiketId = e.detail.id;
+                this.rating = 0;
+                this.ratingHover = 0;
                 this.open = true;
             });
         }

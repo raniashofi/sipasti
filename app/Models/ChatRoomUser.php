@@ -11,7 +11,12 @@ class ChatRoomUser extends Model
     protected $fillable = [
         'room_id',
         'user_id',
-        'role_di_room'
+        'role_di_room',
+        'last_read_at',
+    ];
+
+    protected $casts = [
+        'last_read_at' => 'datetime',
     ];
 
     public $timestamps = false;

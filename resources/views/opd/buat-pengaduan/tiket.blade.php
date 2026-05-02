@@ -119,7 +119,13 @@
                     </div>
                     @endif
 
-
+                    @php
+                        $r = $rekomendasi ?? 'admin';
+                        $pStyle = match($r) {
+                            'eskalasi' => ['bg'=>'#FEE2E2','text'=>'#DC2626','label'=>'Perlu Dieskalasi ke Tim Teknis'],
+                            default    => ['bg'=>'#DBEAFE','text'=>'#1D4ED8','label'=>'Dapat Ditangani Admin'],
+                        };
+                    @endphp
                 </div>
             </div>
 
@@ -156,12 +162,35 @@
 
             {{-- Form body --}}
             <form method="POST" action="{{ route('opd.diagnosis.tiket.store') }}" enctype="multipart/form-data"
-                x-data="{ fileName: '', imagePreview: null }" class="px-7 py-6">
+                x-data="{
+                    photos: [],
+                    addFiles(files) {
+                        for (const file of files) {
+                            if (this.photos.length >= 5) { alert('Maksimal 5 foto yang dapat diunggah.'); break; }
+                            if (file.size > 5 * 1024 * 1024) { alert('File \'' + file.name + '\' melebihi batas 5 MB, dilewati.'); continue; }
+                            this.photos.push({ file, name: file.name, preview: URL.createObjectURL(file) });
+                        }
+                        this.rebuildInput();
+                    },
+                    removePhoto(i) {
+                        URL.revokeObjectURL(this.photos[i].preview);
+                        this.photos.splice(i, 1);
+                        this.rebuildInput();
+                    },
+                    rebuildInput() {
+                        const dt = new DataTransfer();
+                        this.photos.forEach(p => dt.items.add(p.file));
+                        this.$refs.mainInput.files = dt.files;
+                    }
+                }" class="px-7 py-6">
                 @csrf
-                <input type="hidden" name="kategori_id"        value="{{ $kategoriId }}">
-                <input type="hidden" name="kategori_nama"      value="{{ $kategoriNama }}">
-                <input type="hidden" name="kategori_deskripsi" value="{{ $kategoriDeskripsi ?? '' }}">
-                <input type="hidden" name="kb_id"              value="{{ $kbId ?? '' }}">
+                <input type="hidden" name="kategori_id"              value="{{ $kategoriId }}">
+                <input type="hidden" name="kategori_nama"            value="{{ $kategoriNama }}">
+                <input type="hidden" name="kategori_deskripsi"       value="{{ $kategoriDeskripsi ?? '' }}">
+                <input type="hidden" name="kb_id"                    value="{{ $kbId ?? '' }}">
+                <input type="hidden" name="sop_internal_id"          value="{{ $sopInternalId ?? '' }}">
+                <input type="hidden" name="bidang_id"                value="{{ $bidangId ?? '' }}">
+                <input type="hidden" name="rekomendasi_penanganan"   value="{{ $rekomendasi ?? '' }}">
 
                 <div class="space-y-5">
 
@@ -214,59 +243,101 @@
                                   placeholder="Contoh: Gedung B, Lantai 2, Ruang Rapat Utama">{{ old('lokasi') }}</textarea>
                     </div>
 
-                    {{-- Upload --}}
-                    {{-- Upload --}}
+                    {{-- Upload Multi Foto --}}
                     <div>
-                        <label class="field-label">Unggah Foto Bukti</label>
-                        <div class="flex flex-col gap-4">
+                        <label class="field-label">
+                            Unggah Foto Bukti
+                            <span class="text-xs font-normal text-gray-400 ml-1">(maks. 5 foto, maks. 5 MB per foto)</span>
+                        </label>
 
-                            <div class="flex items-center gap-4">
-                                <label class="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200
-                                             hover:border-[#01458E] rounded-xl cursor-pointer transition-colors shrink-0">
-                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
-                                    </svg>
+                        {{-- Input tersembunyi sebagai target DataTransfer --}}
+                        <input type="file" name="foto_bukti[]" multiple x-ref="mainInput" class="sr-only" tabindex="-1">
 
-                                    {{-- Teks berubah otomatis berdasarkan fileName --}}
-                                    <span class="text-sm font-semibold text-gray-700" x-text="fileName ? 'Ganti File' : 'Pilih File'"></span>
+                        {{-- Tombol aksi --}}
+                        <div class="flex gap-2 mb-3">
+                            {{-- Pilih dari galeri --}}
+                            <label :class="photos.length >= 5 ? 'opacity-40 pointer-events-none' : 'hover:border-[#01458E] cursor-pointer'"
+                                   class="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl transition-colors shrink-0">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-gray-700">Pilih dari Galeri</span>
+                                <input type="file" accept="image/jpeg,image/png,image/jpg" multiple class="sr-only"
+                                       @change="addFiles($event.target.files); $event.target.value = ''">
+                            </label>
 
-                                    <input type="file" name="foto_bukti" accept="image/jpeg,image/png,image/jpg"
-                                           class="hidden"
-                                           @change="
-                                                const file = $event.target.files[0];
-                                                if (file) {
-                                                    fileName = file.name;
-                                                    imagePreview = URL.createObjectURL(file);
-                                                } else {
-                                                    fileName = '';
-                                                    imagePreview = null;
-                                                }
-                                           ">
-                                </label>
-                                <div>
-                                    <p x-show="!fileName" class="text-sm font-medium text-[#01458E]">Belum ada file dipilih</p>
-                                    <p x-show="fileName"  class="text-sm font-medium text-gray-700 max-w-[180px] truncate" x-text="fileName"></p>
-                                    <p class="text-[11px] text-gray-400 mt-0.5">JPG, JPEG, PNG — Maks. 10 MB</p>
-                                </div>
-                            </div>
-
-                            {{-- Preview Gambar --}}
-                            <div x-show="imagePreview" class="relative mt-2" style="display: none;">
-                                <p class="text-xs text-gray-500 mb-2 font-medium">Pratinjau Gambar:</p>
-                                <div class="relative inline-block">
-                                    <img :src="imagePreview" alt="Preview Bukti" class="h-32 w-auto object-cover rounded-xl border-2 border-gray-100 shadow-sm">
-
-                                    {{-- Tombol hapus preview (Opsional, tapi bikin UI makin keren) --}}
-                                    <button type="button" @click="fileName = ''; imagePreview = null; $refs.fileInput.value = ''"
-                                            class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                            </div>
-
+                            {{-- Ambil foto dengan kamera --}}
+                            <label :class="photos.length >= 5 ? 'opacity-40 pointer-events-none' : 'hover:border-[#01458E] cursor-pointer'"
+                                   class="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl transition-colors shrink-0">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+                                </svg>
+                                <span class="text-sm font-semibold text-gray-700">Ambil Foto</span>
+                                <input type="file" accept="image/jpeg,image/png,image/jpg" capture="environment" class="sr-only"
+                                       @change="addFiles($event.target.files); $event.target.value = ''">
+                            </label>
                         </div>
+
+                        {{-- Penghitung foto --}}
+                        <p x-show="photos.length > 0"
+                           class="text-[11px] mb-2"
+                           :class="photos.length >= 5 ? 'text-amber-500 font-semibold' : 'text-gray-400'"
+                           x-text="photos.length + '/5 foto dipilih' + (photos.length >= 5 ? ' — batas maksimal tercapai' : '')"></p>
+
+                        {{-- Grid preview --}}
+                        <template x-if="photos.length > 0">
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                <template x-for="(p, i) in photos" :key="i">
+                                    <div class="relative group aspect-square">
+                                        <img :src="p.preview" :alt="'Foto ' + (i+1)"
+                                             class="w-full h-full object-cover rounded-xl border border-gray-200 shadow-sm">
+                                        {{-- Nomor urut --}}
+                                        <span class="absolute bottom-1 left-1.5 text-[9px] bg-black/50 text-white px-1.5 py-0.5 rounded-md font-bold"
+                                              x-text="i + 1"></span>
+                                        {{-- Hapus --}}
+                                        <button type="button" @click="removePhoto(i)"
+                                                class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center shadow
+                                                       opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
+                                            <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+
+                                {{-- Slot tambah (muncul hanya bila < 5 foto) --}}
+                                <template x-if="photos.length < 5">
+                                    <label class="aspect-square border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center
+                                                  cursor-pointer hover:border-[#01458E] hover:bg-blue-50 transition-colors">
+                                        <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                        </svg>
+                                        <span class="text-[10px] text-gray-400 mt-1">Tambah</span>
+                                        <input type="file" accept="image/jpeg,image/png,image/jpg" multiple class="sr-only"
+                                               @change="addFiles($event.target.files); $event.target.value = ''">
+                                    </label>
+                                </template>
+                            </div>
+                        </template>
+
+                        {{-- Empty state --}}
+                        <template x-if="photos.length === 0">
+                            <div class="border-2 border-dashed border-gray-200 rounded-xl px-6 py-8 flex flex-col items-center gap-2 bg-gray-50">
+                                <svg class="w-10 h-10 text-gray-200" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                                </svg>
+                                <p class="text-sm text-gray-400">Belum ada foto yang dipilih</p>
+                                <p class="text-[11px] text-gray-300">JPG, JPEG, PNG — Maks. 5 MB per foto</p>
+                            </div>
+                        </template>
+
+                        @error('foto_bukti')
+                        <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
+                        @enderror
+                        @error('foto_bukti.*')
+                        <p class="text-xs text-red-500 mt-1.5">{{ $message }}</p>
+                        @enderror
                     </div>
 
                 </div>

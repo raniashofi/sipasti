@@ -7,11 +7,12 @@ use App\Models\ActivityLog;
 use App\Models\AdminHelpdesk;
 use App\Models\Bidang;
 use App\Models\Opd;
-use App\Models\RiwayatTransferTiket;
 use App\Models\StatusTiket;
 use App\Models\Tiket;
 use App\Models\TimTeknis;
 use App\Models\TiketTeknisi;
+use App\Notifications\StatusTiketNotification;
+use App\Notifications\TugasBaruNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -39,69 +40,92 @@ class ManajemenTiketController extends Controller
 
     /**
      * Cek apakah admin bisa menerima tiket:
-     * tiket harus punya kb_id → kb.kategori_id → kategori.bidang_id == admin.bidang_id
+     * tiket harus punya kategori_id → kategori_sistem.bidang_id == admin.bidang_id
      */
     private function bisaTerima(Tiket $tiket, AdminHelpdesk $admin): bool
     {
-        if (! $tiket->kb_id || ! $admin->bidang_id) {
+        if (! $admin->bidang_id) {
             return false;
         }
 
-        // Traversal otoritatif: KB → kategori → bidang
-        $kb = $tiket->relationLoaded('kb') ? $tiket->kb : $tiket->load('kb.kategori')->kb;
-
-        if (! $kb || ! $kb->kategori_id) {
-            return false;
+        if ($tiket->bidang_id) {
+            return $tiket->bidang_id === $admin->bidang_id;
         }
 
-        $kbKategori = $kb->relationLoaded('kategori') ? $kb->kategori : $kb->load('kategori')->kategori;
-
-        if (! $kbKategori || ! $kbKategori->bidang_id) {
-            return false;
-        }
-
-        return $kbKategori->bidang_id === $admin->bidang_id;
+        return false;
     }
 
     // ─── Menunggu Verifikasi ───────────────────────────────────────────────
     public function menungguVerif(Request $request)
     {
-        $admin = $this->adminProfile();
+        $admin          = $this->adminProfile();
+        $prefixKembali  = '[Dikembalikan oleh Tim Teknis] ';
+        $prefixTransfer = '[Transfer ke ';
 
-        $query = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus'])
-            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin'));
+        $applyFilters = function ($q) use ($request) {
+            if ($request->filled('opd_id')) $q->where('opd_id', $request->opd_id);
+            if ($request->filled('rekomendasi_penanganan')) {
+                $q->where('rekomendasi_penanganan', $request->rekomendasi_penanganan);
+            }
+            if ($request->filled('search')) {
+                $s = $request->search;
+                $q->where(fn($q2) => $q2->where('id', 'like', "%$s%")->orWhere('subjek_masalah', 'like', "%$s%"));
+            }
+            return $q;
+        };
 
-        // Tampilkan hanya tiket yang:
-        // 1. Memiliki KB (kb_id NOT NULL)
-        // 2. Bidang dari kategori KB sesuai dengan bidang admin
+        // 1. Tiket baru dari OPD: admin_id null, bidang sesuai, bukan tiket transfer
+        $queryBaru = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'solutionNode'])
+            ->whereNull('admin_id')
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
+                ->where(fn($q2) => $q2->whereNull('catatan')->orWhere('catatan', 'not like', '[Transfer ke %]')));
         if ($admin && $admin->bidang_id) {
-            $query->whereNotNull('kb_id')
-                  ->whereHas('kb.kategori', fn($q2) => $q2->where('bidang_id', $admin->bidang_id));
+            $queryBaru->whereHas('kategori', fn($q) => $q->where('bidang_id', $admin->bidang_id));
         }
+        $applyFilters($queryBaru);
 
-        if ($request->filled('opd_id')) {
-            $query->where('opd_id', $request->opd_id);
-        }
-        if ($request->filled('prioritas')) {
-            $query->where('prioritas', $request->prioritas);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(fn($q) => $q->where('id', 'like', "%$search%")
-                ->orWhere('subjek_masalah', 'like', "%$search%"));
-        }
+        // 2. Tiket ditransfer masuk ke bidang admin ini
+        $queryTransfer = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'solutionNode'])
+            ->whereNull('admin_id')
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
+                ->where('catatan', 'like', $prefixTransfer . ($admin?->bidang_id ?? '') . ']%'));
+        $applyFilters($queryTransfer);
 
-        $tikets = $query->latest()->get()->map(function ($tiket) use ($admin) {
-            $tiket->can_terima = $admin ? $this->bisaTerima($tiket, $admin) : false;
+        // 3. Tiket dikembalikan teknisi: masih milik admin ini
+        $queryKembali = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'solutionNode'])
+            ->where('admin_id', $admin?->id)
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
+                ->where('catatan', 'like', $prefixKembali . '%'));
+        $applyFilters($queryKembali);
+
+        $mapTiket = function ($tiket) use ($admin, $prefixKembali) {
+            $tiket->can_terima        = $admin ? $this->bisaTerima($tiket, $admin) : false;
+            $catatan                  = $tiket->latestStatus?->catatan ?? '';
+            $tiket->dikembalikan      = str_starts_with($catatan, $prefixKembali);
+            $tiket->alasan_kembalikan = $tiket->dikembalikan ? substr($catatan, strlen($prefixKembali)) : null;
             return $tiket;
-        });
+        };
+
+        $tiketsVerif = $queryBaru->latest()->get()
+            ->merge($queryTransfer->latest()->get())
+            ->map($mapTiket)
+            ->sortByDesc(fn($t) => $t->rekomendasi_penanganan === 'eskalasi' ? 1 : 0)
+            ->values();
+
+        $tiketsDikembalikan = $queryKembali->latest()->get()
+            ->map($mapTiket)
+            ->values();
 
         $opds     = Opd::orderBy('nama_opd')->get();
         $bidangs  = Bidang::all();
-        $teknisis = TimTeknis::with('bidang')->where('status_teknisi', 'tersedia')->get();
+        $teknisis = TimTeknis::with('bidang')
+            ->withCount(['tiketTeknisi as tiket_aktif_count' => fn($q) => $q->where('status_tugas', 'aktif')])
+            ->where('status_teknisi', 'online')
+            ->orderBy('nama_lengkap')
+            ->get();
 
         return view('admin_helpdesk.manajemen-tiket.menunggu-verif', compact(
-            'tikets', 'opds', 'bidangs', 'teknisis', 'admin'
+            'tiketsVerif', 'tiketsDikembalikan', 'opds', 'bidangs', 'teknisis', 'admin'
         ));
     }
 
@@ -119,12 +143,21 @@ class ManajemenTiketController extends Controller
         $tiket->update(['admin_id' => $admin->id]);
 
         StatusTiket::create([
-            'id'          => 'STS-' . strtoupper(Str::random(10)),
-            'tiket_id'    => $tiket->id,
-            'status_tiket'=> 'panduan_remote',
+            'id'           => 'STS-' . strtoupper(Str::random(10)),
+            'tiket_id'     => $tiket->id,
+            'status_tiket' => 'panduan_remote',
             'catatan'     => 'Tiket diterima dan diproses oleh admin helpdesk. OPD akan dihubungi via panduan remote (chat).',
             'created_at'  => now(),
         ]);
+
+        // Notifikasi ke OPD bahwa tiket sudah diverifikasi
+        $tiket->load('opd.user');
+        $tiket->opd?->user?->notify(new StatusTiketNotification(
+            kodeTiket  : $tiket->id,
+            status     : 'panduan_remote',
+            keterangan : 'Tiket Anda telah diverifikasi dan admin helpdesk siap memberikan panduan remote.',
+            url        : route('opd.tiket.show', $tiket->id),
+        ));
 
         $this->logAktivitas('approve', "Menerima tiket #{$tiket->id} — {$tiket->subjek_masalah}", 'tiket', $tiket->id);
 
@@ -146,6 +179,15 @@ class ManajemenTiketController extends Controller
             'created_at'   => now(),
         ]);
 
+        // Notifikasi ke OPD bahwa tiket perlu direvisi
+        $tiket->load('opd.user');
+        $tiket->opd?->user?->notify(new StatusTiketNotification(
+            kodeTiket  : $tiket->id,
+            status     : 'diverifikasi',
+            keterangan : 'Tiket Anda perlu direvisi: ' . $request->alasan_revisi,
+            url        : route('opd.tiket.edit', $tiket->id),
+        ));
+
         $this->logAktivitas('reject', "Meminta revisi tiket #{$tiket->id} — {$request->alasan_revisi}", 'tiket', $tiket->id);
 
         return back()->with('success', "Permintaan revisi untuk tiket #{$tiket->id} berhasil dikirim.");
@@ -159,19 +201,20 @@ class ManajemenTiketController extends Controller
         $admin = $this->adminProfile();
         $tiket = Tiket::findOrFail($id);
 
-        RiwayatTransferTiket::create([
-            'tiket_id'          => $tiket->id,
-            'pengirim_admin_id' => $admin?->id,
-            'penerima_admin_id' => null,
-            'penerima_bidang_id'=> $request->bidang_id,
-            'alasan_transfer'   => $request->instruksi ?? null,
-            'waktu_transfer'    => now(),
+        $instruksi = $request->instruksi ?? 'Dialihkan oleh admin helpdesk.';
+
+        StatusTiket::create([
+            'id'           => 'STS-' . strtoupper(Str::random(10)),
+            'tiket_id'     => $tiket->id,
+            'status_tiket' => 'verifikasi_admin',
+            'catatan'      => '[Transfer ke ' . $request->bidang_id . '] ' . $instruksi,
+            'created_at'   => now(),
         ]);
 
-        // Lepas kepemilikan admin agar bisa diklaim bidang tujuan
+        // Lepas kepemilikan agar tiket muncul di menunggu verif admin bidang tujuan
         $tiket->update(['admin_id' => null]);
 
-        $this->logAktivitas('transfer', "Transfer tiket #{$tiket->id} ke bidang {$request->bidang_id}", 'tiket', $tiket->id);
+        $this->logAktivitas('update', "Transfer tiket #{$tiket->id} ke bidang {$request->bidang_id} — {$instruksi}", 'tiket', $tiket->id);
 
         return back()->with('success', "Tiket #{$tiket->id} berhasil ditransfer ke bidang tujuan.");
     }
@@ -180,8 +223,9 @@ class ManajemenTiketController extends Controller
     public function eskalasi(Request $request, string $id)
     {
         $request->validate([
-            'teknisi_utama_id'     => 'required|string|exists:tim_teknis,id',
-            'teknisi_pendamping_id'=> 'nullable|string|exists:tim_teknis,id',
+            'teknisi_utama_id'         => 'required|string|exists:tim_teknis,id',
+            'teknisi_pendamping_ids'   => 'nullable|array',
+            'teknisi_pendamping_ids.*' => 'string|exists:tim_teknis,id',
         ]);
 
         $admin = $this->adminProfile();
@@ -200,24 +244,88 @@ class ManajemenTiketController extends Controller
         TiketTeknisi::create([
             'tiket_id'         => $tiket->id,
             'teknis_id'        => $request->teknisi_utama_id,
-            'peran_teknisi'    => 'utama',
+            'peran_teknisi'    => 'teknisi_utama',
             'waktu_ditugaskan' => now(),
-            'status_tugas'     => 'ditugaskan',
+            'status_tugas'     => 'aktif',
         ]);
 
-        if ($request->filled('teknisi_pendamping_id')) {
-            TiketTeknisi::create([
-                'tiket_id'         => $tiket->id,
-                'teknis_id'        => $request->teknisi_pendamping_id,
-                'peran_teknisi'    => 'pendamping',
-                'waktu_ditugaskan' => now(),
-                'status_tugas'     => 'ditugaskan',
-            ]);
+        $pendampingIds = [];
+        if ($request->filled('teknisi_pendamping_ids') && is_array($request->teknisi_pendamping_ids)) {
+            foreach (array_unique($request->teknisi_pendamping_ids) as $pendampingId) {
+                if ($pendampingId !== $request->teknisi_utama_id) {
+                    TiketTeknisi::create([
+                        'tiket_id'         => $tiket->id,
+                        'teknis_id'        => $pendampingId,
+                        'peran_teknisi'    => 'teknisi_pendamping',
+                        'waktu_ditugaskan' => now(),
+                        'status_tugas'     => 'aktif',
+                    ]);
+                    $pendampingIds[] = $pendampingId;
+                }
+            }
         }
+
+        // Notifikasi ke Tim Teknis yang ditugaskan
+        $judulMasalah = $tiket->subjek_masalah;
+        $urlAntrean   = route('tim_teknis.antrean');
+        $allTeknisiIds = array_merge([$request->teknisi_utama_id], $pendampingIds);
+        TimTeknis::with('user')->whereIn('id', $allTeknisiIds)->get()
+            ->each(fn ($t) => $t->user?->notify(new TugasBaruNotification(
+                kodeTiket    : $tiket->id,
+                judulMasalah : $judulMasalah,
+                url          : $urlAntrean,
+            )));
 
         $this->logAktivitas('escalate', "Eskalasi tiket #{$tiket->id} ke tim teknis", 'tiket', $tiket->id);
 
         return back()->with('success', "Tiket #{$tiket->id} berhasil dieskalasi ke Tim Teknis.");
+    }
+
+    // ─── Selesaikan Tiket dari Panduan Remote ────────────────────────────
+    public function selesaiOlehAdmin(Request $request, string $id)
+    {
+        $request->validate(['catatan' => 'nullable|string|max:1000']);
+
+        $admin = $this->adminProfile();
+        $tiket = Tiket::where('admin_id', $admin?->id)
+                      ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'panduan_remote'))
+                      ->findOrFail($id);
+
+        StatusTiket::create([
+            'id'           => 'STS-' . strtoupper(Str::random(10)),
+            'tiket_id'     => $tiket->id,
+            'status_tiket' => 'selesai',
+            'catatan'      => '[Diselesaikan oleh Admin Helpdesk] ' . ($request->catatan ?? 'Tiket berhasil diselesaikan melalui panduan remote.'),
+            'created_at'   => now(),
+        ]);
+
+        // Kasus 2: tiket pernah dibuka kembali lewat jalur panduan remote → langsung tutup
+        $pernahDibukaKembaliRemote = StatusTiket::where('tiket_id', $tiket->id)
+            ->where('status_tiket', 'panduan_remote')
+            ->where('catatan', 'like', '[Dibuka Kembali oleh OPD]%')
+            ->exists();
+        if ($pernahDibukaKembaliRemote) {
+            StatusTiket::create([
+                'id'           => 'STS-' . strtoupper(Str::random(10)),
+                'tiket_id'     => $tiket->id,
+                'status_tiket' => 'tiket_ditutup',
+                'catatan'      => 'Tiket ditutup otomatis setelah diselesaikan kembali oleh Admin Helpdesk.',
+                'created_at'   => now(),
+            ]);
+        }
+
+        // Notifikasi ke OPD bahwa tiket selesai
+        $tiket->load('opd.user');
+        $tiket->opd?->user?->notify(new StatusTiketNotification(
+            kodeTiket  : $tiket->id,
+            status     : 'selesai',
+            keterangan : 'Tiket Anda telah diselesaikan melalui panduan remote oleh admin helpdesk.',
+            url        : route('opd.tiket.show', $tiket->id),
+        ));
+
+        $this->logAktivitas('approve', "Tiket #{$tiket->id} diselesaikan oleh admin helpdesk — {$tiket->subjek_masalah}", 'tiket', $tiket->id);
+
+        return back()->with('success', "Tiket #{$tiket->id} berhasil ditandai selesai.");
     }
 
     // ─── Panduan Remote ───────────────────────────────────────────────────
@@ -225,7 +333,7 @@ class ManajemenTiketController extends Controller
     {
         $admin = $this->adminProfile();
 
-        $query = Tiket::with(['opd', 'kb.kategori', 'kategori', 'latestStatus', 'chatRooms', 'teknisiUtama.timTeknis'])
+        $query = Tiket::with(['opd', 'kategori.bidang', 'latestStatus', 'sopInternal', 'chatRooms', 'teknisiUtama.timTeknis', 'solutionNode'])
             ->where('admin_id', $admin?->id)
             ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'panduan_remote'));
 
@@ -235,9 +343,9 @@ class ManajemenTiketController extends Controller
             $query->where(fn($q) => $q->where('id','like',"%$s%")->orWhere('subjek_masalah','like',"%$s%"));
         }
 
-        $tikets   = $query->latest()->get();
+        $tikets   = $query->latest()->paginate(10);
         $opds     = Opd::orderBy('nama_opd')->get();
-        $teknisis = TimTeknis::with('bidang')->where('status_teknisi', 'tersedia')->get();
+        $teknisis = TimTeknis::with('bidang')->where('status_teknisi', 'online')->orderBy('nama_lengkap')->get();
 
         return view('admin_helpdesk.manajemen-tiket.panduan-remote', compact('tikets','opds','teknisis','admin'));
     }
@@ -247,9 +355,9 @@ class ManajemenTiketController extends Controller
     {
         $admin = $this->adminProfile();
 
-        $query = Tiket::with(['opd', 'kb.kategori', 'kategori', 'latestStatus', 'teknisiUtama.timTeknis'])
+        $query = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'statusTiket', 'teknisiUtama.timTeknis', 'solutionNode'])
             ->where('admin_id', $admin?->id)
-            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'perbaikan_teknis'));
+            ->whereHas('latestStatus', fn($q) => $q->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']));
 
         if ($request->filled('opd_id'))    $query->where('opd_id', $request->opd_id);
         if ($request->filled('kategori_id')) $query->where('kategori_id', $request->kategori_id);
@@ -258,9 +366,9 @@ class ManajemenTiketController extends Controller
             $query->where(fn($q) => $q->where('id','like',"%$s%")->orWhere('subjek_masalah','like',"%$s%"));
         }
 
-        $tikets   = $query->latest()->get();
+        $tikets   = $query->latest()->paginate(10);
         $opds     = Opd::orderBy('nama_opd')->get();
-        $kategori = \App\Models\Kategori::orderBy('nama_kategori')->get();
+        $kategori = \App\Models\KategoriSistem::orderBy('nama_kategori')->get();
 
         return view('admin_helpdesk.manajemen-tiket.distribusi', compact('tikets','opds','kategori','admin'));
     }
@@ -270,14 +378,16 @@ class ManajemenTiketController extends Controller
     {
         $admin = $this->adminProfile();
 
-        $statusSelesai = ['selesai','rusak_berat','dibuka_kembali'];
+        $statusSelesai = ['selesai', 'rusak_berat', 'tiket_ditutup'];
 
-        $query = Tiket::with(['opd', 'kb.kategori', 'kategori', 'latestStatus', 'teknisiUtama.timTeknis'])
+        $query = Tiket::with(['opd', 'kategori', 'latestStatus', 'teknisiUtama.timTeknis', 'solutionNode'])
             ->where('admin_id', $admin?->id)
             ->whereHas('latestStatus', fn($q) => $q->whereIn('status_tiket', $statusSelesai));
 
         if ($request->filled('opd_id'))    $query->where('opd_id', $request->opd_id);
-        if ($request->filled('prioritas')) $query->where('prioritas', $request->prioritas);
+        if ($request->filled('rekomendasi_penanganan')) {
+            $query->where('rekomendasi_penanganan', $request->rekomendasi_penanganan);
+        }
         if ($request->filled('kategori_id')) $query->where('kategori_id', $request->kategori_id);
         if ($request->filled('search')) {
             $s = $request->search;
@@ -286,7 +396,7 @@ class ManajemenTiketController extends Controller
 
         $tikets   = $query->latest()->get();
         $opds     = Opd::orderBy('nama_opd')->get();
-        $kategori = \App\Models\Kategori::orderBy('nama_kategori')->get();
+        $kategori = \App\Models\KategoriSistem::orderBy('nama_kategori')->get();
 
         return view('admin_helpdesk.manajemen-tiket.riwayat', compact('tikets','opds','kategori','admin'));
     }
@@ -294,9 +404,10 @@ class ManajemenTiketController extends Controller
     // ─── Export CSV ───────────────────────────────────────────────────────
     public function exportCsv(Request $request)
     {
-        $tikets = Tiket::with(['opd', 'kategori', 'latestStatus'])
+        $tikets = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'solutionNode'])
             ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin'))
-            ->latest()->get();
+            ->latest()
+            ->paginate(10);
 
         $headers = [
             'Content-Type'        => 'text/csv',
@@ -305,14 +416,18 @@ class ManajemenTiketController extends Controller
 
         $callback = function () use ($tikets) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['ID Tiket', 'OPD', 'Subjek Masalah', 'Kategori', 'Prioritas', 'Waktu Masuk']);
+            fputcsv($handle, ['ID Tiket', 'OPD', 'Subjek Masalah', 'Kategori', 'Rekomendasi Penanganan', 'Waktu Masuk']);
             foreach ($tikets as $t) {
+                $rekomendasiLabel = match($t->rekomendasi_penanganan) {
+                    'eskalasi' => 'Perlu Dieskalasi ke Tim Teknis',
+                    default    => 'Dapat Ditangani Admin',
+                };
                 fputcsv($handle, [
                     $t->id,
                     $t->opd?->nama_opd,
                     $t->subjek_masalah,
                     $t->kategori?->nama_kategori ?? '—',
-                    ucfirst($t->prioritas),
+                    $rekomendasiLabel,
                     $t->created_at?->format('d M Y H:i'),
                 ]);
             }

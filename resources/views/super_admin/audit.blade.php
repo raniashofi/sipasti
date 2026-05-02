@@ -107,13 +107,13 @@
         <div id="auditDrawerBody" style="padding:20px;"></div>
     </div>
 
-    <div class="ml-64 min-h-screen flex flex-col">
+    <div class="ml-0 lg:ml-64 min-h-screen flex flex-col">
 
         {{-- ── Top bar ── --}}
-        <header class="bg-white border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+        <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
             <div>
                 <h1 class="text-lg font-bold text-gray-900">Log Aktivitas & Audit Keamanan</h1>
-                <p class="text-xs text-gray-400 mt-0.5">Rekam jejak semua aktivitas pengguna dalam sistem</p>
+                <p class="text-sm text-gray-400 mt-0.5">Rekam jejak semua aktivitas pengguna dalam sistem</p>
             </div>
             <a href="{{ route('super_admin.audit.export', request()->query()) }}"
                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"

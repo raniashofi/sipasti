@@ -4,7 +4,7 @@ namespace App\Http\Controllers\SuperAdmin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Bidang;
-use App\Models\Kategori;
+use App\Models\KategoriSistem;
 use App\Models\KnowledgeBase;
 use App\Models\NodeDiagnosis;
 use Illuminate\Http\Request;
@@ -22,15 +22,20 @@ class KonfigurasiSistemController extends Controller
 
     public function index()
     {
-        $kategoris = Kategori::with(['bidang', 'nodes.knowledgeBase', 'nodes.nextYa', 'nodes.nextTidak'])
+        $kategoris = KategoriSistem::with(['nodes.knowledgeBase', 'nodes.sopInternal', 'nodes.bidang', 'nodes.nextYa', 'nodes.nextTidak'])
             ->orderBy('nama_kategori')
             ->get();
 
         $bidangs  = Bidang::all();
-        // Hanya artikel OPD yang bisa dipilih sebagai solusi routing
         $articles = KnowledgeBase::where('visibilitas_akses', 'opd')
+            ->where('status_publikasi', 'published')
             ->orderBy('nama_artikel_sop')
-            ->get(['id', 'kategori_id', 'nama_artikel_sop']);
+            ->get(['id', 'kategori_artikel_id', 'nama_artikel_sop']);
+
+        $internalArticles = KnowledgeBase::where('visibilitas_akses', 'internal')
+            ->where('status_publikasi', 'published')
+            ->orderBy('nama_artikel_sop')
+            ->get(['id', 'bidang_id', 'nama_artikel_sop']);
 
         $kategorisData = $kategoris->map(fn($k) => $this->formatKategori($k))->values();
         $bidangsData   = $bidangs->map(fn($b) => [
@@ -38,13 +43,18 @@ class KonfigurasiSistemController extends Controller
             'label' => $this->bidangLabel[$b->nama_bidang] ?? $b->nama_bidang,
         ])->values();
         $articlesData = $articles->map(fn($a) => [
-            'id'          => $a->id,
-            'kategori_id' => $a->kategori_id ?? '',
-            'judul'       => $a->nama_artikel_sop,
+            'id'                  => $a->id,
+            'kategori_artikel_id' => $a->kategori_artikel_id ?? '',
+            'judul'               => $a->nama_artikel_sop,
+        ])->values();
+        $internalArticlesData = $internalArticles->map(fn($a) => [
+            'id'       => $a->id,
+            'bidang_id' => $a->bidang_id ?? '',
+            'judul'    => $a->nama_artikel_sop,
         ])->values();
 
         return view('super_admin.konfigurasiSistem', compact(
-            'kategorisData', 'bidangsData', 'articlesData'
+            'kategorisData', 'bidangsData', 'articlesData', 'internalArticlesData'
         ));
     }
 
@@ -54,16 +64,15 @@ class KonfigurasiSistemController extends Controller
     {
         $request->validate([
             'nama_kategori' => 'required|string|max:255',
-            'bidang_id'     => 'nullable|exists:bidang,id',
+            'icon'          => 'nullable|string|in:' . implode(',', array_keys(config('category_icons.presets', []))),
         ]);
 
-        $k = Kategori::create([
+        $k = KategoriSistem::create([
             'id'            => (string) Str::uuid(),
             'nama_kategori' => $request->nama_kategori,
             'deskripsi'     => $request->deskripsi,
-            'bidang_id'     => $request->bidang_id ?: null,
+            'icon'          => $request->icon ?? 'default',
         ]);
-        $k->load('bidang');
 
         return response()->json($this->formatKategori($k));
     }
@@ -72,42 +81,35 @@ class KonfigurasiSistemController extends Controller
     {
         $request->validate([
             'nama_kategori' => 'required|string|max:255',
-            'bidang_id'     => 'nullable|exists:bidang,id',
+            'icon'          => 'nullable|string|in:' . implode(',', array_keys(config('category_icons.presets', []))),
         ]);
 
-        $k = Kategori::findOrFail($id);
+        $k = KategoriSistem::findOrFail($id);
         $k->update([
             'nama_kategori' => $request->nama_kategori,
             'deskripsi'     => $request->deskripsi,
-            'bidang_id'     => $request->bidang_id ?: null,
+            'icon'          => $request->icon ?? $k->icon ?? 'default',
         ]);
-        $k->load('bidang');
 
         return response()->json([
             'id'            => $k->id,
             'nama_kategori' => $k->nama_kategori ?? '',
             'deskripsi'     => $k->deskripsi ?? '',
-            'bidang_id'     => $k->bidang_id ?? '',
-            'bidang_nama'   => $this->bidangLabel[$k->bidang?->nama_bidang ?? ''] ?? '—',
         ]);
     }
 
     public function destroyKategori($id)
     {
-        // Ambil semua node IDs yang akan dihapus
         $nodeIds = NodeDiagnosis::where('kategori_id', $id)->pluck('id')->toArray();
 
-        // Hapus referensi dari node lain ke nodes yang akan dihapus
         if (!empty($nodeIds)) {
             NodeDiagnosis::whereIn('id_next_ya', $nodeIds)->update(['id_next_ya' => null]);
             NodeDiagnosis::whereIn('id_next_tidak', $nodeIds)->update(['id_next_tidak' => null]);
         }
 
-        // Hapus semua nodes di kategori ini
         NodeDiagnosis::where('kategori_id', $id)->delete();
 
-        // Hapus kategori
-        Kategori::findOrFail($id)->delete();
+        KategoriSistem::findOrFail($id)->delete();
 
         return response()->json(['success' => true]);
     }
@@ -117,25 +119,28 @@ class KonfigurasiSistemController extends Controller
     public function storeNode(Request $request)
     {
         $request->validate([
-            'kategori_id' => 'required|exists:kategori,id',
+            'kategori_id' => 'required|exists:kategori_sistem,id',
             'tipe_node'   => 'required|in:pertanyaan,solusi',
         ]);
+
+        $isSolusi = $request->tipe_node === 'solusi';
 
         $n = NodeDiagnosis::create([
             'id'                => (string) Str::uuid(),
             'kategori_id'       => $request->kategori_id,
             'tipe_node'         => $request->tipe_node,
-            'teks_pertanyaan'   => $request->tipe_node === 'pertanyaan' ? $request->teks_pertanyaan : null,
+            'teks_pertanyaan'   => !$isSolusi ? $request->teks_pertanyaan : null,
             'hint_konteks'      => $request->hint_konteks ?: null,
-            'judul_solusi'      => $request->tipe_node === 'solusi' ? $request->judul_solusi : null,
+            'judul_solusi'      => $isSolusi ? $request->judul_solusi : null,
             'penjelasan_solusi' => $request->penjelasan_solusi ?: null,
-            'prioritas'         => $request->prioritas ?: null,
+            'rekomendasi_penanganan' => $request->rekomendasi_penanganan ?: null,
             'id_next_ya'        => null,
             'id_next_tidak'     => null,
             'kb_id'             => $request->kb_id ?: null,
+            'sop_internal_id'   => $isSolusi ? ($request->sop_internal_id ?: null) : null,
+            'bidang_id'         => $isSolusi ? ($request->bidang_id ?: null) : null,
         ]);
 
-        // Proses routing langsung saat create (untuk node pertanyaan)
         $newNodes   = [];
         $deletedIds = [];
         if ($request->tipe_node === 'pertanyaan') {
@@ -143,12 +148,12 @@ class KonfigurasiSistemController extends Controller
             $this->applyRouting($n, $request->routing_tidak_type, 'tidak', $newNodes, $deletedIds);
         }
 
-        $n->load(['knowledgeBase', 'nextYa', 'nextTidak']);
+        $n->load(['knowledgeBase', 'sopInternal', 'bidang', 'nextYa', 'nextTidak']);
 
         $newNodesFormatted = collect($newNodes)
             ->unique('id')
             ->map(fn($node) => $this->formatNode(
-                $node->load(['knowledgeBase', 'nextYa', 'nextTidak'])
+                $node->load(['knowledgeBase', 'sopInternal', 'bidang', 'nextYa', 'nextTidak'])
             ))
             ->values();
 
@@ -162,14 +167,17 @@ class KonfigurasiSistemController extends Controller
     public function updateNode(Request $request, $id)
     {
         $n = NodeDiagnosis::findOrFail($id);
+        $isSolusi = $request->tipe_node === 'solusi';
         $n->update([
             'tipe_node'         => $request->tipe_node,
-            'teks_pertanyaan'   => $request->tipe_node === 'pertanyaan' ? $request->teks_pertanyaan : null,
+            'teks_pertanyaan'   => !$isSolusi ? $request->teks_pertanyaan : null,
             'hint_konteks'      => $request->hint_konteks ?: null,
-            'judul_solusi'      => $request->tipe_node === 'solusi' ? $request->judul_solusi : null,
+            'judul_solusi'      => $isSolusi ? $request->judul_solusi : null,
             'penjelasan_solusi' => $request->penjelasan_solusi ?: null,
-            'prioritas'         => $request->prioritas ?: null,
+            'rekomendasi_penanganan' => $request->rekomendasi_penanganan ?: null,
             'kb_id'             => $request->kb_id ?: null,
+            'sop_internal_id'   => $isSolusi ? ($request->sop_internal_id ?: null) : null,
+            'bidang_id'         => $isSolusi ? ($request->bidang_id ?: null) : null,
         ]);
 
         $newNodes   = [];
@@ -179,7 +187,6 @@ class KonfigurasiSistemController extends Controller
             $this->applyRouting($n, $request->routing_ya_type,    'ya',    $newNodes, $deletedIds);
             $this->applyRouting($n, $request->routing_tidak_type, 'tidak', $newNodes, $deletedIds);
         } else {
-            // Node diubah menjadi solusi — hapus semua anak routing
             if ($n->id_next_ya) {
                 $child = NodeDiagnosis::find($n->id_next_ya);
                 if ($child) $this->deleteNodeCascade($child, $deletedIds);
@@ -192,12 +199,12 @@ class KonfigurasiSistemController extends Controller
             }
         }
 
-        $n->load(['knowledgeBase', 'nextYa', 'nextTidak']);
+        $n->load(['knowledgeBase', 'sopInternal', 'bidang', 'nextYa', 'nextTidak']);
 
         $newNodesFormatted = collect($newNodes)
             ->unique('id')
             ->map(fn($node) => $this->formatNode(
-                $node->load(['knowledgeBase', 'nextYa', 'nextTidak'])
+                $node->load(['knowledgeBase', 'sopInternal', 'bidang', 'nextYa', 'nextTidak'])
             ))
             ->values();
 
@@ -208,14 +215,10 @@ class KonfigurasiSistemController extends Controller
         ]);
     }
 
-    /**
-     * Terapkan routing YA atau TIDAK ke sebuah node pertanyaan.
-     * Jika tipe routing berubah, anak lama dihapus cascade.
-     */
     private function applyRouting(
         NodeDiagnosis $parent,
         ?string $routingType,
-        string $branch,         // 'ya' | 'tidak'
+        string $branch,
         array &$newNodes,
         array &$deletedIds
     ): void {
@@ -226,7 +229,7 @@ class KonfigurasiSistemController extends Controller
         switch ($routingType) {
             case 'pertanyaan':
                 if ($oldNode && $oldNode->tipe_node === 'pertanyaan') {
-                    // Sudah terhubung ke pertanyaan — biarkan
+                    // sudah terhubung — biarkan
                 } else {
                     if ($oldNode) $this->deleteNodeCascade($oldNode, $deletedIds);
                     $child      = $this->createChildQuestion($parent->kategori_id);
@@ -237,7 +240,7 @@ class KonfigurasiSistemController extends Controller
 
             case 'solusi':
                 if ($oldNode && $oldNode->tipe_node === 'solusi') {
-                    // Sudah terhubung ke solusi — biarkan
+                    // sudah terhubung — biarkan
                 } else {
                     if ($oldNode) $this->deleteNodeCascade($oldNode, $deletedIds);
                     $child      = $this->createChildSolusi($parent->kategori_id);
@@ -247,7 +250,6 @@ class KonfigurasiSistemController extends Controller
                 break;
 
             default:
-                // Routing dihapus — hapus anak lama jika ada
                 if ($oldNode) $this->deleteNodeCascade($oldNode, $deletedIds);
                 $parent->update([$field => null]);
         }
@@ -271,13 +273,8 @@ class KonfigurasiSistemController extends Controller
         ]);
     }
 
-    /**
-     * Hapus node beserta seluruh anak routing-nya secara rekursif.
-     * Mengumpulkan ID yang dihapus ke dalam $deletedIds.
-     */
     private function deleteNodeCascade(NodeDiagnosis $node, array &$deletedIds): void
     {
-        // Rekursif hapus anak-anak terlebih dahulu
         if ($node->id_next_ya) {
             $child = NodeDiagnosis::find($node->id_next_ya);
             if ($child) $this->deleteNodeCascade($child, $deletedIds);
@@ -286,7 +283,6 @@ class KonfigurasiSistemController extends Controller
             $child = NodeDiagnosis::find($node->id_next_tidak);
             if ($child) $this->deleteNodeCascade($child, $deletedIds);
         }
-        // Putus referensi dari node induk manapun
         NodeDiagnosis::where('id_next_ya',    $node->id)->update(['id_next_ya'    => null]);
         NodeDiagnosis::where('id_next_tidak', $node->id)->update(['id_next_tidak' => null]);
         $deletedIds[] = $node->id;
@@ -307,25 +303,34 @@ class KonfigurasiSistemController extends Controller
 
     // ── Helpers ───────────────────────────────────────────────────
 
-    private function formatKategori(Kategori $k): array
+    private function formatKategori(KategoriSistem $k): array
     {
+        $nodes = $k->relationLoaded('nodes') ? $k->nodes : collect();
+
+        $hasIncompleteSolusi = $nodes->contains(
+            fn($n) => $n->tipe_node === 'solusi' && (empty($n->kb_id) || empty($n->bidang_id))
+        ) || $nodes->contains(
+            fn($n) => $n->tipe_node === 'pertanyaan' && (
+                empty($n->teks_pertanyaan) ||
+                empty($n->id_next_ya)      ||
+                empty($n->id_next_tidak)
+            )
+        );
+
         return [
-            'id'            => $k->id,
-            'nama_kategori' => $k->nama_kategori ?? '',
-            'deskripsi'     => $k->deskripsi ?? '',
-            'bidang_id'     => $k->bidang_id ?? '',
-            'bidang_nama'   => $this->bidangLabel[$k->bidang?->nama_bidang ?? ''] ?? '—',
-            'nodes'         => ($k->relationLoaded('nodes')
-                ? $k->nodes->map(fn($n) => $this->formatNode($n))->values()
-                : collect()
-            ),
+            'id'                    => $k->id,
+            'nama_kategori'         => $k->nama_kategori ?? '',
+            'deskripsi'             => $k->deskripsi ?? '',
+            'icon'                  => $k->icon ?? 'default',
+            'has_incomplete_solusi' => $hasIncompleteSolusi,
+            'nodes'                 => $nodes->map(fn($n) => $this->formatNode($n))->values(),
         ];
     }
 
     private function formatNode(NodeDiagnosis $n): array
     {
-        $yaType     = $n->nextYa?->tipe_node ?? '';
-        $tidakType  = $n->nextTidak?->tipe_node ?? '';
+        $yaType    = $n->nextYa?->tipe_node ?? '';
+        $tidakType = $n->nextTidak?->tipe_node ?? '';
 
         return [
             'id'                    => $n->id,
@@ -336,12 +341,15 @@ class KonfigurasiSistemController extends Controller
             'hint_konteks'          => $n->hint_konteks ?? '',
             'judul_solusi'          => $n->judul_solusi ?? '',
             'penjelasan_solusi'     => $n->penjelasan_solusi ?? '',
-            'prioritas'             => $n->prioritas ?? '',
+            'rekomendasi_penanganan' => $n->rekomendasi_penanganan ?? '',
             'id_next_ya'            => $n->id_next_ya ?? '',
             'id_next_tidak'         => $n->id_next_tidak ?? '',
             'kb_id'                 => $n->kb_id ?? '',
             'kb_judul'              => $n->knowledgeBase?->nama_artikel_sop ?? '',
-            // routing helpers for the UI
+            'sop_internal_id'       => $n->sop_internal_id ?? '',
+            'sop_judul'             => $n->sopInternal?->nama_artikel_sop ?? '',
+            'bidang_id'             => $n->bidang_id ?? '',
+            'bidang_nama'           => $this->bidangLabel[$n->bidang?->nama_bidang ?? ''] ?? '',
             'routing_ya_type'           => $yaType,
             'routing_ya_child_kode'     => $n->nextYa
                                             ? (($yaType === 'pertanyaan' ? 'Q-' : 'A-') . strtoupper(substr($n->nextYa->id, 0, 4)))

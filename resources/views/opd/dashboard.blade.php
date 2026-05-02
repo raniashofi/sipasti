@@ -107,7 +107,7 @@
                     </p>
                     <h1 class="text-3xl md:text-4xl font-bold leading-tight mb-2">
                         Selamat Datang,<br>
-                        <span class="text-white font-extrabold">{{ $opd->nama_opd }}</span>
+                        <span class="text-white font-extrabold">{{ $opd?->nama_opd ?? 'OPD' }}</span>
                     </h1>
                     <p class="text-blue-50 text-sm md:text-base max-w-xl">
                         Kelola, pantau, dan selesaikan seluruh pengaduan layanan TIK Anda dengan mudah melalui dasbor ini.

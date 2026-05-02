@@ -119,7 +119,7 @@
                         match(auth()->user()?->role) {
                             'super_admin'    => route('super_admin.dashboard'),
                             'admin_helpdesk' => route('admin_helpdesk.dashboard'),
-                            'tim_teknis'     => route('tim_teknis.dashboard'),
+                            'tim_teknis'     => route('tim_teknis.antrean'),
                             'opd'            => route('opd.dashboard'),
                             'pimpinan'       => route('pimpinan.dashboard'),
                             default          => url('/'),
@@ -187,7 +187,7 @@
                         match(auth()->user()?->role) {
                             'super_admin'    => route('super_admin.dashboard'),
                             'admin_helpdesk' => route('admin_helpdesk.dashboard'),
-                            'tim_teknis'     => route('tim_teknis.dashboard'),
+                            'tim_teknis'     => route('tim_teknis.antrean'),
                             'opd'            => route('opd.dashboard'),
                             'pimpinan'       => route('pimpinan.dashboard'),
                             default          => url('/'),

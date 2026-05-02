@@ -23,7 +23,7 @@ class ChatController extends Controller
     {
         $user  = Auth::user();
         $opd   = $user->opd;
-        $tiket = Tiket::where('opd_id', $opd->id)->findOrFail($tiketId);
+        $tiket = Tiket::with('statusTiket')->where('opd_id', $opd->id)->findOrFail($tiketId);
 
         $type = in_array($request->query('type'), ['admin', 'teknis'])
             ? $request->query('type')
@@ -60,7 +60,9 @@ class ChatController extends Controller
             ])
             ->values();
 
-        return view('opd.pengaduan-saya.chat', compact('tiket', 'room', 'messages', 'type'));
+        $bukaKembaliStatus = $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->last();
+
+        return view('opd.pengaduan-saya.chat', compact('tiket', 'room', 'messages', 'type', 'bukaKembaliStatus'));
     }
 
     /**

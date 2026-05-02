@@ -28,13 +28,13 @@
     @include('layouts.sidebarSuperAdmin')
 
     {{-- Main content offset by sidebar --}}
-    <div class="ml-64 min-h-screen flex flex-col">
+    <div class="ml-0 lg:ml-64 min-h-screen flex flex-col">
 
         {{-- Top bar with Glassmorphism --}}
-        <header class="bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm transition-all">
+        <header class="bg-white/80 backdrop-blur-md border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm transition-all">
             <div>
-                <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
-                <p class="text-sm text-gray-500 mt-0.5">Selamat datang kembali, Super Admin</p>
+                <h1 class="text-xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
+                <p class="text-sm text-gray-400 mt-0.5">Selamat datang kembali, Super Admin</p>
             </div>
             </header>
 

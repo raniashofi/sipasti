@@ -66,61 +66,10 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         @foreach($kategori as $kat)
         @php
-            // Ambil nama bidang dari relasi (pastikan penamaan relasi modelnya benar, misal: $kat->bidang->nama_bidang)
-            $bidang = strtolower($kat->bidang->nama_bidang ?? '');
-
-            if ($bidang === 'e_government' || str_contains($bidang, 'government')) {
-                // Ilustrasi: Jendela Browser / Aplikasi Layanan
-                $svgIcon = <<<'SVG'
-<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:88px;height:88px;color:#01458E;">
-  <rect x="8" y="18" width="64" height="44" rx="5" stroke="currentColor" stroke-width="3"/>
-  <line x1="8" y1="30" x2="72" y2="30" stroke="currentColor" stroke-width="3"/>
-  <circle cx="17" cy="24" r="2.5" fill="currentColor"/>
-  <circle cx="25" cy="24" r="2.5" fill="currentColor"/>
-  <circle cx="33" cy="24" r="2.5" fill="currentColor"/>
-  <rect x="16" y="38" width="22" height="16" rx="3" stroke="currentColor" stroke-width="2.5"/>
-  <line x1="46" y1="42" x2="64" y2="42" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="46" y1="50" x2="56" y2="50" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-</svg>
-SVG;
-            } elseif ($bidang === 'infrastruktur_teknologi_informasi' || str_contains($bidang, 'infrastruktur')) {
-                // Ilustrasi: Rak Server / Jaringan / Hardware
-                $svgIcon = <<<'SVG'
-<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:88px;height:88px;color:#01458E;">
-  <rect x="16" y="20" width="48" height="16" rx="3" stroke="currentColor" stroke-width="3"/>
-  <circle cx="24" cy="28" r="2" fill="currentColor"/>
-  <circle cx="30" cy="28" r="2" fill="currentColor"/>
-  <line x1="44" y1="28" x2="56" y2="28" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-  <rect x="16" y="44" width="48" height="16" rx="3" stroke="currentColor" stroke-width="3"/>
-  <circle cx="24" cy="52" r="2" fill="currentColor"/>
-  <circle cx="30" cy="52" r="2" fill="currentColor"/>
-  <line x1="44" y1="52" x2="56" y2="52" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M64 28 C74 28 74 52 64 52" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-</svg>
-SVG;
-            } elseif ($bidang === 'statistik_persandian' || str_contains($bidang, 'statistik')) {
-                // Ilustrasi: Grafik Data & Perisai Keamanan (Sandi)
-                $svgIcon = <<<'SVG'
-<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:88px;height:88px;color:#01458E;">
-  <rect x="12" y="44" width="10" height="20" rx="2" stroke="currentColor" stroke-width="2.5"/>
-  <rect x="26" y="32" width="10" height="32" rx="2" stroke="currentColor" stroke-width="2.5"/>
-  <rect x="40" y="20" width="10" height="44" rx="2" stroke="currentColor" stroke-width="2.5"/>
-  <line x1="8" y1="64" x2="60" y2="64" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-  <path d="M52 38 L68 38 L68 48 C68 56 60 62 52 66 C44 62 36 56 36 48 L36 38 Z" fill="#fff" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-  <circle cx="52" cy="48" r="3" fill="currentColor"/>
-  <path d="M51 50 L53 50 L54 55 L50 55 Z" fill="currentColor"/>
-</svg>
-SVG;
-            } else {
-                // Default Icon (Bantuan/Lainnya)
-                $svgIcon = <<<'SVG'
-<svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:88px;height:88px;color:#01458E;">
-  <circle cx="40" cy="40" r="26" stroke="currentColor" stroke-width="3" stroke-dasharray="8 8"/>
-  <circle cx="40" cy="40" r="16" stroke="currentColor" stroke-width="3"/>
-  <circle cx="40" cy="40" r="4" fill="currentColor"/>
-</svg>
-SVG;
-            }
+            // Ambil SVG dari config berdasarkan field icon di database
+            $iconKey = $kat->icon ?? 'default';
+            $presets = config('category_icons.presets', []);
+            $svgIcon = $presets[$iconKey]['svg'] ?? $presets['default']['svg'] ?? '';
         @endphp
 
         <a href="{{ route('opd.diagnosis.mulai', $kat->id) }}" class="cat-card">

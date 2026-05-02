@@ -28,7 +28,7 @@ class ManajemenPenggunaController extends Controller
         $opdList = Opd::whereNull('parent_id')->orderBy('nama_opd')->get();
         $opds    = Opd::with('user')->whereNotNull('user_id')->orderBy('nama_opd')->get();
 
-        return view('super_admin.manajemenOpd', compact('opds', 'bidangs', 'opdList'));
+        return view('super_admin.manajemen-pengguna.opd', compact('opds', 'bidangs', 'opdList'));
     }
 
     public function storeOpd(Request $request)
@@ -206,7 +206,7 @@ class ManajemenPenggunaController extends Controller
         $pimpinanList  = Pimpinan::with('user')->orderBy('nama_lengkap')->get();
         $bidangs       = Bidang::all();
 
-        return view('super_admin.manajemenInternal', compact(
+        return view('super_admin.manajemen-pengguna.internal', compact(
             'timTeknis', 'adminHelpdesk', 'pimpinanList', 'bidangs', 'tab'
         ));
     }
@@ -219,7 +219,7 @@ class ManajemenPenggunaController extends Controller
             'nama_lengkap'   => 'required|string|max:255',
             'email'          => 'required|email|unique:users,email',
             'password'       => 'required|string|min:6',
-            'bidang_id'      => 'nullable|exists:bidang,id',
+            'bidang_id'      => 'required|exists:bidang,id',
             'status_teknisi' => 'nullable|in:online,offline',
         ], [
             'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
@@ -227,6 +227,7 @@ class ManajemenPenggunaController extends Controller
             'email.unique'          => 'Email sudah digunakan.',
             'password.required'     => 'Password wajib diisi.',
             'password.min'          => 'Password minimal 6 karakter.',
+            'bidang_id.required'    => 'Bidang wajib dipilih.',
         ]);
 
         if ($validator->fails()) {
@@ -250,7 +251,7 @@ class ManajemenPenggunaController extends Controller
             'user_id'        => $userId,
             'nama_lengkap'   => $request->nama_lengkap,
             'bidang_id'      => $request->bidang_id ?: null,
-            'status_teknisi' => $request->status_teknisi ?: null,
+            'status_teknisi' => $request->status_teknisi ?: 'online',
         ]);
 
         // Log aktivitas
@@ -297,9 +298,28 @@ class ManajemenPenggunaController extends Controller
                 ->with('tab', 'tim_teknis');
         }
 
+        // Cek apakah bidang berubah
+        $newBidangId = $request->bidang_id ?: null;
+        if ($newBidangId !== $tt->bidang_id) {
+            $hasActiveTickets = $tt->tiketTeknisi()
+                ->whereHas('tiket', fn($q) => $q->whereHas('latestStatus', fn($q2) =>
+                    $q2->whereNotIn('status_tiket', ['selesai', 'rusak_berat'])
+                ))
+                ->exists();
+
+            if ($hasActiveTickets) {
+                return back()
+                    ->withErrors(['bidang_id' => 'Bidang tidak dapat dipindahkan karena teknisi masih memiliki tiket aktif yang belum selesai.'])
+                    ->withInput()
+                    ->with('open_edit_tt', true)
+                    ->with('edit_tt_id', $id)
+                    ->with('tab', 'tim_teknis');
+            }
+        }
+
         $tt->update([
             'nama_lengkap'   => $request->nama_lengkap,
-            'bidang_id'      => $request->bidang_id ?: null,
+            'bidang_id'      => $newBidangId,
             'status_teknisi' => $request->status_teknisi ?: null,
         ]);
 
@@ -363,13 +383,14 @@ class ManajemenPenggunaController extends Controller
             'nama_lengkap' => 'required|string|max:255',
             'email'        => 'required|email|unique:users,email',
             'password'     => 'required|string|min:6',
-            'bidang_id'    => 'nullable|exists:bidang,id',
+            'bidang_id'    => 'required|exists:bidang,id',
         ], [
             'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
             'email.required'        => 'Email wajib diisi.',
             'email.unique'          => 'Email sudah digunakan.',
             'password.required'     => 'Password wajib diisi.',
             'password.min'          => 'Password minimal 6 karakter.',
+            'bidang_id.required'    => 'Bidang wajib dipilih.',
         ]);
 
         if ($validator->fails()) {

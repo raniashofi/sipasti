@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 /**
  * @property string $id
@@ -10,9 +11,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
  * @property string $password
  * @property string|null $gambar
  * @property string $role
+ * @property-read \Illuminate\Notifications\DatabaseNotificationCollection $notifications
+ * @property-read \Illuminate\Notifications\DatabaseNotificationCollection $unreadNotifications
  */
 class User extends Authenticatable
 {
+    use Notifiable;
     protected $table = 'users';
     public $incrementing = false;
     protected $keyType = 'string';
@@ -50,5 +54,14 @@ class User extends Authenticatable
     public function chatRooms()
     {
         return $this->belongsToMany(ChatRoom::class, 'chat_room_users', 'user_id', 'room_id');
+    }
+
+    /**
+     * Channel broadcast untuk notifikasi real-time via Reverb.
+     * Frontend subscribe ke: private-notifications.{userId}
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'notifications.' . $this->id;
     }
 }

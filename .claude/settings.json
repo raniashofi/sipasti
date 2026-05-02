@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(rm app/Events/NewNotification.php)",
+      "Bash(rm app/Models/Notification.php)",
+      "Bash(rm app/Http/Controllers/NotificationController.php)",
+      "Read(//c/Users/HP ID/OneDrive - Universitas Andalas/UNAND/TUGAS/Tukas Akhir/sipasti/app/Http/Requests/Auth/**)"
+    ]
+  }
+}

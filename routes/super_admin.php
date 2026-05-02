@@ -48,15 +48,33 @@ Route::prefix('super-admin')->name('super_admin.')->middleware(['auth', 'role:su
 
     // Pustaka Pengetahuan (Knowledge Base)
     Route::prefix('pustaka')->name('pustaka.')->group(function () {
-        Route::get('/opd',                [KnowledgeBaseController::class, 'indexOpd'])->name('opd');
-        Route::get('/internal',           [KnowledgeBaseController::class, 'indexInternal'])->name('internal');
-        Route::get('/tambah',             [KnowledgeBaseController::class, 'create'])->name('create');
-        Route::post('/',                  [KnowledgeBaseController::class, 'store'])->name('store');
-        Route::get('/{id}/edit',          [KnowledgeBaseController::class, 'edit'])->name('edit');
-        Route::put('/{id}',               [KnowledgeBaseController::class, 'update'])->name('update');
-        Route::delete('/{id}',            [KnowledgeBaseController::class, 'destroy'])->name('destroy');
-        Route::get('/{id}/preview',       [KnowledgeBaseController::class, 'preview'])->name('preview');
-        Route::post('/upload-image',      [KnowledgeBaseController::class, 'uploadImage'])->name('upload-image');
+
+        // ── Tab OPD ──
+        Route::get('/opd',                        [KnowledgeBaseController::class, 'indexOpd'])->name('opd');
+        Route::get('/opd/kategori/{id}',          [KnowledgeBaseController::class, 'opdKategori'])->name('opd.kategori');
+
+        // ── Tab Internal ──
+        Route::get('/internal',                   [KnowledgeBaseController::class, 'indexInternal'])->name('internal');
+        Route::get('/internal/bidang/{id}',       [KnowledgeBaseController::class, 'internalBidang'])->name('internal.bidang');
+
+        // ── CRUD Kategori Artikel (modal) ──
+        Route::post('/kategori',                  [KnowledgeBaseController::class, 'storeKategori'])->name('kategori.store');
+        Route::put('/kategori/{id}',              [KnowledgeBaseController::class, 'updateKategori'])->name('kategori.update');
+        Route::delete('/kategori/{id}',           [KnowledgeBaseController::class, 'destroyKategori'])->name('kategori.destroy');
+
+        // ── CRUD Bidang (modal) ──
+        Route::post('/bidang',                    [KnowledgeBaseController::class, 'storeBidang'])->name('bidang.store');
+        Route::put('/bidang/{id}',                [KnowledgeBaseController::class, 'updateBidang'])->name('bidang.update');
+        Route::delete('/bidang/{id}',             [KnowledgeBaseController::class, 'destroyBidang'])->name('bidang.destroy');
+
+        // ── Artikel CRUD ──
+        Route::get('/tambah',                     [KnowledgeBaseController::class, 'create'])->name('create');
+        Route::post('/',                          [KnowledgeBaseController::class, 'store'])->name('store');
+        Route::post('/upload-image',              [KnowledgeBaseController::class, 'uploadImage'])->name('upload-image');
+        Route::get('/{id}/edit',                  [KnowledgeBaseController::class, 'edit'])->name('edit');
+        Route::put('/{id}',                       [KnowledgeBaseController::class, 'update'])->name('update');
+        Route::delete('/{id}',                    [KnowledgeBaseController::class, 'destroy'])->name('destroy');
+        Route::get('/{id}/preview',               [KnowledgeBaseController::class, 'preview'])->name('preview');
     });
 
     // Keamanan & Audit

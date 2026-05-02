@@ -145,10 +145,13 @@
     {{-- ── CTA resolusi ── --}}
     @php
         $tiketUrl = route('opd.diagnosis.tiket') . '?' . http_build_query([
-            'kategori_id'        => $kategoriId,
-            'kategori_nama'      => $kategoriNama,
-            'kategori_deskripsi' => $kategoriDeskripsi ?? '',
-            'kb_id'              => $node->kb_id ?? '',
+            'kategori_id'            => $kategoriId,
+            'kategori_nama'          => $kategoriNama,
+            'kategori_deskripsi'     => $kategoriDeskripsi ?? '',
+            'kb_id'                  => $node->kb_id ?? '',
+            'sop_internal_id'        => $node->sop_internal_id ?? '',
+            'bidang_id'              => $bidangId ?? '',
+            'rekomendasi_penanganan' => $node->rekomendasi_penanganan ?? 'admin',
         ]);
     @endphp
 

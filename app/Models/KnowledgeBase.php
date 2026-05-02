@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * @property string      $id
- * @property string|null $kategori_id
+ * @property string|null $kategori_artikel_id
  * @property string      $nama_artikel_sop
  * @property string|null $deskripsi_singkat
  * @property string      $isi_konten
@@ -27,7 +27,7 @@ class KnowledgeBase extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'id', 'kategori_id', 'nama_artikel_sop', 'deskripsi_singkat',
+        'id', 'kategori_artikel_id', 'bidang_id', 'nama_artikel_sop', 'deskripsi_singkat',
         'isi_konten', 'status_publikasi', 'visibilitas_akses',
         'header_image', 'lampiran_file',
         'total_views', 'rating', 'rating_count',
@@ -35,41 +35,36 @@ class KnowledgeBase extends Model
 
     protected $dates = ['deleted_at'];
 
-    /**
-     * Relationship: Kategori
-     */
-    public function kategori()
+    public function kategoriArtikel()
     {
-        return $this->belongsTo(Kategori::class);
+        return $this->belongsTo(KategoriArtikel::class, 'kategori_artikel_id');
     }
 
-    /**
-     * Relationship: Tags (Many-to-Many)
-     */
+    public function kategori()
+    {
+        return $this->kategoriArtikel();
+    }
+
+    public function bidang()
+    {
+        return $this->belongsTo(Bidang::class, 'bidang_id');
+    }
+
     public function tags()
     {
         return $this->belongsToMany(Tag::class, 'knowledge_base_tag');
     }
 
-    /**
-     * Relationship: Lampiran Files
-     */
     public function lampirans()
     {
         return $this->hasMany(LampiranArtikel::class, 'knowledge_base_id');
     }
 
-    /**
-     * Relationship: Nodes Diagnosis
-     */
     public function nodes()
     {
         return $this->hasMany(NodeDiagnosis::class, 'kb_id');
     }
 
-    /**
-     * Relationship: Ratings dari OPD
-     */
     public function ratings()
     {
         return $this->hasMany(KnowledgeBaseRating::class);

@@ -25,26 +25,23 @@
 
     @include('layouts.sidebarAdminHelpdesk')
 
-    <div class="ml-64 min-h-screen flex flex-col">
+    <div class="ml-0 lg:ml-64 min-h-screen flex flex-col">
 
         {{-- Top bar --}}
-        <header class="bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+        <header class="bg-white/80 backdrop-blur-md border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
             <div>
                 <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
                 <p class="text-sm text-gray-500 mt-0.5">
                     Selamat datang, {{ $adminProfile?->nama_lengkap ?? Auth::user()->name }}
-                    @if($adminProfile?->bidang)
-                        — <span class="font-medium text-[#01458E]">{{ $adminProfile->bidang->nama_bidang ?? $adminProfile->bidang->nama ?? '' }}</span>
-                    @endif
                 </p>
             </div>
-            <div class="text-right">
+            <div class="hidden sm:block text-right">
                 <p class="text-xs text-gray-400">{{ now()->translatedFormat('l, d F Y') }}</p>
                 <p class="text-xs font-semibold text-gray-500 mt-0.5">{{ now()->format('H:i') }} WIB</p>
             </div>
         </header>
 
-        <main class="flex-1 px-8 py-8 space-y-8">
+        <main class="flex-1 px-4 py-4 lg:px-8 lg:py-8 space-y-6 lg:space-y-8">
 
             {{-- ── Stat Cards ── --}}
             @php
@@ -94,33 +91,33 @@
             ];
             @endphp
 
-            <div class="grid grid-cols-2 xl:grid-cols-4 gap-6 animate-fade-in-up">
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-6 animate-fade-in-up">
                 @foreach($cards as $card)
-                <div class="bg-white rounded-2xl p-6 flex items-center gap-5 shadow-sm border border-gray-100
+                <div class="bg-white rounded-2xl p-4 sm:p-6 flex items-center gap-3 sm:gap-5 shadow-sm border border-gray-100
                             hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden group cursor-default">
                     <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20 transition-transform duration-500 group-hover:scale-125"
                          style="background-color:{{ $card['color'] }};"></div>
 
-                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 relative z-10 transition-transform duration-300 group-hover:scale-110"
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 relative z-10 transition-transform duration-300 group-hover:scale-110"
                          style="background-color:{{ $card['bg'] }};">
-                        <svg class="w-7 h-7" style="color:{{ $card['color'] }};"
+                        <svg class="w-5 h-5 sm:w-7 sm:h-7" style="color:{{ $card['color'] }};"
                              fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="{{ $card['icon'] }}"/>
                         </svg>
                     </div>
 
                     <div class="relative z-10 flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-2">
-                            <p class="text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format($card['value']) }}</p>
+                        <div class="flex items-start justify-between gap-1">
+                            <p class="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format($card['value']) }}</p>
                             @if(!empty($card['badge']))
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 mt-1"
+                            <span class="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 mt-1 whitespace-nowrap"
                                   style="background-color:{{ $card['badge_bg'] }};color:{{ $card['badge_color'] }};">
                                 {{ $card['badge'] }}
                             </span>
                             @endif
                         </div>
-                        <p class="text-sm font-semibold text-gray-700 mt-0.5">{{ $card['label'] }}</p>
-                        <p class="text-xs text-gray-400 mt-0.5 truncate">{{ $card['desc'] }}</p>
+                        <p class="text-xs sm:text-sm font-semibold text-gray-700 mt-0.5 leading-tight">{{ $card['label'] }}</p>
+                        <p class="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate hidden sm:block">{{ $card['desc'] }}</p>
                     </div>
                 </div>
                 @endforeach
@@ -130,7 +127,7 @@
             <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-fade-in-up delay-100">
 
                 {{-- Donut chart (2 cols) --}}
-                <div id="card-distribusi" class="xl:col-span-2 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 flex flex-col self-start hover:shadow-md transition-shadow">
+                <div id="card-distribusi" class="xl:col-span-2 bg-white rounded-2xl p-5 sm:p-7 shadow-sm border border-gray-100 flex flex-col self-start hover:shadow-md transition-shadow">
                     <h2 class="text-base font-bold text-gray-800">Distribusi Status Tiket</h2>
                     <p class="text-sm text-gray-400 mb-6 mt-1">Sebaran tiket yang sedang ditangani</p>
 
@@ -158,7 +155,7 @@
                 </div>
 
                 {{-- Recent Activity (3 cols) --}}
-                <div id="card-activity" class="xl:col-span-3 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col self-start overflow-hidden">
+                <div id="card-activity" class="xl:col-span-3 bg-white rounded-2xl p-5 sm:p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col self-start overflow-hidden">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-50 shrink-0">
                         <div>
                             <h2 class="text-base font-bold text-gray-800">Log Aktivitas Terbaru</h2>
@@ -217,7 +214,7 @@
                                             {{ $log->waktu_eksekusi?->diffForHumans() ?? '-' }}
                                         </span>
                                     </div>
-                                    <p class="text-sm text-gray-600 truncate">{{ $log->detail_tindakan ?? '-' }}</p>
+                                    <p class="text-sm text-gray-600 break-words">{{ $log->detail_tindakan ?? '-' }}</p>
                                 </div>
                             </div>
                             @endforeach
@@ -268,7 +265,7 @@
                         'route' => 'admin_helpdesk.pustaka',
                         'color' => '#059669',
                         'bg'    => '#D1FAE5',
-                        'icon'  => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+                        'icon'  => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253',
                         'count' => $stats['total_kb'],
                     ],
                 ];
@@ -277,7 +274,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
                     @foreach($quickLinks as $link)
                     <a href="{{ Route::has($link['route']) ? route($link['route']) : '#' }}"
-                       class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group flex items-start gap-4">
+                       class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-300 group flex items-start gap-4">
                         <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
                              style="background-color:{{ $link['bg'] }};">
                             <svg class="w-6 h-6" style="color:{{ $link['color'] }};"
@@ -359,15 +356,22 @@
         });
     })();
 
-    // Sync heights
+    // Perbaikan: Sync height hanya aktif di layar Desktop (xl) ke atas
     (function syncCardHeight() {
         const donutCard    = document.getElementById('card-distribusi');
         const activityCard = document.getElementById('card-activity');
         if (!donutCard || !activityCard) return;
+
         function sync() {
-            const h = donutCard.offsetHeight;
-            activityCard.style.maxHeight = h + 'px';
-            activityCard.style.height    = h + 'px';
+            if (window.innerWidth >= 1280) { // breakpoint xl di Tailwind
+                const h = donutCard.offsetHeight;
+                activityCard.style.maxHeight = h + 'px';
+                activityCard.style.height    = h + 'px';
+            } else {
+                // Di layar kecil, beri max-height agar tetap bisa di-scroll tapi tidak memakan seluruh layar
+                activityCard.style.maxHeight = '450px';
+                activityCard.style.height    = 'auto';
+            }
         }
         requestAnimationFrame(() => requestAnimationFrame(sync));
         window.addEventListener('resize', sync);
