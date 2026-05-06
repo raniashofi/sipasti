@@ -301,7 +301,7 @@
                         </div>
                     </form>
 
-                    {{-- FORM 2: EXPORT CSV (Dipisah dari Form Filter) --}}
+                    {{-- FORM 2: EXPORT EXCEL (Dipisah dari Form Filter) --}}
                     <div class="pt-5 mt-5 border-t border-gray-100">
                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Export Data</p>
                         <form method="GET" action="{{ route('pimpinan.export.csv') }}" id="exportForm" class="inline">
@@ -314,9 +314,9 @@
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
-                                Export Data CSV
+                                Export Data Excel
                             </button>
-                            <span class="text-xs text-gray-400 italic ml-3">File CSV dapat dibuka langsung di Microsoft Excel</span>
+                            <span class="text-xs text-gray-400 italic ml-3">File Excel (.xlsx) siap untuk digunakan</span>
                         </form>
                     </div>
 
@@ -578,187 +578,6 @@
                     <div class="flex-1 flex items-center justify-center py-12 text-gray-400 text-sm">
                         Belum ada data tim teknis.
                     </div>
-                    @endif
-                </div>
-            </div>
-
-
-            {{-- ══════════════════════════════════════════════════════════
-                 SECTION 6 — Audit Trail (Internal Roles Only)
-            ══════════════════════════════════════════════════════════ --}}
-            @php
-            $auditRows = $auditLog->map(function ($log) {
-                $badgeMap = [
-                    'create'   => ['css' => 'ab-create',   'icon' => '✦', 'label' => 'CREATE'],
-                    'update'   => ['css' => 'ab-update',   'icon' => '✎', 'label' => 'UPDATE'],
-                    'delete'   => ['css' => 'ab-delete',   'icon' => '✕', 'label' => 'DELETE'],
-                    'escalate' => ['css' => 'ab-escalate', 'icon' => '↑', 'label' => 'ESCALATE'],
-                    'approve'  => ['css' => 'ab-approve',  'icon' => '✓', 'label' => 'APPROVE'],
-                    'reject'   => ['css' => 'ab-reject',   'icon' => '✗', 'label' => 'REJECT'],
-                ];
-                $roleMap = [
-                    'super_admin'    => ['pill' => 'bg-[#EEF3F9] text-[#01458E]', 'label' => 'Super Admin'],
-                    'admin_helpdesk' => ['pill' => 'bg-[#EBF3FF] text-[#0263C8]', 'label' => 'Admin Helpdesk'],
-                    'tim_teknis'     => ['pill' => 'bg-[#D1FAE5] text-[#059669]', 'label' => 'Tim Teknis'],
-                ];
-                $badge = $badgeMap[$log->jenis_aktivitas] ?? ['css' => 'ab-update', 'icon' => '•', 'label' => strtoupper($log->jenis_aktivitas)];
-                $role  = $roleMap[$log->role_pelaku]      ?? ['pill' => 'bg-gray-100 text-gray-600', 'label' => $log->role_pelaku];
-                return [
-                    'nama'       => $log->user?->name ?? 'Sistem',
-                    'inisial'    => strtoupper(substr($log->user?->name ?? 'S', 0, 1)),
-                    'rolePill'   => $role['pill'],
-                    'roleLabel'  => $role['label'],
-                    'badgeCss'   => $badge['css'],
-                    'badgeIcon'  => $badge['icon'],
-                    'badgeLabel' => $badge['label'],
-                    'detail'     => $log->detail_tindakan ?? '—',
-                    'waktu'      => $log->waktu_eksekusi?->locale('id')->diffForHumans() ?? '—',
-                ];
-            })->values()->toArray();
-            @endphp
-
-            <div class="fade-up delay-3"
-                 x-data="{
-                     rows:    {{ Js::from($auditRows) }},
-                     perPage: 10,
-                     page:    1,
-                     get totalPages() { return Math.max(1, Math.ceil(this.rows.length / this.perPage)); },
-                     get paged()      { return this.rows.slice((this.page - 1) * this.perPage, this.page * this.perPage); },
-                     get from()       { return this.rows.length === 0 ? 0 : (this.page - 1) * this.perPage + 1; },
-                     get to()         { return Math.min(this.page * this.perPage, this.rows.length); },
-                     prev() { if (this.page > 1) this.page--; },
-                     next() { if (this.page < this.totalPages) this.page++; },
-                     go(p)  { this.page = p; },
-                 }">
-
-                {{-- Header --}}
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#EDE9FE;">
-                            <svg class="w-4 h-4 text-[#7C3AED]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 class="text-base font-bold text-gray-800">Audit Trail — Aktivitas Internal</h2>
-                            <p class="text-xs text-gray-400">Hanya mencakup aktivitas Super Admin, Admin Helpdesk, dan Tim Teknis</p>
-                        </div>
-                    </div>
-                    {{-- Info total --}}
-                    <span class="text-xs text-gray-400 shrink-0"
-                          x-text="rows.length > 0 ? `Menampilkan ${from}–${to} dari ${rows.length} aktivitas` : ''">
-                    </span>
-                </div>
-
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-
-                    @if($auditLog->isEmpty())
-                    <div class="flex flex-col items-center justify-center py-14 text-gray-400">
-                        <svg class="w-10 h-10 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p class="text-sm font-medium">Belum ada aktivitas tercatat</p>
-                    </div>
-                    @else
-
-                    {{-- Tabel --}}
-                    <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-100 bg-gray-50/50">
-                                <th class="px-6 py-3.5 text-left text-xs font-bold text-gray-500 w-8">No</th>
-                                <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-500">Pengguna</th>
-                                <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-500">Peran</th>
-                                <th class="px-4 py-3.5 text-center text-xs font-bold text-gray-500">Aktivitas</th>
-                                <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-500">Detail</th>
-                                <th class="px-6 py-3.5 text-right text-xs font-bold text-gray-500">Waktu</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="(row, idx) in paged" :key="(page - 1) * perPage + idx">
-                                <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                                    {{-- No --}}
-                                    <td class="px-6 py-3.5 text-sm text-gray-400" x-text="(page - 1) * perPage + idx + 1"></td>
-                                    {{-- Pengguna --}}
-                                    <td class="px-4 py-3.5">
-                                        <div class="flex items-center gap-2.5">
-                                            <div class="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
-                                                 style="background:#01458E;" x-text="row.inisial"></div>
-                                            <span class="text-sm font-semibold text-gray-800" x-text="row.nama"></span>
-                                        </div>
-                                    </td>
-                                    {{-- Peran --}}
-                                    <td class="px-4 py-3.5">
-                                        <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
-                                              :class="row.rolePill" x-text="row.roleLabel"></span>
-                                    </td>
-                                    {{-- Aktivitas --}}
-                                    <td class="px-4 py-3.5 text-center">
-                                        <span class="action-badge" :class="row.badgeCss">
-                                            <span x-text="row.badgeIcon"></span>
-                                            <span x-text="row.badgeLabel"></span>
-                                        </span>
-                                    </td>
-                                    {{-- Detail --}}
-                                    <td class="px-4 py-3.5 text-sm text-gray-500 max-w-xs truncate" x-text="row.detail"></td>
-                                    {{-- Waktu --}}
-                                    <td class="px-6 py-3.5 text-right text-xs text-gray-400 whitespace-nowrap" x-text="row.waktu"></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    </div>
-
-                    {{-- ── Pagination Footer ── --}}
-                    <div class="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/40">
-
-                        {{-- Kiri: info halaman --}}
-                        <p class="text-xs text-gray-400">
-                            Halaman <span class="font-semibold text-gray-600" x-text="page"></span>
-                            dari <span class="font-semibold text-gray-600" x-text="totalPages"></span>
-                        </p>
-
-                        {{-- Tengah: nomor halaman --}}
-                        <div class="flex items-center gap-1">
-                            {{-- Prev --}}
-                            <button @click="prev"
-                                    :disabled="page === 1"
-                                    :class="page === 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
-                                </svg>
-                            </button>
-
-                            {{-- Nomor halaman --}}
-                            <template x-for="p in totalPages" :key="p">
-                                <button @click="go(p)"
-                                        :class="p === page
-                                            ? 'text-white font-bold'
-                                            : 'text-gray-500 hover:bg-gray-100'"
-                                        :style="p === page ? 'background-color:#01458E;' : ''"
-                                        class="w-8 h-8 flex items-center justify-center rounded-lg text-xs transition-colors"
-                                        x-text="p">
-                                </button>
-                            </template>
-
-                            {{-- Next --}}
-                            <button @click="next"
-                                    :disabled="page === totalPages"
-                                    :class="page === totalPages ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'"
-                                    class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                                </svg>
-                            </button>
-                        </div>
-
-                        {{-- Kanan: total data --}}
-                        <p class="text-xs text-gray-400">
-                            <span class="font-semibold text-gray-600" x-text="rows.length"></span> total aktivitas
-                        </p>
-                    </div>
-
                     @endif
                 </div>
             </div>
