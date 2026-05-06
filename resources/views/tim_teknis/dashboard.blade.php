@@ -86,14 +86,7 @@
 
             {{-- ── Hero Banner ── --}}
             @php
-            $bidangLabels = [
-                'e_government'                     => 'E-Government',
-                'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-                'statistik_persandian'              => 'Statistik & Persandian',
-            ];
-            $bidangLabel = $teknis->bidang
-                ? ($bidangLabels[$teknis->bidang->nama_bidang] ?? $teknis->bidang->nama_bidang)
-                : '—';
+            $bidangLabel = $teknis->bidang?->nama_bidang ?? '—';
             @endphp
 
             <div class="fu fu1 relative overflow-hidden rounded-3xl text-white shadow-lg"
@@ -202,7 +195,93 @@
 
                 {{-- LEFT: Tugas Aktif Terbaru --}}
                 <div class="lg:col-span-2">
-                    <div class="fu fu4 card overflow-hidden flex flex-col h-full">
+
+                    {{-- Mobile card list (tampil di mobile, sembunyi di md+) --}}
+                    @php
+                    $statusMapMobile = [
+                        'perbaikan_teknis' => ['label' => 'Perbaikan Teknis', 'pill' => 'bg-amber-50 text-amber-600',    'dot' => 'bg-amber-500'],
+                        'dibuka_kembali'   => ['label' => 'Dibuka Kembali',   'pill' => 'bg-orange-50 text-orange-600',  'dot' => 'bg-orange-500'],
+                        'verifikasi_admin' => ['label' => 'Verifikasi Admin', 'pill' => 'bg-blue-50 text-blue-600',      'dot' => 'bg-blue-500'],
+                        'selesai'          => ['label' => 'Selesai',           'pill' => 'bg-emerald-50 text-emerald-600','dot' => 'bg-emerald-500'],
+                        'rusak_berat'      => ['label' => 'Rusak Berat',       'pill' => 'bg-red-50 text-red-600',        'dot' => 'bg-red-500'],
+                    ];
+                    @endphp
+                    <div class="md:hidden fu fu4 card overflow-hidden flex flex-col">
+                        <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
+                                <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Tugas Aktif Terbaru</h2>
+                            </div>
+                            <a href="{{ route('tim_teknis.antrean') }}"
+                               class="text-xs font-semibold text-[#01458E] hover:underline flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+                                Lihat Semua
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </a>
+                        </div>
+                        @forelse($tiketAktif as $tt)
+                        @php $tiket = $tt->tiket; @endphp
+                        <div class="px-4 py-4 border-b border-gray-100 last:border-0">
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <span class="font-mono text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200">
+                                    #{{ strtoupper(substr($tiket->id, 0, 8)) }}
+                                </span>
+                                @if($tiket->latestStatus)
+                                    @php $stm = $statusMapMobile[$tiket->latestStatus->status_tiket] ?? ['label' => $tiket->latestStatus->status_tiket, 'pill' => 'bg-gray-100 text-gray-600', 'dot' => 'bg-gray-400']; @endphp
+                                    <span class="pill {{ $stm['pill'] }} text-[10px]">
+                                        <span class="pill-dot {{ $stm['dot'] }}"></span>
+                                        {{ $stm['label'] }}
+                                    </span>
+                                @else
+                                    <span class="pill bg-slate-100 text-slate-500 text-[10px]">
+                                        <span class="pill-dot bg-slate-400"></span>—
+                                    </span>
+                                @endif
+                            </div>
+                            <p class="text-sm font-semibold text-gray-900 mb-1 leading-snug">{{ $tiket->subjek_masalah ?? '-' }}</p>
+                            <div class="flex flex-wrap gap-x-2 text-xs text-gray-500 mb-3">
+                                <span>{{ $tiket->opd?->nama_opd ?? '—' }}</span>
+                                <span class="text-gray-300">•</span>
+                                @if($tt->peran_teknisi === 'teknisi_utama')
+                                    <span class="text-blue-600 font-semibold">Utama</span>
+                                @else
+                                    <span class="text-purple-600 font-semibold">Pendamping</span>
+                                @endif
+                                <span class="text-gray-300">•</span>
+                                <span>{{ $tiket->created_at->diffForHumans() }}</span>
+                            </div>
+                            <div class="flex gap-2 flex-wrap">
+                                <a href="{{ route('tim_teknis.antrean') }}"
+                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                                   style="background-color:#01458E;">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                    </svg>
+                                    Lihat Antrean
+                                </a>
+                            </div>
+                        </div>
+                        @empty
+                        <div class="px-4 py-12 text-center">
+                            <div class="flex flex-col items-center gap-3">
+                                <div class="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-50/50">
+                                    <svg class="w-6 h-6 text-[#01458E] opacity-70" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-sm font-bold text-gray-800">Tidak ada tugas aktif</p>
+                                    <p class="text-xs text-gray-500 mt-1">Semua tugas telah diselesaikan.</p>
+                                </div>
+                            </div>
+                        </div>
+                        @endforelse
+                    </div>
+
+                    {{-- Desktop table (sembunyi di mobile, tampil di md+) --}}
+                    <div class="hidden md:block fu fu4 card overflow-hidden flex flex-col h-full">
                         <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
@@ -217,7 +296,43 @@
                             </a>
                         </div>
 
-                        <div class="table-wrap flex-1">
+                        {{-- Mobile cards --}}
+                        @php
+                        $statusMapM = [
+                            'perbaikan_teknis' => ['label' => 'Perbaikan Teknis', 'pill' => 'bg-amber-50 text-amber-600'],
+                            'dibuka_kembali'   => ['label' => 'Dibuka Kembali',   'pill' => 'bg-orange-50 text-orange-600'],
+                            'verifikasi_admin' => ['label' => 'Verifikasi Admin', 'pill' => 'bg-blue-50 text-blue-600'],
+                            'selesai'          => ['label' => 'Selesai',           'pill' => 'bg-emerald-50 text-emerald-600'],
+                            'rusak_berat'      => ['label' => 'Rusak Berat',       'pill' => 'bg-red-50 text-red-600'],
+                        ];
+                        @endphp
+                        <div class="md:hidden divide-y divide-gray-100">
+                            @forelse($tiketAktif as $tt)
+                            @php $tiket = $tt->tiket; @endphp
+                            <div class="px-4 py-4 hover:bg-blue-50/30 transition-colors">
+                                <div class="flex items-start justify-between gap-2 mb-1">
+                                    <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">#{{ strtoupper(substr($tiket->id, 0, 8)) }}</span>
+                                    @if($tt->peran_teknisi === 'teknisi_utama')
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 shrink-0">Utama</span>
+                                    @else
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 shrink-0">Pendamping</span>
+                                    @endif
+                                </div>
+                                <p class="text-sm font-semibold text-gray-900 mb-0.5 truncate">{{ $tiket->subjek_masalah ?? '-' }}</p>
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs text-gray-400">{{ $tiket->opd?->nama_opd ?? '—' }}</span>
+                                    @if($tiket->latestStatus)
+                                    @php $stM = $statusMapM[$tiket->latestStatus->status_tiket] ?? ['label' => $tiket->latestStatus->status_tiket, 'pill' => 'bg-gray-100 text-gray-600']; @endphp
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $stM['pill'] }}">{{ $stM['label'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                            @empty
+                            <div class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada tugas aktif.</div>
+                            @endforelse
+                        </div>
+
+                        <div class="hidden md:block table-wrap flex-1">
                             <table class="w-full whitespace-nowrap">
                                 <thead>
                                     <tr class="bg-gray-50/80 border-b border-gray-100">
@@ -293,6 +408,7 @@
                                     @endforelse
                                 </tbody>
                             </table>
+                        </div>
                         </div>
                     </div>
                 </div>

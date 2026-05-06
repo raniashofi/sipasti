@@ -73,14 +73,7 @@
                         </div>
 
                         @php
-                            $bidangLabels = [
-                                'e_government'                      => 'E-Government',
-                                'infrastruktur_teknologi_informasi'  => 'Infrastruktur TI',
-                                'statistik_persandian'               => 'Statistik & Persandian',
-                            ];
-                            $bidangNama = $profil?->bidang
-                                ? ($bidangLabels[$profil->bidang->nama_bidang] ?? $profil->bidang->nama_bidang)
-                                : '—';
+                            $bidangNama = $profil?->bidang?->nama_bidang ?? '—';
                         @endphp
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">

@@ -66,8 +66,8 @@
 
                             {{-- Rekomendasi Penanganan Dropdown --}}
                             @php
-                                $prioOpts = ['' => 'Semua Rekomendasi', 'eskalasi' => 'Perlu Dieskalasi', 'admin' => 'Dapat Ditangani Admin'];
-                                $prioSel  = request('rekomendasi_penanganan') ?? '';
+                                $prioOpts  = ['' => 'Semua Rekomendasi', 'eskalasi' => 'Perlu Dieskalasi', 'admin' => 'Dapat Ditangani Admin'];
+                                $prioSel   = request('rekomendasi_penanganan') ?? '';
                                 $prioLabel = $prioOpts[$prioSel] ?? 'Semua Rekomendasi';
                             @endphp
                             <input type="hidden" name="rekomendasi_penanganan" id="prioInputMenunggu" value="{{ $prioSel }}">
@@ -186,7 +186,77 @@
                     {{-- Tab: Tiket Baru --}}
                     <div x-show="activeTab === 'baru'" class="h-full flex flex-col">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
-                            <div class="overflow-x-auto flex-1">
+
+                            {{-- Mobile cards --}}
+                            <div class="md:hidden divide-y divide-gray-100 overflow-y-auto">
+                                @forelse($tiketsVerif as $tiket)
+                                @php
+                                    $pS = match($tiket->rekomendasi_penanganan) {
+                                        'eskalasi' => ['bg'=>'#FEF2F2','text'=>'#DC2626','label'=>'Perlu Dieskalasi'],
+                                        default    => ['bg'=>'#EFF6FF','text'=>'#1D4ED8','label'=>'Ditangani Admin'],
+                                    };
+                                    $tJ = json_encode([
+                                        'id'                    => $tiket->id,
+                                        'subjek_masalah'        => $tiket->subjek_masalah,
+                                        'detail_masalah'        => $tiket->detail_masalah,
+                                        'opd_nama'              => $tiket->opd?->nama_opd ?? '—',
+                                        'kategori_nama'         => $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—'),
+                                        'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
+                                        'lokasi'                => $tiket->lokasi ?? '—',
+                                        'foto_bukti'            => $tiket->foto_bukti,
+                                        'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
+                                        'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
+                                        'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
+                                        'can_terima'            => $tiket->can_terima,
+                                        'alasan_kembalikan'     => null,
+                                        'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
+                                        'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
+                                    ]);
+                                @endphp
+                                <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                     @click="openDetail({{ $tJ }})">
+                                    <div class="flex items-start justify-between gap-2 mb-1">
+                                        <span class="font-mono text-xs font-bold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">#{{ Str::upper(substr($tiket->id, -8)) }}</span>
+                                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0" style="background:{{ $pS['bg'] }};color:{{ $pS['text'] }};">{{ $pS['label'] }}</span>
+                                    </div>
+                                    <p class="text-sm font-semibold text-gray-800 mb-0.5 line-clamp-1">{{ $tiket->subjek_masalah }}</p>
+                                    <p class="text-xs text-gray-400 mb-2 line-clamp-1">{{ $tiket->detail_masalah }}</p>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="text-xs text-gray-400 min-w-0">
+                                            <span class="line-clamp-1">{{ $tiket->opd?->nama_opd ?? '—' }}</span>
+                                            <span class="text-gray-300 text-[11px]">{{ $tiket->created_at?->translatedFormat('d M Y') }}</span>
+                                        </div>
+                                        <div class="flex gap-1.5 shrink-0" @click.stop>
+                                            <button @click.stop="setTiket({{ $tJ }}); showModal = 'transfer-pilih'"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#FEF3C7;color:#D97706;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                            </button>
+                                            @if($tiket->can_terima)
+                                            <button @click.stop="setTiket({{ $tJ }}); showModal = 'terima'"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#D1FAE5;color:#059669;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            </button>
+                                            @else
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center cursor-not-allowed opacity-50" style="background:#F3F4F6;color:#9CA3AF;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            </div>
+                                            @endif
+                                            <button @click.stop="setTiket({{ $tJ }}); showModal = 'revisi'"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#FEE2E2;color:#DC2626;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                @empty
+                                <div class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada tiket baru.</div>
+                                @endforelse
+                            </div>
+
+                            <div class="hidden md:block overflow-x-auto flex-1">
                                 <table class="w-full text-sm text-left">
                                     <thead>
                                         <tr class="border-b border-gray-100 bg-gray-50/50">
@@ -316,7 +386,7 @@
                                 </table>
                             </div>
 
-                            {{-- Pagination 10 Data (Jika Controller diubah menjadi Paginate, pastikan memakai $tiketsVerif->links()) --}}
+                            {{-- Pagination --}}
                             @if(method_exists($tiketsVerif, 'links'))
                             <div class="px-5 py-4 border-t border-gray-100 w-full shrink-0">
                                 {{ $tiketsVerif->appends(request()->query())->links() }}
@@ -326,9 +396,81 @@
                     </div>
 
                     {{-- Tab: Dikembalikan Teknisi --}}
-                    <div x-show="activeTab === 'dikembalikan'" class="h-full flex flex-col">
+                    <div x-show="activeTab === 'dikembalikan'" class="h-full flex flex-col" style="display:none;">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full overflow-hidden">
-                            <div class="overflow-x-auto flex-1">
+
+                            {{-- Mobile cards --}}
+                            <div class="md:hidden divide-y divide-gray-100 overflow-y-auto">
+                                @forelse($tiketsDikembalikan as $tiket)
+                                @php
+                                    $pS2 = match($tiket->rekomendasi_penanganan) {
+                                        'eskalasi' => ['bg'=>'#FEF2F2','text'=>'#DC2626','label'=>'Perlu Dieskalasi'],
+                                        default    => ['bg'=>'#EFF6FF','text'=>'#1D4ED8','label'=>'Ditangani Admin'],
+                                    };
+                                    $tJ2 = json_encode([
+                                        'id'                    => $tiket->id,
+                                        'subjek_masalah'        => $tiket->subjek_masalah,
+                                        'detail_masalah'        => $tiket->detail_masalah,
+                                        'opd_nama'              => $tiket->opd?->nama_opd ?? '—',
+                                        'kategori_nama'         => $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—'),
+                                        'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
+                                        'lokasi'                => $tiket->lokasi ?? '—',
+                                        'foto_bukti'            => $tiket->foto_bukti,
+                                        'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
+                                        'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
+                                        'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
+                                        'can_terima'            => $tiket->can_terima,
+                                        'alasan_kembalikan'     => $tiket->alasan_kembalikan,
+                                        'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
+                                        'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
+                                    ]);
+                                @endphp
+                                <div class="px-4 py-4 hover:bg-orange-50/50 transition-colors cursor-pointer"
+                                     @click="openDetail({{ $tJ2 }})">
+                                    <div class="flex items-start justify-between gap-2 mb-1">
+                                        <span class="font-mono text-xs font-bold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">#{{ Str::upper(substr($tiket->id, -8)) }}</span>
+                                        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full border shrink-0" style="background:{{ $pS2['bg'] }};color:{{ $pS2['text'] }};">{{ $pS2['label'] }}</span>
+                                    </div>
+                                    <p class="text-sm font-semibold text-gray-800 mb-0.5 line-clamp-1">{{ $tiket->subjek_masalah }}</p>
+                                    @if($tiket->alasan_kembalikan)
+                                    <p class="text-xs font-semibold mb-1" style="color:#D97706;"><span class="mr-1">↩</span>{{ $tiket->alasan_kembalikan }}</p>
+                                    @endif
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="text-xs text-gray-400 min-w-0">
+                                            <span class="line-clamp-1">{{ $tiket->opd?->nama_opd ?? '—' }}</span>
+                                            <span class="text-gray-300 text-[11px]">{{ $tiket->created_at?->translatedFormat('d M Y') }}</span>
+                                        </div>
+                                        <div class="flex gap-1.5 shrink-0" @click.stop>
+                                            <button @click.stop="setTiket({{ $tJ2 }}); showModal = 'transfer-pilih'"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#FEF3C7;color:#D97706;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                                            </button>
+                                            @if($tiket->can_terima)
+                                            <button @click.stop="setTiket({{ $tJ2 }}); showModal = 'terima'"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#D1FAE5;color:#059669;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            </button>
+                                            @else
+                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center cursor-not-allowed opacity-50" style="background:#F3F4F6;color:#9CA3AF;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            </div>
+                                            @endif
+                                            <button @click.stop="setTiket({{ $tJ2 }}); showModal = 'revisi'"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#FEE2E2;color:#DC2626;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                @empty
+                                <div class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada tiket dikembalikan.</div>
+                                @endforelse
+                            </div>
+
+                            <div class="hidden md:block overflow-x-auto flex-1">
                                 <table class="w-full text-sm text-left">
                                     <thead>
                                         <tr class="border-b border-orange-100 bg-orange-50/50">
@@ -462,7 +604,7 @@
                                 </table>
                             </div>
 
-                            {{-- Pagination 10 Data --}}
+                            {{-- Pagination --}}
                             @if(method_exists($tiketsDikembalikan, 'links'))
                             <div class="px-5 py-4 border-t border-gray-100 w-full shrink-0">
                                 {{ $tiketsDikembalikan->appends(request()->query())->links() }}
@@ -483,7 +625,8 @@
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
                  @click="closeDetail()"
-                 class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm">
+                 class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm"
+                 style="display:none;">
             </div>
 
             {{-- ── Detail Drawer ── --}}
@@ -495,6 +638,7 @@
                  x-transition:leave-start="translate-x-0"
                  x-transition:leave-end="translate-x-full"
                  class="fixed right-0 top-0 h-screen bg-white z-[101] flex flex-col w-full sm:w-[450px] shadow-2xl"
+                 style="display:none;"
                  @click.stop>
 
                 {{-- Drawer Header --}}
@@ -656,7 +800,7 @@
             {{-- ── Modals ── --}}
 
             {{-- Overlay --}}
-            <div x-show="showModal"
+            <div x-show="showModal && showModal !== ''"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0"
                  x-transition:enter-end="opacity-100"
@@ -665,7 +809,7 @@
                  x-transition:leave-end="opacity-0"
                  @click="showModal = ''"
                  class="fixed inset-0 z-[102] bg-black/40 backdrop-blur-sm"
-                 x-cloak></div>
+                 style="display:none;"></div>
 
             {{-- Modal: Terima & Proses --}}
             <div x-show="showModal === 'terima'"
@@ -676,7 +820,8 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="fixed inset-0 z-[103] flex items-center justify-center p-4 sm:p-0"
-                 x-cloak>
+                 style="display:none;"
+                 @click.self="showModal = ''">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 sm:p-8 text-center relative" @click.stop>
                     <button @click="showModal = ''" class="absolute top-4 right-4 w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors focus:outline-none">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -709,7 +854,8 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="fixed inset-0 z-[103] flex items-center justify-center p-4 sm:p-0"
-                 x-cloak>
+                 style="display:none;"
+                 @click.self="showModal = ''">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 sm:p-8 relative" @click.stop>
                     <button @click="showModal = ''" class="absolute top-4 right-4 w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors focus:outline-none">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -750,7 +896,8 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="fixed inset-0 z-[103] flex items-center justify-center p-4 sm:p-0"
-                 x-cloak>
+                 style="display:none;"
+                 @click.self="showModal = ''">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 sm:p-8 text-center relative" @click.stop>
                     <button @click="showModal = ''" class="absolute top-4 right-4 w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors focus:outline-none">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -786,7 +933,8 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="fixed inset-0 z-[103] flex items-center justify-center p-4 sm:p-0"
-                 x-cloak>
+                 style="display:none;"
+                 @click.self="showModal = ''">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 sm:p-8 relative" @click.stop>
                     <button @click="showModal = ''" class="absolute top-4 right-4 w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors focus:outline-none">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -803,8 +951,7 @@
                                     class="w-full px-3.5 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] bg-white">
                                 <option value="">Pilih bidang</option>
                                 @foreach($bidangs as $bidang)
-                                @php $bl = ['e_government'=>'E-Government','infrastruktur_teknologi_informasi'=>'Infrastruktur TI','statistik_persandian'=>'Statistik & Persandian']; @endphp
-                                <option value="{{ $bidang->id }}">{{ $bl[$bidang->nama_bidang] ?? $bidang->nama_bidang }}</option>
+                                <option value="{{ $bidang->id }}">{{ $bidang->nama_bidang }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -837,7 +984,8 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="fixed inset-0 z-[103] flex items-center justify-center p-4 sm:p-0"
-                 x-cloak>
+                 style="display:none;"
+                 @click.self="showModal = ''">
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 sm:p-8 relative" @click.stop>
                     <button @click="showModal = ''" class="absolute top-4 right-4 w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors focus:outline-none">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -855,10 +1003,9 @@
                                     class="w-full px-3.5 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] bg-white">
                                 <option value="">Pilih Teknisi</option>
                                 @foreach($teknisis as $tek)
-                                @php $bl = ['e_government'=>'E-Government','infrastruktur_teknologi_informasi'=>'Infrastruktur TI','statistik_persandian'=>'Statistik & Persandian']; @endphp
                                 <option value="{{ $tek->id }}">
                                     {{ $tek->nama_lengkap }}
-                                    @if($tek->bidang) — {{ $bl[$tek->bidang->nama_bidang] ?? $tek->bidang->nama_bidang }} @endif
+                                    @if($tek->bidang) — {{ $tek->bidang->nama_bidang }} @endif
                                     · {{ $tek->tiket_aktif_count }} tiket aktif
                                 </option>
                                 @endforeach
@@ -895,7 +1042,7 @@
                                      x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
                                      class="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-[110] max-h-44 overflow-y-auto"
                                      style="display:none;">
-                                    <template x-for="tek in teknisiList.filter(t => t.id !== tekUtamaId)" :key="tek.id">
+                                    <template x-for="tek in teknisiList.filter(t => String(t.id) !== String(tekUtamaId))" :key="tek.id">
                                         <div @click="togglePendamping(tek.id)"
                                              class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
                                              :class="pendampingIds.includes(tek.id) ? 'bg-blue-50/50 hover:bg-blue-50/80' : ''">
@@ -921,7 +1068,7 @@
                                                   x-text="tek.tiket_aktif + ' aktif'"></span>
                                         </div>
                                     </template>
-                                    <div x-show="teknisiList.filter(t => t.id !== tekUtamaId).length === 0"
+                                    <div x-show="teknisiList.filter(t => String(t.id) !== String(tekUtamaId)).length === 0"
                                          class="px-4 py-4 text-xs text-gray-400 text-center">
                                         Tidak ada teknisi lain tersedia
                                     </div>
@@ -977,6 +1124,7 @@
                  x-transition:leave-end="opacity-0"
                  @click="showFoto = false; activeFoto = null"
                  class="fixed inset-0 z-[105] bg-black/90 flex items-center justify-center p-4 sm:p-6"
+                 style="display:none;"
                  x-cloak>
                 <img :src="activeFoto ? '/storage/' + activeFoto : ''"
                      class="max-w-full max-h-full rounded-xl shadow-2xl object-contain" @click.stop>
@@ -995,6 +1143,7 @@
                  x-transition:leave-end="opacity-0"
                  @click="sopPreviewOpen = false"
                  class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] p-0 sm:p-4"
+                 style="display:none;"
                  x-cloak></div>
 
             {{-- Modal: Preview SOP Content --}}
@@ -1006,6 +1155,7 @@
                  x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
                  x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
                  class="fixed inset-0 flex items-end sm:items-center justify-center z-[111] p-0 sm:p-4 pointer-events-none"
+                 style="display:none;"
                  x-cloak>
                 <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-3xl h-[85vh] sm:h-[90vh] max-h-[800px] overflow-hidden flex flex-col transform transition-all pointer-events-auto"
                      @click.stop>
@@ -1063,11 +1213,10 @@
     <script>
     function tiketPage() {
         @php
-        $bl = ['e_government'=>'E-Government','infrastruktur_teknologi_informasi'=>'Infrastruktur TI','statistik_persandian'=>'Statistik & Persandian'];
         $teknisiListData = $teknisis->map(fn($t) => [
             'id'          => $t->id,
             'nama'        => $t->nama_lengkap,
-            'bidang'      => $t->bidang ? ($bl[$t->bidang->nama_bidang] ?? $t->bidang->nama_bidang) : null,
+            'bidang'      => $t->bidang?->nama_bidang,
             'tiket_aktif' => (int) ($t->tiket_aktif_count ?? 0),
         ]);
         @endphp
@@ -1090,6 +1239,16 @@
             init() {
                 this.$watch('tekUtamaId', (newVal) => {
                     this.pendampingIds = this.pendampingIds.filter(id => id !== newVal);
+                });
+
+                // Menutup modal/drawer jika tombol ESC ditekan
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        if (this.showFoto) { this.showFoto = false; }
+                        else if (this.sopPreviewOpen) { this.sopPreviewOpen = false; }
+                        else if (this.showModal) { this.showModal = ''; }
+                        else if (this.showDrawer) { this.showDrawer = false; }
+                    }
                 });
             },
             togglePendamping(id) {

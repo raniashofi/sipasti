@@ -204,8 +204,43 @@
                     <span class="text-xs text-gray-400" x-text="`${filtered.length} dari ${rows.length} data`"></span>
                 </div>
 
+                {{-- Mobile card list --}}
+                <div class="md:hidden divide-y divide-gray-100">
+                    <template x-for="(row, index) in paginatedFiltered" :key="row.id">
+                        <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors">
+                            <div class="flex items-start justify-between gap-2 mb-1">
+                                <p class="text-sm font-semibold text-gray-900" x-text="row.nama_opd || '-'"></p>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-2" x-text="row.email || '-'"></p>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-gray-400">
+                                    <template x-if="row.last_login"><span x-text="row.last_login"></span></template>
+                                    <template x-if="!row.last_login"><span class="text-gray-300">Belum login</span></template>
+                                </span>
+                                <div class="flex gap-2">
+                                    <button @click="openEdit(row)"
+                                            class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white"
+                                            style="background-color:#D97706;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        Edit
+                                    </button>
+                                    <button @click="openHapus(row.id)"
+                                            class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white"
+                                            style="background-color:#DC2626;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="filtered.length === 0" class="px-4 py-10 text-center text-sm text-gray-400">
+                        Tidak ada data yang cocok dengan pencarian.
+                    </div>
+                </div>
+
                 {{-- Responsif Tabel: table-wrap + min-w --}}
-                <div class="overflow-x-auto table-wrap flex-1 min-w-full">
+                <div class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
                     <table class="w-full min-w-[800px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -259,6 +294,7 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
                 </div>
 
                 {{-- Pagination UI (Hanya tampil jika ada data) --}}

@@ -16,14 +16,7 @@
     @include('layouts.sidebarAdminHelpdesk')
 
     @php
-        $bidangLabels = [
-            'e_government'                      => 'E-Government',
-            'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-            'statistik_persandian'              => 'Statistik & Persandian',
-        ];
-        $bidangLabel = $admin?->bidang
-            ? ($bidangLabels[$admin->bidang->nama_bidang] ?? $admin->bidang->nama_bidang)
-            : '—';
+        $bidangLabel = $admin?->bidang?->nama_bidang ?? '—';
     @endphp
 
     <div class="ml-0 lg:ml-64 min-h-screen flex flex-col">
@@ -161,7 +154,52 @@
                     </p>
                 </div>
 
-                <div class="overflow-x-auto flex-1 w-full">
+                {{-- Mobile card list --}}
+                <div class="md:hidden divide-y divide-gray-100">
+                    @forelse($articles as $i => $article)
+                    <div class="px-4 py-4 hover:bg-gray-50/80 transition-colors">
+                        <div class="flex items-start justify-between gap-2 mb-1.5">
+                            <p class="text-sm font-semibold text-gray-900 leading-snug">{{ $article->nama_artikel_sop }}</p>
+                            @if($article->status_publikasi === 'published')
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 text-green-700 bg-green-50 shrink-0">
+                                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Published
+                            </span>
+                            @else
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border border-yellow-200 text-yellow-700 bg-yellow-50 shrink-0">
+                                <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span> Draft
+                            </span>
+                            @endif
+                        </div>
+                        @if($article->tags->count())
+                        <div class="flex flex-wrap gap-1 mb-2">
+                            @foreach($article->tags->take(3) as $tag)
+                            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{{ $tag->nama_tag }}</span>
+                            @endforeach
+                        </div>
+                        @endif
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-xs text-gray-400">{{ $article->created_at?->format('d M Y') ?? '—' }}</span>
+                            <a href="{{ route('admin_helpdesk.pustaka.show', $article->id) }}"
+                               class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+                               style="background-color:#01458E;">
+                                Lihat Detail
+                            </a>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="px-6 py-12 flex flex-col items-center gap-3 text-center">
+                        <div class="w-14 h-14 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center">
+                            <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                        </div>
+                        <p class="text-sm font-bold text-gray-500">Belum ada artikel tersedia.</p>
+                    </div>
+                    @endforelse
+                </div>
+
+                {{-- Desktop table --}}
+                <div class="hidden md:block overflow-x-auto flex-1 w-full">
                     <table class="w-full min-w-max text-sm text-left">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50/50">
@@ -259,6 +297,7 @@
                             @endif
                         </tbody>
                     </table>
+                </div>
                 </div>
 
                 {{-- Pagination 10 Data --}}

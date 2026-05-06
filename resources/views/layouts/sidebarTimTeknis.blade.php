@@ -95,14 +95,7 @@
         @php
             $sidebarTeknis = \App\Models\TimTeknis::with('bidang')
                 ->where('user_id', Auth::id())->first();
-            $bidangLabels = [
-                'e_government'                     => 'E-Government',
-                'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-                'statistik_persandian'              => 'Statistik & Persandian',
-            ];
-            $teknisBidang = $sidebarTeknis?->bidang
-                ? ($bidangLabels[$sidebarTeknis->bidang->nama_bidang] ?? $sidebarTeknis->bidang->nama_bidang)
-                : '—';
+            $teknisBidang = $sidebarTeknis?->bidang?->nama_bidang ?? '—';
             $teknisNama = $sidebarTeknis?->nama_lengkap ?? 'Tim Teknis';
         @endphp
 

@@ -12,12 +12,6 @@ use Illuminate\Support\Str;
 
 class KonfigurasiSistemController extends Controller
 {
-    private array $bidangLabel = [
-        'e_government'                     => 'E-Government',
-        'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-        'statistik_persandian'             => 'Statistik & Persandian',
-    ];
-
     // ── Index ─────────────────────────────────────────────────────
 
     public function index()
@@ -40,7 +34,7 @@ class KonfigurasiSistemController extends Controller
         $kategorisData = $kategoris->map(fn($k) => $this->formatKategori($k))->values();
         $bidangsData   = $bidangs->map(fn($b) => [
             'id'    => $b->id,
-            'label' => $this->bidangLabel[$b->nama_bidang] ?? $b->nama_bidang,
+            'label' => $b->nama_bidang,
         ])->values();
         $articlesData = $articles->map(fn($a) => [
             'id'                  => $a->id,

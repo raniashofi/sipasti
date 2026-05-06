@@ -145,14 +145,7 @@
         @php
             $sidebarAdminProfile = \App\Models\AdminHelpdesk::with('bidang')
                 ->where('user_id', Auth::id())->first();
-            $bidangLabels = [
-                'e_government'                      => 'E-Government',
-                'infrastruktur_teknologi_informasi'  => 'Infrastruktur TI',
-                'statistik_persandian'               => 'Statistik & Persandian',
-            ];
-            $bidangNama = $sidebarAdminProfile?->bidang
-                ? ($bidangLabels[$sidebarAdminProfile->bidang->nama_bidang] ?? $sidebarAdminProfile->bidang->nama_bidang)
-                : '—';
+            $bidangNama = $sidebarAdminProfile?->bidang?->nama_bidang ?? '—';
             $namaLengkap = $sidebarAdminProfile?->nama_lengkap ?? 'Admin Helpdesk';
         @endphp
 

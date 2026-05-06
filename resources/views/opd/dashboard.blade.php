@@ -173,7 +173,47 @@
                         </a>
                     </div>
 
-                    <div class="table-wrap flex-1">
+                    @php
+                    $statusMap = [
+                        'verifikasi_admin' => ['label'=>'Verifikasi Admin', 'pill'=>'bg-blue-50 text-blue-600',    'dot'=>'bg-blue-500'],
+                        'perlu_revisi'     => ['label'=>'Perlu Revisi',     'pill'=>'bg-red-50 text-red-600',      'dot'=>'bg-red-500'],
+                        'panduan_remote'   => ['label'=>'Panduan Remote',   'pill'=>'bg-purple-50 text-purple-600','dot'=>'bg-purple-500'],
+                        'perbaikan_teknis' => ['label'=>'Perbaikan Teknis', 'pill'=>'bg-amber-50 text-amber-600',  'dot'=>'bg-amber-500'],
+                        'rusak_berat'      => ['label'=>'Rusak Berat',      'pill'=>'bg-orange-50 text-orange-600','dot'=>'bg-orange-500'],
+                        'selesai'          => ['label'=>'Selesai',          'pill'=>'bg-emerald-50 text-emerald-600','dot'=>'bg-emerald-500'],
+                    ];
+                    @endphp
+
+                    {{-- Mobile card list --}}
+                    <div class="md:hidden divide-y divide-gray-100">
+                        @forelse($tiketTerbaru as $tiket)
+                        @php $st = isset($tiket->latestStatus) ? ($statusMap[$tiket->latestStatus->status_tiket] ?? ['label'=>$tiket->latestStatus->status_tiket,'pill'=>'bg-gray-100 text-gray-600','dot'=>'bg-gray-400']) : ['label'=>'Menunggu','pill'=>'bg-slate-100 text-slate-600','dot'=>'bg-slate-400']; @endphp
+                        <div class="px-4 py-4 hover:bg-blue-50/20 transition-colors">
+                            <div class="flex items-start justify-between gap-2 mb-1.5">
+                                <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md border border-gray-200">#{{ strtoupper(substr($tiket->id, 0, 8)) }}</span>
+                                <span class="pill {{ $st['pill'] }} shrink-0"><span class="pill-dot {{ $st['dot'] }}"></span>{{ $st['label'] }}</span>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-900 leading-snug mb-0.5">{{ $tiket->subjek_masalah ?? '-' }}</p>
+                            <div class="flex flex-wrap items-center gap-x-2 text-xs text-gray-400">
+                                <span>{{ $tiket->kategori?->nama_kategori ?? '—' }}</span>
+                                <span>•</span>
+                                <span>{{ $tiket->created_at->diffForHumans() }}</span>
+                            </div>
+                        </div>
+                        @empty
+                        <div class="px-6 py-12 flex flex-col items-center gap-3 text-center">
+                            <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-blue-50/50">
+                                <svg class="w-7 h-7 text-[#01458E] opacity-70" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-bold text-gray-800">Belum ada pengaduan</p>
+                        </div>
+                        @endforelse
+                    </div>
+
+                    {{-- Desktop table --}}
+                    <div class="hidden md:block table-wrap flex-1">
                         <table class="w-full whitespace-nowrap">
                             <thead>
                                 <tr class="bg-gray-50/80 border-b border-gray-100">
@@ -184,18 +224,9 @@
                                     <th class="px-6 py-3.5"></th>
                                 </tr>
                             </thead>
-                            @php
-                            $statusMap = [
-                                'verifikasi_admin' => ['label'=>'Verifikasi Admin', 'pill'=>'bg-blue-50 text-blue-600',   'dot'=>'bg-blue-500'],
-                                'perlu_revisi'     => ['label'=>'Perlu Revisi',     'pill'=>'bg-red-50 text-red-600',     'dot'=>'bg-red-500'],
-                                'panduan_remote'   => ['label'=>'Panduan Remote',   'pill'=>'bg-purple-50 text-purple-600','dot'=>'bg-purple-500'],
-                                'perbaikan_teknis' => ['label'=>'Perbaikan Teknis', 'pill'=>'bg-amber-50 text-amber-600', 'dot'=>'bg-amber-500'],
-                                'rusak_berat'      => ['label'=>'Rusak Berat',      'pill'=>'bg-orange-50 text-orange-600','dot'=>'bg-orange-500'],
-                                'selesai'          => ['label'=>'Selesai',          'pill'=>'bg-emerald-50 text-emerald-600','dot'=>'bg-emerald-500'],
-                            ];
-                            @endphp
                             <tbody class="divide-y divide-gray-100">
                                 @forelse($tiketTerbaru as $tiket)
+                                @php $st = isset($tiket->latestStatus) ? ($statusMap[$tiket->latestStatus->status_tiket] ?? ['label'=>$tiket->latestStatus->status_tiket,'pill'=>'bg-gray-100 text-gray-600','dot'=>'bg-gray-400']) : ['label'=>'Menunggu','pill'=>'bg-slate-100 text-slate-600','dot'=>'bg-slate-400']; @endphp
                                 <tr class="hover:bg-blue-50/30 transition-colors group">
                                     <td class="px-6 py-4">
                                         <span class="font-mono text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
@@ -203,26 +234,14 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 max-w-[220px]">
-                                        <p class="text-sm font-semibold text-gray-900 truncate">
-                                            {{ $tiket->subjek_masalah ?? '-' }}
-                                        </p>
+                                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $tiket->subjek_masalah ?? '-' }}</p>
                                         <p class="text-[11px] text-gray-400 mt-0.5">{{ $tiket->created_at->diffForHumans() }}</p>
                                     </td>
                                     <td class="px-6 py-4">
                                         <span class="text-xs text-gray-600 font-medium">{{ $tiket->kategori?->nama_kategori ?? '—' }}</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        @if($tiket->latestStatus)
-                                            @php $st = $statusMap[$tiket->latestStatus->status_tiket] ?? ['label'=>$tiket->latestStatus->status_tiket,'pill'=>'bg-gray-100 text-gray-600','dot'=>'bg-gray-400']; @endphp
-                                            <span class="pill {{ $st['pill'] }}">
-                                                <span class="pill-dot {{ $st['dot'] }}"></span>
-                                                {{ $st['label'] }}
-                                            </span>
-                                        @else
-                                            <span class="pill bg-slate-100 text-slate-600">
-                                                <span class="pill-dot bg-slate-400"></span> Menunggu
-                                            </span>
-                                        @endif
+                                        <span class="pill {{ $st['pill'] }}"><span class="pill-dot {{ $st['dot'] }}"></span>{{ $st['label'] }}</span>
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <a href="#" class="inline-flex items-center justify-center p-2 rounded-lg text-gray-400 hover:text-[#01458E] hover:bg-blue-50 transition-colors">
