@@ -43,14 +43,7 @@
     @include('layouts.sidebarAdminHelpdesk')
 
     @php
-        $bidangLabels = [
-            'e_government'                      => 'E-Government',
-            'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-            'statistik_persandian'              => 'Statistik & Persandian',
-        ];
-        $bidangLabel = $admin?->bidang
-            ? ($bidangLabels[$admin->bidang->nama_bidang] ?? $admin->bidang->nama_bidang)
-            : '—';
+        $bidangLabel = $admin?->bidang?->nama_bidang ?? '—';
         $kodeArtikel = 'KB-' . strtoupper(substr($article->id, 0, 8));
     @endphp
 

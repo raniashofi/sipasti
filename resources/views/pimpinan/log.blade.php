@@ -234,10 +234,10 @@
                     {{-- Bidang dropdown --}}
                     @php
                         $bidangOptions = [
-                            ''                                   => 'Semua Bidang',
-                            'e_government'                       => 'E-Government',
-                            'infrastruktur_teknologi_informasi'  => 'Infrastruktur TI',
-                            'statistik_persandian'               => 'Statistik & Persandian',
+                            ''                        => 'Semua Bidang',
+                            'E-Government'            => 'E-Government',
+                            'Infrastruktur TI'        => 'Infrastruktur TI',
+                            'Statistik & Persandian'  => 'Statistik & Persandian',
                         ];
                         $bidangSelected     = $bidang ?: '';
                         $bidangTriggerLabel = $bidangOptions[$bidangSelected] ?? 'Semua Bidang';
@@ -370,7 +370,90 @@
                     </p>
                 </div>
 
-                <div class="overflow-x-auto">
+                {{-- Mobile Card List --}}
+                <div class="md:hidden divide-y divide-gray-100">
+                    @forelse($logs as $i => $log)
+                    @php
+                        $nama = $log->user?->adminHelpdesk?->nama_lengkap
+                            ?? $log->user?->timTeknis?->nama_lengkap
+                            ?? $log->user?->email
+                            ?? '—';
+
+                        $bidangKey = $log->user?->adminHelpdesk?->bidang?->nama_bidang
+                            ?? $log->user?->timTeknis?->bidang?->nama_bidang
+                            ?? null;
+                        $bidangMap = [
+                            'E-Government'           => ['label' => 'E-Government',           'css' => 'bb bb-egov'],
+                            'Infrastruktur TI'       => ['label' => 'Infrastruktur TI',       'css' => 'bb bb-infra'],
+                            'Statistik & Persandian' => ['label' => 'Statistik & Persandian', 'css' => 'bb bb-statistik'],
+                        ];
+                        $bidangInfo = $bidangKey ? ($bidangMap[$bidangKey] ?? null) : null;
+
+                        $roleMap = [
+                            'admin_helpdesk' => ['label' => 'Admin Helpdesk', 'css' => 'background:#eff6ff;color:#1d4ed8;'],
+                            'tim_teknis'     => ['label' => 'Tim Teknis',     'css' => 'background:#f5f3ff;color:#5b21b6;'],
+                        ];
+                        $roleBadge = $roleMap[$log->role_pelaku] ?? ['label' => $log->role_pelaku, 'css' => 'background:#f3f4f6;color:#6b7280;'];
+
+                        $actionMap = [
+                            'create'   => ['css' => 'ab-create',   'icon' => '✦', 'label' => 'CREATE'],
+                            'update'   => ['css' => 'ab-update',   'icon' => '✎', 'label' => 'UPDATE'],
+                            'delete'   => ['css' => 'ab-delete',   'icon' => '✕', 'label' => 'DELETE'],
+                            'escalate' => ['css' => 'ab-escalate', 'icon' => '↑', 'label' => 'ESCALATE'],
+                            'login'    => ['css' => 'ab-login',    'icon' => '→', 'label' => 'LOGIN'],
+                            'logout'   => ['css' => 'ab-logout',   'icon' => '←', 'label' => 'LOGOUT'],
+                            'approve'  => ['css' => 'ab-approve',  'icon' => '✓', 'label' => 'APPROVE'],
+                            'reject'   => ['css' => 'ab-reject',   'icon' => '✗', 'label' => 'REJECT'],
+                        ];
+                        $action     = $actionMap[$log->jenis_aktivitas] ?? ['css' => 'ab-logout', 'icon' => '·', 'label' => strtoupper($log->jenis_aktivitas)];
+                        $isCritical = $log->jenis_aktivitas === 'delete';
+                    @endphp
+                    <div class="px-4 py-4 cursor-pointer {{ $isCritical ? 'bg-[#fff8f8]' : 'hover:bg-gray-50' }}"
+                         onclick="auditOpenDrawer({{ $i }})">
+                        <div class="flex items-start justify-between gap-2 mb-2">
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-gray-900 truncate">{{ $nama }}</p>
+                                <p class="text-[11px] text-gray-400 font-mono truncate">{{ $log->user?->email ?? '—' }}</p>
+                            </div>
+                            <span class="action-badge {{ $action['css'] }} shrink-0">{{ $action['icon'] }} {{ $action['label'] }}</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <span class="bb" style="{{ $roleBadge['css'] }}">{{ $roleBadge['label'] }}</span>
+                            @if($bidangInfo)
+                            <span class="{{ $bidangInfo['css'] }}">{{ $bidangInfo['label'] }}</span>
+                            @else
+                            <span class="bb bb-default">—</span>
+                            @endif
+                        </div>
+                        <p class="text-xs text-gray-500 truncate mb-1">{{ $log->detail_tindakan ?? '—' }}</p>
+                        @if($log->id_record)
+                        <p class="text-xs font-mono font-semibold truncate mb-1" style="color:#01458E;">{{ $log->id_record }}</p>
+                        @endif
+                        <div class="flex items-center justify-between mt-1">
+                            <span class="text-[10px] font-mono text-gray-400">{{ $log->ip_address ?? '—' }}</span>
+                            <span class="text-[10px] text-gray-400 font-mono">
+                                {{ $log->waktu_eksekusi?->format('d M Y H:i') ?? '—' }} WIB
+                            </span>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                                <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm text-gray-400">Belum ada aktivitas yang tercatat</p>
+                            @if($search || $role || $bidang || $jenis || $tanggal)
+                            <a href="{{ route('pimpinan.log') }}" class="text-xs text-[#01458E] hover:underline">Reset filter</a>
+                            @endif
+                        </div>
+                    </div>
+                    @endforelse
+                </div>
+
+                <div class="hidden md:block overflow-x-auto">
                     <table class="w-full text-sm border-collapse">
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-100">
@@ -396,9 +479,9 @@
                                     ?? $log->user?->timTeknis?->bidang?->nama_bidang
                                     ?? null;
                                 $bidangMap = [
-                                    'e_government'                     => ['label' => 'E-Government',         'css' => 'bb bb-egov'],
-                                    'infrastruktur_teknologi_informasi' => ['label' => 'Infrastruktur TI',     'css' => 'bb bb-infra'],
-                                    'statistik_persandian'             => ['label' => 'Statistik & Persandian','css' => 'bb bb-statistik'],
+                                    'E-Government'           => ['label' => 'E-Government',          'css' => 'bb bb-egov'],
+                                    'Infrastruktur TI'       => ['label' => 'Infrastruktur TI',      'css' => 'bb bb-infra'],
+                                    'Statistik & Persandian' => ['label' => 'Statistik & Persandian', 'css' => 'bb bb-statistik'],
                                 ];
                                 $bidangInfo = $bidangKey ? ($bidangMap[$bidangKey] ?? null) : null;
 
@@ -538,9 +621,9 @@
     };
 
     const _bidangBadge = {
-        e_government:                     { css:'bb bb-egov',      label:'E-Government' },
-        infrastruktur_teknologi_informasi: { css:'bb bb-infra',     label:'Infrastruktur TI' },
-        statistik_persandian:             { css:'bb bb-statistik', label:'Statistik & Persandian' },
+        'E-Government':           { css:'bb bb-egov',      label:'E-Government' },
+        'Infrastruktur TI':       { css:'bb bb-infra',     label:'Infrastruktur TI' },
+        'Statistik & Persandian': { css:'bb bb-statistik', label:'Statistik & Persandian' },
     };
 
     function escHtml(s) {

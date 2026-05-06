@@ -13,11 +13,6 @@ class Bidang extends Model
 
     protected $fillable = ['id', 'nama_bidang'];
 
-    public function kategori()
-    {
-        return $this->hasMany(KategoriSistem::class);
-    }
-
     public function knowledgeBases()
     {
         return $this->hasMany(KnowledgeBase::class, 'bidang_id');

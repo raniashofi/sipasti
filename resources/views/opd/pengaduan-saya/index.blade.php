@@ -95,7 +95,7 @@
     @include('layouts.topBarOpd')
 </div>
 
-<main class="flex-1 max-w-screen-xl w-full mx-auto px-5 md:px-8 py-8">
+<main class="flex-1 max-w-screen-xl w-full mx-auto px-4 md:px-8 py-6 md:py-8">
 
     {{-- Flash success --}}
     @if(session('success'))
@@ -123,7 +123,7 @@
             <p class="text-sm text-gray-500 mt-0.5">Daftar seluruh tiket pengaduan yang telah Anda buat</p>
         </div>
         <a href="{{ route('opd.diagnosis.index') }}"
-           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold
+           class="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-5 py-2.5 rounded-xl text-white text-sm font-bold
                   transition hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
            style="background:#01458E;">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -134,7 +134,7 @@
     </div>
 
     {{-- Filter & Search bar --}}
-    <div class="fu fu2 card p-5 mb-5 relative z-40">
+    <div class="fu fu2 card p-5 mb-5 relative">
         <form method="GET" action="{{ route('opd.tiket.index') }}"
               class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
 
@@ -220,8 +220,137 @@
         </form>
     </div>
 
-    {{-- Table --}}
-    <div class="fu fu3 card overflow-hidden">
+    {{-- ── Mobile card list (tampil di bawah md) ── --}}
+    <div class="fu fu3 card overflow-hidden md:hidden">
+
+        @forelse($tikets as $tiket)
+            @php
+            $status = $tiket->latestStatus?->status_tiket ?? '';
+            $statusConfig = match($status) {
+                'verifikasi_admin'  => ['label' => 'Verifikasi Admin',  'cls' => 'badge-verifikasi'],
+                'panduan_remote'    => ['label' => 'Panduan Remote',    'cls' => 'badge-panduan'],
+                'perbaikan_teknis'  => ['label' => 'Perbaikan Teknis',  'cls' => 'badge-perbaikan'],
+                'selesai',
+                'tiket_ditutup'     => ['label' => 'Selesai',           'cls' => 'badge-selesai'],
+                'rusak_berat'       => ['label' => 'Rusak Berat',       'cls' => 'badge-rusak'],
+                'perlu_revisi'      => ['label' => 'Perlu Revisi',      'cls' => 'badge-revisi'],
+                'dibuka_kembali'    => ['label' => 'Dibuka Kembali',    'cls' => 'badge-perbaikan'],
+                default             => ['label' => 'Menunggu',          'cls' => 'badge-default'],
+            };
+            $showChat    = in_array($status, ['panduan_remote', 'perbaikan_teknis']);
+            $showKonfirm = in_array($status, ['selesai', 'tiket_ditutup']) && $tiket->penilaian === null;
+            @endphp
+
+            <div class="px-4 py-4 border-b border-gray-100 last:border-0">
+                {{-- Baris atas: ID + Badge --}}
+                <div class="flex items-start justify-between gap-2 mb-2">
+                    <span class="font-mono text-xs font-semibold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200">
+                        #TKT-{{ substr(explode('-', $tiket->id)[1], 0, 5) }}
+                    </span>
+                    <span class="badge {{ $statusConfig['cls'] }}">{{ $statusConfig['label'] }}</span>
+                </div>
+
+                {{-- Subjek --}}
+                <p class="text-sm font-semibold text-gray-900 mb-1 leading-snug">{{ $tiket->subjek_masalah ?? '-' }}</p>
+
+                {{-- Meta: kategori + tanggal --}}
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 mb-3">
+                    <span>{{ $tiket->kategori?->nama_kategori ?? '—' }}</span>
+                    <span class="text-gray-300">•</span>
+                    <span>{{ $tiket->created_at?->locale('id')->isoFormat('D MMM YYYY, HH:mm') ?? '-' }}</span>
+                </div>
+
+                {{-- Tombol aksi --}}
+                <div class="flex items-center gap-2 flex-wrap">
+                    @if($showChat)
+                    <a href="{{ route('opd.tiket.chat', $tiket->id) }}" class="btn-action btn-chat">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
+                        </svg>
+                        Chat
+                    </a>
+                    @endif
+
+                    @if($showKonfirm)
+                    <button type="button" onclick="bukaModalRating('{{ $tiket->id }}')" class="btn-action btn-konfirm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Selesai
+                    </button>
+                    @endif
+
+                    <a href="{{ route('opd.tiket.show', $tiket->id) }}" class="btn-action btn-detail">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                        </svg>
+                        Detail
+                    </a>
+                </div>
+            </div>
+
+        @empty
+            <div class="px-6 py-16 flex flex-col items-center gap-4 text-center">
+                <div class="w-14 h-14 rounded-2xl flex items-center justify-center bg-blue-50">
+                    <svg class="w-7 h-7 text-[#01458E] opacity-60" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-gray-800">Belum ada pengaduan</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        @if(request()->hasAny(['status','search']))
+                            Tidak ada tiket yang sesuai dengan filter Anda.
+                        @else
+                            Tiket pengaduan yang Anda buat akan muncul di sini.
+                        @endif
+                    </p>
+                </div>
+                @if(!request()->hasAny(['status','search']))
+                <a href="{{ route('opd.diagnosis.index') }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold transition hover:shadow-lg"
+                   style="background:#01458E;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Buat Pengaduan Pertama
+                </a>
+                @endif
+            </div>
+        @endforelse
+
+        {{-- Pagination mobile --}}
+        @if($tikets->hasPages())
+        <div class="px-4 py-4 border-t border-gray-100 flex flex-col items-center gap-3">
+            <p class="text-xs text-gray-500">
+                Menampilkan <span class="font-semibold text-gray-700">{{ $tikets->firstItem() }}–{{ $tikets->lastItem() }}</span>
+                dari <span class="font-semibold text-gray-700">{{ $tikets->total() }}</span> tiket
+            </p>
+            <div class="flex items-center gap-1">
+                @if($tikets->onFirstPage())
+                <span class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 bg-gray-50 cursor-not-allowed">&lsaquo; Prev</span>
+                @else
+                <a href="{{ $tikets->previousPageUrl() }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-blue-50 hover:text-[#01458E] transition-colors">&lsaquo; Prev</a>
+                @endif
+                @foreach($tikets->getUrlRange(max(1, $tikets->currentPage()-2), min($tikets->lastPage(), $tikets->currentPage()+2)) as $page => $url)
+                    @if($page == $tikets->currentPage())
+                    <span class="px-3 py-1.5 rounded-lg text-xs font-bold text-white" style="background:#01458E;">{{ $page }}</span>
+                    @else
+                    <a href="{{ $url }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-blue-50 hover:text-[#01458E] transition-colors">{{ $page }}</a>
+                    @endif
+                @endforeach
+                @if($tikets->hasMorePages())
+                <a href="{{ $tikets->nextPageUrl() }}" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-blue-50 hover:text-[#01458E] transition-colors">Next &rsaquo;</a>
+                @else
+                <span class="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-300 bg-gray-50 cursor-not-allowed">Next &rsaquo;</span>
+                @endif
+            </div>
+        </div>
+        @endif
+    </div>
+
+    {{-- ── Table (tampil mulai md ke atas) ── --}}
+    <div class="fu fu3 card overflow-hidden hidden md:block">
         <div class="table-wrap">
             <table class="w-full whitespace-nowrap">
                 <thead>

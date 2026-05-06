@@ -64,7 +64,7 @@
     @include('layouts.topBarOpd')
 </div>
 
-<main class="max-w-screen-xl mx-auto px-6 lg:px-8 py-7 space-y-6">
+<main class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 space-y-5 sm:space-y-6">
 
     {{-- Breadcrumb --}}
     <div class="flex items-center gap-2 text-xs text-gray-400">
@@ -79,25 +79,25 @@
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
 
         {{-- Header --}}
-        <div class="px-7 py-6 border-b border-gray-100"
+        <div class="px-4 py-5 sm:px-7 sm:py-6 border-b border-gray-100"
              style="background-color: #ffffff;">
-            <div class="flex items-start gap-4">
-                <div class="w-20 h-20 rounded-xl flex items-center justify-center shrink-0"
+            <div class="flex items-start gap-3 sm:gap-4">
+                <div class="w-14 h-14 sm:w-20 sm:h-20 rounded-xl flex items-center justify-center shrink-0"
                      style="background:#01458E;">
-                    <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg class="w-8 h-8 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
                               d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/>
                     </svg>
                 </div>
-                <div>
+                <div class="min-w-0">
                     <p class="text-[11px] font-bold text-[#01458E] uppercase tracking-widest mb-1">Solusi Terdeteksi</p>
-                    <h1 class="text-xl font-bold text-gray-900 leading-snug">
+                    <h1 class="text-base sm:text-xl font-bold text-gray-900 leading-snug">
                         {{ $node->judul_solusi ?? $kb?->nama_artikel_sop ?? 'Solusi Ditemukan' }}
                     </h1>
                     @if($node->penjelasan_solusi)
-                    <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">{{ $node->penjelasan_solusi }}</p>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1.5 leading-relaxed">{{ $node->penjelasan_solusi }}</p>
                     @elseif($kb?->deskripsi_singkat)
-                    <p class="text-sm text-gray-500 mt-1.5 leading-relaxed">{{ $kb->deskripsi_singkat }}</p>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-1.5 leading-relaxed">{{ $kb->deskripsi_singkat }}</p>
                     @endif
                 </div>
             </div>
@@ -119,13 +119,13 @@
 
         {{-- Deskripsi singkat highlight --}}
         @if($kb?->deskripsi_singkat && $node->penjelasan_solusi)
-        <div class="mx-7 mt-5 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-            <p class="text-sm text-blue-900 leading-relaxed">{{ $kb->deskripsi_singkat }}</p>
+        <div class="mx-4 sm:mx-7 mt-4 sm:mt-5 p-3 sm:p-4 bg-blue-50 border border-blue-100 rounded-xl">
+            <p class="text-xs sm:text-sm text-blue-900 leading-relaxed">{{ $kb->deskripsi_singkat }}</p>
         </div>
         @endif
 
         {{-- Konten artikel --}}
-        <div class="px-7 py-7">
+        <div class="px-4 py-5 sm:px-7 sm:py-7">
             @if($kb?->isi_konten)
                 <div class="prose-artikel">{!! $kb->isi_konten !!}</div>
             @elseif($node->penjelasan_solusi)
@@ -155,27 +155,27 @@
         ]);
     @endphp
 
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-4 py-5 sm:px-8 sm:py-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
         <div>
-            <p class="text-lg font-bold text-gray-800">Silakan coba solusi di atas.</p>
+            <p class="text-base sm:text-lg font-bold text-gray-800">Silakan coba solusi di atas.</p>
             <p class="text-sm text-gray-800 mt-0.5">Apakah masalah Anda sudah teratasi?</p>
         </div>
 
-        <div class="flex gap-3 shrink-0">
+        <div class="flex flex-col sm:flex-row gap-3 sm:shrink-0">
             {{-- Berhasil --}}
             <a href="{{ route('opd.dashboard') }}"
-               class="flex flex-col items-center justify-center px-8 py-5 rounded-xl text-white text-center
-                      transition hover:-translate-y-0.5 hover:shadow-md"
-               style="background-color:#16A34A; min-width:160px;">
+               class="flex flex-col items-center justify-center px-5 py-4 sm:px-8 sm:py-5 rounded-xl text-white text-center
+                      transition hover:-translate-y-0.5 hover:shadow-md w-full sm:w-auto"
+               style="background-color:#16A34A; min-width:0;">
                 <span class="text-sm font-bold tracking-wide">YA, BERHASIL</span>
                 <span class="text-[11px] font-medium opacity-85 mt-0.5">Masalah selesai, kembali ke Beranda</span>
             </a>
 
             {{-- Masih bermasalah --}}
             <a href="{{ $tiketUrl }}"
-               class="flex flex-col items-center justify-center px-8 py-5 rounded-xl text-white text-center
-                      transition hover:-translate-y-0.5 hover:shadow-md"
-               style="background-color:#DC2626; min-width:160px;">
+               class="flex flex-col items-center justify-center px-5 py-4 sm:px-8 sm:py-5 rounded-xl text-white text-center
+                      transition hover:-translate-y-0.5 hover:shadow-md w-full sm:w-auto"
+               style="background-color:#DC2626; min-width:0;">
                 <span class="text-sm font-bold tracking-wide">TIDAK, MASIH BERMASALAH</span>
                 <span class="text-[11px] font-medium opacity-85 mt-0.5">Lanjut buat Tiket Pengaduan</span>
             </a>

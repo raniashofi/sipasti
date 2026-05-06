@@ -53,7 +53,7 @@
                 <x-notification-bell layout="topbar" />
 
                 {{-- User Dropdown (desktop) --}}
-                <div x-data="{ open: false }" class="relative hidden lg:block">
+                <div x-data="{ open: false }" class="relative hidden lg:block z-100">
                     <button @click="open = !open"
                             class="flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-gray-700 transition-colors">
                         <span>{{ Auth::user()->opd?->nama_opd ?? 'Nama OPD' }}</span>

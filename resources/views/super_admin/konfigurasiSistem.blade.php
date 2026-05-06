@@ -54,7 +54,9 @@
                 right: 0 !important;
                 top: auto !important;
                 width: 100% !important;
-                max-height: 84vh;
+                height: 85vh;
+                height: 85dvh;
+                max-height: 85dvh;
                 border-radius: 20px 20px 0 0 !important;
                 z-index: 50;
                 box-shadow: 0 -4px 32px rgba(0,0,0,.15);
@@ -70,9 +72,26 @@
             }
             .hide-on-mobile { display: none !important; }
         }
+        /* Desktop: always show left panel regardless of Alpine x-show */
         @media (min-width:1024px) {
             .mobile-drag-handle { display: none; }
             .mobile-only { display: none !important; }
+        }
+
+        /* FIX: Memastikan seluruh SVG Icon patuh terhadap ukuran div container-nya */
+        .cat-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .cat-icon svg {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            display: block !important;
+            color: inherit;
         }
     </style>
 </head>
@@ -182,7 +201,7 @@
                 const nodes = this.aktifNodes;
                 if (!nodes.length) return this._emptyFlow(
                     'Belum ada node',
-                    'Tambahkan pertanyaan atau solusi melalui tombol "+ Node Baru" di atas.');
+                    'Tambahkan pertanyaan atau solusi melalui tombol "+ Node Baru" di panel kiri.');
                 const nm  = {}; nodes.forEach(n => nm[n.id] = n);
                 const ref = new Set();
                 nodes.forEach(n => { if (n.id_next_ya) ref.add(n.id_next_ya); if (n.id_next_tidak) ref.add(n.id_next_tidak); });
@@ -254,7 +273,6 @@
                 const nya  = n.id_next_ya     ? nm[n.id_next_ya]     : null;
                 const ntdk = n.id_next_tidak  ? nm[n.id_next_tidak]  : null;
 
-                // Cek kelengkapan node pertanyaan
                 const noText   = !n.teks_pertanyaan;
                 const noYa     = !n.id_next_ya;
                 const noTidak  = !n.id_next_tidak;
@@ -271,7 +289,6 @@
                 const qWarnBorder = qIncomplete ? 'border-color:#F59E0B;background:#FFFBEB;' : '';
                 const qWarnSelS   = (isSel && qIncomplete) ? 'box-shadow:0 0 0 3px rgba(245,158,11,.3);' : selS;
 
-                // Baris peringatan spesifik di dalam node pertanyaan
                 const qWarnLines = [
                     noText  ? `<div style="font-size:10px;color:#D97706;margin-top:4px;display:flex;align-items:center;gap:3px;font-weight:600;">
                                    <svg style="width:10px;height:10px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
@@ -279,7 +296,6 @@
                                </div>` : '',
                 ].filter(Boolean).join('');
 
-                // Trik CSS untuk membuat garis cabang T-Branch yang rapi sempurna
                 return `<div style="display:flex;flex-direction:column;align-items:center;">
                     <div class="fn-q${isSel?' fn-sel':''}" onclick="_sn('${n.id}','${katId}')" style="${qWarnBorder}${qWarnSelS}">
                         <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:${qIncomplete?'#D97706':'#1D4ED8'};margin-bottom:4px;">? PERTANYAAN · ${n.kode}</div>
@@ -351,7 +367,6 @@
             _treeLeaf(n, katId, sel, depth) {
                 const isSel     = sel === n.id;
                 const isQ       = n.tipe_node === 'pertanyaan';
-                // Cek kelengkapan: solusi tanpa artikel/SOP/bidang, atau pertanyaan dengan teks/routing kosong
                 const noKb      = !isQ && !n.kb_id;
                 const noSop     = !isQ && !n.sop_internal_id;
                 const noBidang  = !isQ && !n.bidang_id;
@@ -378,7 +393,6 @@
                     ? (qInc ? '#92400E' : '#1E3A5F')
                     : (noArticle ? '#92400E' : '#4C1D95');
 
-                // Baris keterangan masalah spesifik
                 const hints = [
                     noText   ? '⚠ teks pertanyaan belum diisi'      : '',
                     noYa     ? '⚠ routing YA belum diset'           : '',
@@ -402,7 +416,6 @@
 
             _trunc(s, l) { return s && s.length > l ? s.substring(0,l)+'…' : (s||'—'); },
 
-            // Cek apakah kategori memiliki node yang belum lengkap
             katHasIncomplete(kat) {
                 return kat.nodes.some(n => {
                     if (n.tipe_node === 'solusi')     return !n.kb_id || !n.sop_internal_id || !n.bidang_id;
@@ -604,7 +617,6 @@
                 document.addEventListener('mouseup',  onUp);
             },
 
-            // Icon helper methods
             getIconPresets() {
                 return {
                     'default': { label: 'Umum', svg: {!! json_encode(config('category_icons.presets.default.svg', '<svg></svg>')) !!} },
@@ -658,9 +670,9 @@
 
         {{-- ── Delete Confirmation Modal ── --}}
         <div x-show="deleteConfirmOpen" @click.self="deleteConfirmOpen=false"
-             class="fixed inset-0 z-50 flex items-center justify-center"
+             class="fixed inset-0 z-50 flex items-center justify-center px-4"
              style="background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:none;">
-            <div class="bg-white rounded-3xl shadow-2xl w-[380px] overflow-hidden">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-[380px] overflow-hidden">
                 <div class="px-6 py-4 text-white" style="background:#DC2626;">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
@@ -702,9 +714,9 @@
 
         {{-- ── Simulation Modal ── --}}
         <div x-show="simOpen" @click.self="simOpen=false"
-             class="fixed inset-0 z-40 flex items-center justify-center"
+             class="fixed inset-0 z-40 flex items-center justify-center px-4"
              style="background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:none;">
-            <div class="bg-white rounded-3xl shadow-2xl w-[360px] overflow-hidden">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-[360px] overflow-hidden">
                 <div class="px-6 py-4 text-white" style="background:#01458E;">
                     <div class="flex items-center justify-between">
                         <div>
@@ -750,7 +762,7 @@
                     <template x-if="!simCurrentNode">
                         <div class="text-center py-4">
                             <div class="w-10 h-10 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/></svg>
                             </div>
                             <p class="text-sm font-semibold text-gray-600 mb-1">Akhir Alur</p>
                             <p class="text-xs text-gray-400">Tidak ada node lanjutan yang ditentukan.</p>
@@ -818,7 +830,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                             </svg>
                             <div class="flex-1 min-w-0 flex items-center gap-2">
-                                <div class="w-5 h-5 text-[#01458E] flex-shrink-0" x-html="getIconSVG(kat.icon||'default')"></div>
+                                <div class="w-5 h-5 text-[#01458E] flex-shrink-0 cat-icon" x-html="getIconSVG(kat.icon||'default')"></div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-semibold text-gray-800 truncate" x-text="kat.nama_kategori"></p>
                                     <p class="text-[10px] text-gray-400" x-text="kat.nodes.length + ' node'"></p>
@@ -867,34 +879,42 @@
         <div class="flex-1 flex flex-col overflow-hidden">
 
             {{-- Topbar --}}
-            <header class="bg-white border-b border-gray-100 px-6 py-3.5 flex items-center justify-between shrink-0">
-                <div class="flex items-center gap-2 text-sm">
-                    <span class="text-gray-400 text-m">Konfigurasi</span>
-                    <svg class="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                    </svg>
-                    <span class="font-bold text-gray-800 text-m" x-text="aktifKat ? aktifKat.nama_kategori : 'Alur Diagnosis'"></span>
-                    <span x-show="aktifKat" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 font-semibold"
-                          style="color:#01458E;" x-text="aktifNodes.length + ' node'"></span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button x-show="aktifKat" @click="openAddNode(aktifKatId)"
-                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        Node Baru
+            <header class="bg-white border-b border-gray-100 pl-[60px] md:pl-20 lg:px-6 h-16 box-border flex items-center justify-between shrink-0 gap-2 z-10 relative px-4">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+
+                    {{-- Tombol Pemicu Left Panel di Mobile --}}
+                    <button @click="mobileLeftOpen=true"
+                            class="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 transition-colors shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+                        </svg>
+                        <span class="hidden sm:inline">Pohon Diagnosis</span>
                     </button>
+
+                    <div class="flex items-center gap-1.5 text-sm min-w-0">
+                        <span class="text-gray-400 hidden md:block shrink-0">Konfigurasi</span>
+                        <svg class="w-3 h-3 text-gray-300 hidden md:block shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span class="font-bold text-gray-800 truncate" x-text="aktifKat ? aktifKat.nama_kategori : 'Alur Diagnosis'"></span>
+                        {{-- <span x-show="aktifKat" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 font-semibold shrink-0 hidden sm:inline"
+                              style="color:#01458E;" x-text="aktifNodes.length + ' node'"></span> --}}
+                    </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
                     <button x-show="aktifKat && aktifNodes.length > 0" @click="openSim()"
-                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+                            class="flex items-center gap-1.5 px-2.5 lg:px-3.5 py-2 rounded-full text-xs font-semibold text-white hover:opacity-90 transition-opacity"
                             style="background:#01458E;">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"/>
                         </svg>
-                        Simulasi
+                        <span class="hidden sm:inline">Simulasi</span>
                     </button>
                     <button @click="openAddKategori()"
-                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold border text-[#01458E] hover:bg-blue-50 transition-colors"
+                            class="flex items-center gap-1 px-2.5 lg:px-3.5 py-2 rounded-full text-xs font-semibold border text-[#01458E] hover:bg-blue-50 transition-colors"
                             style="border-color:#01458E;">
-                        + Kategori
+                        <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        <span class="hidden sm:inline">Kategori</span>
                     </button>
                 </div>
             </header>
@@ -904,7 +924,7 @@
                  x-transition:enter="transition ease-out duration-150"
                  x-transition:enter-start="opacity-0 -translate-y-1"
                  x-transition:enter-end="opacity-100 translate-y-0"
-                 class="mx-6 mt-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 shrink-0"
+                 class="mx-3 lg:mx-6 mt-2 lg:mt-3 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 lg:px-4 py-3 shrink-0"
                  style="display:none;">
                 <svg class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
@@ -916,9 +936,9 @@
             </div>
 
             {{-- Legend & Zoom Controls --}}
-            <div class="px-6 pt-3 pb-0 flex items-center justify-between shrink-0">
+            <div class="px-3 lg:px-6 pt-2 lg:pt-3 pb-0 flex items-center justify-between shrink-0">
                 <template x-if="aktifKat">
-                    <div class="flex items-center gap-4 flex-1">
+                    <div class="hidden sm:flex items-center gap-3 lg:gap-4 flex-1">
                         <div class="flex items-center gap-1.5">
                             <div class="w-3 h-3 rounded border-2 border-blue-400 bg-blue-50"></div>
                             <span class="text-[10px] text-gray-500 font-medium">Pertanyaan</span>
@@ -927,7 +947,7 @@
                             <div class="w-3 h-3 rounded border-2 border-purple-400 bg-purple-50"></div>
                             <span class="text-[10px] text-gray-500 font-medium">Solusi</span>
                         </div>
-                        <span class="text-[10px] text-gray-400 ml-2">Klik node untuk mengedit</span>
+                        <span class="text-[10px] text-gray-400 hidden lg:block">Klik node untuk mengedit</span>
                     </div>
                 </template>
 
@@ -950,8 +970,8 @@
 
             {{-- Flow canvas dengan proper Zoom support & Scroll --}}
             <div id="canvas-scroll"
-                 class="flex-1 ps canvas-bg mt-3 overflow-auto flex justify-center" style="min-height:0;">
-                <div class="min-w-max min-h-max p-8 transition-transform duration-200 origin-top"
+                 class="flex-1 ps canvas-bg mt-2 lg:mt-3 overflow-auto flex justify-center" style="min-height:0;">
+                <div class="min-w-max min-h-max p-4 lg:p-8 transition-transform duration-200 origin-top"
                      :style="`transform: scale(${zoomLevel}); transform-origin: top center;`">
                     <div x-html="flowHtml"></div>
                 </div>
@@ -961,15 +981,19 @@
         {{-- ════════════════════════════════════════════════════
              RIGHT PANEL — Editor
         ════════════════════════════════════════════════════ --}}
-        <div x-show="panel"
+        <div id="right-panel"
+             x-show="panel"
              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-x-4" x-transition:enter-end="opacity-100 translate-x-0"
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0 translate-x-4"
              class="w-80 shrink-0 bg-white border-l border-gray-100 flex flex-col overflow-hidden"
              style="display:none;">
 
+            {{-- Mobile drag handle --}}
+            <div class="mobile-drag-handle"></div>
+
             {{-- ══ Kategori panel ══ --}}
             <template x-if="panel === 'add-kat' || panel === 'edit-kat'">
-                <div class="flex flex-col h-full">
+                <div class="flex flex-col h-full bg-white">
                     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                         <div>
                             <h3 class="font-bold text-gray-900 text-sm" x-text="panel==='add-kat' ? 'Tambah Kategori' : 'Edit Kategori'"></h3>
@@ -980,7 +1004,7 @@
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
                         </button>
                     </div>
-                    <div class="flex-1 overflow-y-auto ps px-6 py-4 space-y-4">
+                    <div class="flex-1 overflow-y-auto ps px-6 py-4 space-y-4 pb-24">
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Kategori <span class="text-red-400">*</span></label>
                             <input type="text" x-model="katForm.nama_kategori" placeholder="Contoh: Jaringan/Internet"
@@ -996,7 +1020,7 @@
 
                             {{-- Preview Icon Terpilih --}}
                             <div class="mb-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex flex-col items-center justify-center gap-2">
-                                <div class="w-12 h-12 flex items-center justify-center text-[#01458E] transition-all" x-html="getIconSVG(katForm.icon)"></div>
+                                <div class="w-12 h-12 flex items-center justify-center text-[#01458E] transition-all cat-icon" x-html="getIconSVG(katForm.icon)"></div>
                                 <span class="text-xs font-bold text-[#01458E]" x-text="getIconPresets()[katForm.icon]?.label || 'Icon belum dipilih'"></span>
                             </div>
 
@@ -1008,7 +1032,7 @@
                                             :class="katForm.icon === key ? 'ring-2 ring-[#01458E] border-[#01458E] bg-blue-50' : 'border-gray-200 hover:border-[#01458E]/50 hover:bg-gray-50 bg-white'"
                                             class="flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all group"
                                             :title="preset.label">
-                                        <div class="w-7 h-7 flex items-center justify-center mb-1.5 transition-colors"
+                                        <div class="w-7 h-7 flex items-center justify-center mb-1.5 transition-colors cat-icon"
                                              :class="katForm.icon === key ? 'text-[#01458E]' : 'text-gray-400 group-hover:text-[#01458E]'"
                                              x-html="preset.svg"></div>
                                         <span class="text-[9px] font-bold text-center leading-tight transition-colors line-clamp-1"
@@ -1019,7 +1043,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="px-6 py-4 border-t border-gray-100 flex gap-2 shrink-0">
+                    <div class="px-6 py-4 border-t border-gray-100 flex gap-2 shrink-0 bg-white z-10">
                         <button x-show="panel==='edit-kat'" @click="openDeleteKategori()" :disabled="loading"
                                 class="px-4 py-2.5 rounded-xl text-sm font-semibold text-red-500 border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50">
                             Hapus
@@ -1035,7 +1059,7 @@
 
             {{-- ══ Node panel ══ --}}
             <template x-if="panel === 'add-node' || panel === 'edit-node'">
-                <div class="flex flex-col h-full">
+                <div class="flex flex-col h-full bg-white">
                     <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                         <div>
                             <h3 class="font-bold text-gray-900 text-sm"
@@ -1053,7 +1077,7 @@
                         </button>
                     </div>
 
-                    <div class="flex-1 overflow-y-auto ps px-6 py-4 space-y-4">
+                    <div class="flex-1 overflow-y-auto ps px-6 py-4 space-y-4 pb-24">
 
                         <div x-show="panel==='add-node'">
                             <label class="block text-xs font-semibold text-gray-600 mb-1.5">Tipe Node</label>
@@ -1392,12 +1416,8 @@
                                                 </button>
 
                                                 <div x-show="sopDropdownOpen"
-                                                     x-transition:enter="transition ease-out duration-100"
-                                                     x-transition:enter-start="opacity-0 scale-95"
-                                                     x-transition:enter-end="opacity-100 scale-100"
-                                                     x-transition:leave="transition ease-in duration-75"
-                                                     x-transition:leave-start="opacity-100 scale-100"
-                                                     x-transition:leave-end="opacity-0 scale-95"
+                                                     x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                                                     x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
                                                      class="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
 
                                                     <div class="px-3 pt-3 pb-2 border-b border-gray-100">
@@ -1484,7 +1504,7 @@
 
                     </div>
 
-                    <div class="px-6 py-4 border-t border-gray-100 flex gap-2 shrink-0">
+                    <div class="px-6 py-4 border-t border-gray-100 flex gap-2 shrink-0 bg-white z-10">
                         <button x-show="panel==='edit-node'" @click="openDeleteNode()" :disabled="loading"
                                 class="px-4 py-2.5 rounded-xl text-sm font-semibold text-red-500 border border-red-200 hover:bg-red-50 transition-colors disabled:opacity-50">
                             Hapus

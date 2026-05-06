@@ -71,14 +71,7 @@
                         </div>
 
                         @php
-                            $bidangLabels = [
-                                'e_government'                     => 'E-Government',
-                                'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-                                'statistik_persandian'              => 'Statistik & Persandian',
-                            ];
-                            $bidangNama  = $profil?->bidang
-                                ? ($bidangLabels[$profil->bidang->nama_bidang] ?? $profil->bidang->nama_bidang)
-                                : '—';
+                            $bidangNama  = $profil?->bidang?->nama_bidang ?? '—';
                             $statusKey   = $profil?->status_teknisi ?? 'offline';
                             $isOnline    = $statusKey === 'online';
                         @endphp

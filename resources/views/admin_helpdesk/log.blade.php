@@ -190,8 +190,53 @@
                            onchange="document.getElementById('filterForm').submit()"
                            class="w-full md:w-auto px-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-700 bg-[#F0F4F8] focus:outline-none focus:ring-2 focus:ring-blue-200">
 
-                    {{-- Hidden inputs & custom dropdowns ... --}}
-                    {{-- [Sama seperti di kode sebelumnya agar tetap fungsional] --}}
+                    {{-- Role dropdown --}}
+                    @php
+                        $roleOpts = ['' => 'Semua Role', 'admin_helpdesk' => 'Admin Helpdesk', 'tim_teknis' => 'Tim Teknis'];
+                        $roleSelected     = $role ?: '';
+                        $roleTriggerLabel = $roleOpts[$roleSelected] ?? 'Semua Role';
+                    @endphp
+                    <input type="hidden" name="role_pelaku" id="roleInput" value="{{ $roleSelected }}">
+                    <div class="relative w-full md:w-auto"
+                         x-data="{ open:false, selected:'{{ $roleSelected }}', label:'{{ addslashes($roleTriggerLabel) }}',
+                                   choose(v,l){ this.selected=v; this.label=l; document.getElementById('roleInput').value=v; this.open=false; document.getElementById('filterForm').submit(); } }"
+                         @click.outside="open=false">
+                        <button type="button" class="cdd-trigger" :class="{'active':open}" @click="open=!open">
+                            <span x-text="label">{{ $roleTriggerLabel }}</span>
+                            <svg class="cdd-chevron w-3.5 h-3.5 text-gray-400" :class="{'open':open}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div class="cdd-menu" x-show="open" x-transition style="display:none;">
+                            @foreach($roleOpts as $v => $l)
+                            <div class="cdd-option {{ $roleSelected===$v?'selected':'' }}" :class="{'selected':selected==='{{ $v }}'}" @click="choose('{{ $v }}','{{ addslashes($l) }}')">
+                                <span class="dot"></span>{{ $l }}
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    {{-- Jenis Aktivitas dropdown --}}
+                    @php
+                        $jenisOpts = ['' => 'Semua Aktivitas', 'login' => 'LOGIN', 'logout' => 'LOGOUT', 'create' => 'CREATE', 'update' => 'UPDATE', 'delete' => 'DELETE', 'escalate' => 'ESCALATE', 'approve' => 'APPROVE', 'reject' => 'REJECT'];
+                        $jenisSelected     = $jenis ?: '';
+                        $jenisTriggerLabel = $jenisOpts[$jenisSelected] ?? 'Semua Aktivitas';
+                    @endphp
+                    <input type="hidden" name="jenis_aktivitas" id="jenisInput" value="{{ $jenisSelected }}">
+                    <div class="relative w-full md:w-auto"
+                         x-data="{ open:false, selected:'{{ $jenisSelected }}', label:'{{ addslashes($jenisTriggerLabel) }}',
+                                   choose(v,l){ this.selected=v; this.label=l; document.getElementById('jenisInput').value=v; this.open=false; document.getElementById('filterForm').submit(); } }"
+                         @click.outside="open=false">
+                        <button type="button" class="cdd-trigger" :class="{'active':open}" @click="open=!open">
+                            <span x-text="label">{{ $jenisTriggerLabel }}</span>
+                            <svg class="cdd-chevron w-3.5 h-3.5 text-gray-400" :class="{'open':open}" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        <div class="cdd-menu" x-show="open" x-transition style="display:none;">
+                            @foreach($jenisOpts as $v => $l)
+                            <div class="cdd-option {{ $jenisSelected===$v?'selected':'' }}" :class="{'selected':selected==='{{ $v }}'}" @click="choose('{{ $v }}','{{ addslashes($l) }}')">
+                                <span class="dot"></span>{{ $l }}
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
 
                     <div class="w-full md:flex-1 md:min-w-0 relative">
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
@@ -217,31 +262,125 @@
                     <p class="text-xs text-gray-400">Total {{ $logs->total() }} entri</p>
                 </div>
 
-                <div class="overflow-x-auto min-w-full">
+                {{-- Mobile card list --}}
+                <div class="md:hidden divide-y divide-gray-100">
+                    @forelse($logs as $i => $log)
+                    @php
+                        $namaLog = $log->user?->adminHelpdesk?->nama_lengkap ?? $log->user?->timTeknis?->nama_lengkap ?? $log->user?->email ?? '—';
+                        $aMap = ['create'=>['css'=>'ab-create','icon'=>'✦','label'=>'CREATE'],'update'=>['css'=>'ab-update','icon'=>'✎','label'=>'UPDATE'],'delete'=>['css'=>'ab-delete','icon'=>'✕','label'=>'DELETE'],'escalate'=>['css'=>'ab-escalate','icon'=>'↑','label'=>'ESCALATE'],'login'=>['css'=>'ab-login','icon'=>'→','label'=>'LOGIN'],'logout'=>['css'=>'ab-logout','icon'=>'←','label'=>'LOGOUT'],'approve'=>['css'=>'ab-approve','icon'=>'✓','label'=>'APPROVE'],'reject'=>['css'=>'ab-reject','icon'=>'✗','label'=>'REJECT']];
+                        $act = $aMap[$log->jenis_aktivitas] ?? ['css'=>'ab-logout','icon'=>'·','label'=>strtoupper($log->jenis_aktivitas)];
+                        $isCrit = $log->jenis_aktivitas === 'delete';
+                    @endphp
+                    <div class="px-4 py-4 cursor-pointer {{ $isCrit ? 'bg-[#fff8f8]' : 'hover:bg-gray-50' }}"
+                         onclick="auditOpenDrawer({{ $i }})">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ $namaLog }}</p>
+                            <span class="action-badge {{ $act['css'] }} shrink-0">{{ $act['icon'] }} {{ $act['label'] }}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 truncate mb-1">{{ $log->detail_tindakan ?? '—' }}</p>
+                        @if($log->id_record)
+                        <p class="text-xs font-mono font-semibold truncate mb-1" style="color:#01458E;">{{ $log->id_record }}</p>
+                        @endif
+                        <div class="flex items-center justify-between mt-1">
+                            <span class="text-[10px] font-mono text-gray-400">{{ $log->ip_address ?? '—' }}</span>
+                            <span class="text-[10px] text-gray-400">{{ $log->waktu_eksekusi?->format('d M Y H:i') ?? '—' }} WIB</span>
+                        </div>
+                    </div>
+                    @empty
+                    <div class="px-6 py-12 text-center text-sm text-gray-400">Belum ada aktivitas yang tercatat.</div>
+                    @endforelse
+                </div>
+
+                {{-- Desktop table --}}
+                <div class="hidden md:block overflow-x-auto min-w-full">
                     <table class="w-full text-sm border-collapse min-w-[800px]">
                         <thead>
                             <tr class="bg-gray-50 border-b border-gray-100">
-                                <th class="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Waktu</th>
-                                <th class="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Nama</th>
-                                <th class="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
-                                <th class="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Aktivitas</th>
-                                <th class="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Detail</th>
-                                <th class="px-4 sm:px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">IP Address</th>
-                                <th class="px-4 sm:px-5 py-3"></th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Waktu</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Nama</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Role</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Aktivitas</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">Detail</th>
+                                <th class="px-5 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wide">IP Address</th>
+                                <th class="px-5 py-3"></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{-- Baris tabel sama seperti sebelumnya dengan pagination 10 --}}
+                            @forelse($logs as $i => $log)
+                            @php
+                                $namaLog = $log->user?->adminHelpdesk?->nama_lengkap ?? $log->user?->timTeknis?->nama_lengkap ?? $log->user?->email ?? '—';
+                                $roleMap = ['admin_helpdesk' => 'Admin Helpdesk', 'tim_teknis' => 'Tim Teknis'];
+                                $aMap = ['create'=>['css'=>'ab-create','icon'=>'✦','label'=>'CREATE'],'update'=>['css'=>'ab-update','icon'=>'✎','label'=>'UPDATE'],'delete'=>['css'=>'ab-delete','icon'=>'✕','label'=>'DELETE'],'escalate'=>['css'=>'ab-escalate','icon'=>'↑','label'=>'ESCALATE'],'login'=>['css'=>'ab-login','icon'=>'→','label'=>'LOGIN'],'logout'=>['css'=>'ab-logout','icon'=>'←','label'=>'LOGOUT'],'approve'=>['css'=>'ab-approve','icon'=>'✓','label'=>'APPROVE'],'reject'=>['css'=>'ab-reject','icon'=>'✗','label'=>'REJECT']];
+                                $act = $aMap[$log->jenis_aktivitas] ?? ['css'=>'ab-logout','icon'=>'·','label'=>strtoupper($log->jenis_aktivitas)];
+                                $isCrit = $log->jenis_aktivitas === 'delete';
+                            @endphp
+                            <tr class="border-b border-gray-50 cursor-pointer transition-colors {{ $isCrit ? 'row-critical' : 'hover:bg-gray-50' }}"
+                                onclick="auditOpenDrawer({{ $i }})">
+                                <td class="px-5 py-3.5 whitespace-nowrap">
+                                    <p class="text-xs font-semibold text-gray-900 font-mono">{{ $log->waktu_eksekusi?->format('d M Y') ?? '—' }}</p>
+                                    <p class="text-xs text-gray-400 font-mono">{{ $log->waktu_eksekusi?->format('H:i:s') ?? '' }} WIB</p>
+                                </td>
+                                <td class="px-5 py-3.5">
+                                    <p class="text-sm font-semibold text-gray-900 truncate max-w-[150px]">{{ $namaLog }}</p>
+                                    <p class="text-xs text-gray-400 font-mono">{{ $log->user?->email ?? '—' }}</p>
+                                </td>
+                                <td class="px-5 py-3.5">
+                                    <span class="text-xs text-gray-500">{{ $roleMap[$log->role_pelaku] ?? $log->role_pelaku }}</span>
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap">
+                                    <span class="action-badge {{ $act['css'] }}">{{ $act['icon'] }} {{ $act['label'] }}</span>
+                                </td>
+                                <td class="px-5 py-3.5">
+                                    <p class="text-xs text-gray-500 truncate max-w-[200px]">{{ $log->detail_tindakan ?? '—' }}</p>
+                                    @if($log->id_record)
+                                    <p class="text-xs font-mono font-semibold mt-0.5 truncate max-w-[200px]" style="color:#01458E;">{{ $log->id_record }}</p>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-3.5 whitespace-nowrap">
+                                    <span class="text-xs font-mono text-gray-400">{{ $log->ip_address ?? '—' }}</span>
+                                </td>
+                                <td class="px-5 py-3.5 text-right">
+                                    <span class="text-gray-300 text-base">›</span>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                                            <svg class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                            </svg>
+                                        </div>
+                                        <p class="text-sm text-gray-400">Belum ada aktivitas yang tercatat</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                {{-- Pagination (Responsif) --}}
+                {{-- Pagination --}}
                 @if($logs->hasPages())
                 <div class="px-4 sm:px-6 py-4 border-t border-gray-50 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <p class="text-xs text-gray-400">Halaman {{ $logs->currentPage() }} dari {{ $logs->lastPage() }}</p>
+                    <p class="text-xs text-gray-400">Halaman {{ $logs->currentPage() }} dari {{ $logs->lastPage() }} · Total {{ $logs->total() }} entri</p>
                     <div class="flex items-center gap-1 flex-wrap justify-center">
-                        {{-- Logika pagination --}}
+                        @if($logs->onFirstPage())
+                        <span class="px-2 py-1.5 rounded-lg text-xs font-semibold border border-gray-100 text-gray-300 cursor-not-allowed">‹</span>
+                        @else
+                        <a href="{{ $logs->previousPageUrl() }}" class="px-2 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50">‹</a>
+                        @endif
+                        @foreach($logs->getUrlRange(max(1,$logs->currentPage()-2), min($logs->lastPage(),$logs->currentPage()+2)) as $page => $url)
+                        <a href="{{ $url }}"
+                           class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-semibold border transition-colors {{ $page == $logs->currentPage() ? 'text-white border-transparent' : 'text-gray-600 border-gray-200 hover:bg-gray-50' }}"
+                           @if($page == $logs->currentPage()) style="background-color:#01458E;" @endif>{{ $page }}</a>
+                        @endforeach
+                        @if($logs->hasMorePages())
+                        <a href="{{ $logs->nextPageUrl() }}" class="px-2 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50">›</a>
+                        @else
+                        <span class="px-2 py-1.5 rounded-lg text-xs font-semibold border border-gray-100 text-gray-300 cursor-not-allowed">›</span>
+                        @endif
                     </div>
                 </div>
                 @endif
@@ -249,6 +388,95 @@
         </main>
     </div>
 
-    {{-- Script Drawer & Data Sama seperti sebelumnya --}}
+    <script>
+    const _logsData = @json($logsJs);
+
+    const _actionBadge = {
+        create:   { css:'ab-create',   icon:'✦', label:'CREATE' },
+        update:   { css:'ab-update',   icon:'✎', label:'UPDATE' },
+        delete:   { css:'ab-delete',   icon:'✕', label:'DELETE' },
+        escalate: { css:'ab-escalate', icon:'↑', label:'ESCALATE' },
+        login:    { css:'ab-login',    icon:'→', label:'LOGIN' },
+        logout:   { css:'ab-logout',   icon:'←', label:'LOGOUT' },
+        approve:  { css:'ab-approve',  icon:'✓', label:'APPROVE' },
+        reject:   { css:'ab-reject',   icon:'✗', label:'REJECT' },
+    };
+
+    const _roleLabel = {
+        admin_helpdesk: 'Admin Helpdesk',
+        tim_teknis:     'Tim Teknis',
+    };
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function sectionTitle(t) {
+        return `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f3f4f6;">${t}</div>`;
+    }
+    function detailRow(label, valHtml) {
+        return `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+                    <span style="font-size:12px;color:#9ca3af;white-space:nowrap;">${label}</span>
+                    <span style="font-size:12px;font-weight:600;text-align:right;max-width:230px;word-break:break-all;">${valHtml}</span>
+                </div>`;
+    }
+    function monoVal(v) {
+        return `<span style="font-family:'Courier New',monospace;font-size:11px;">${escHtml(v)}</span>`;
+    }
+
+    function auditOpenDrawer(index) {
+        const d = _logsData[index];
+        if (!d) return;
+        const ab = _actionBadge[d.jenis_aktivitas] ?? { css:'ab-logout', icon:'·', label:(d.jenis_aktivitas??'').toUpperCase() };
+        const isDelete = d.jenis_aktivitas === 'delete';
+        const badgeHtml = `<span class="action-badge ${ab.css}">${ab.icon} ${ab.label}</span>`;
+        const roleLabel = _roleLabel[d.role_pelaku] ?? d.role_pelaku;
+        const beforeJson = d.data_before ? JSON.stringify(d.data_before, null, 2) : '[ Tidak ada data sebelumnya ]';
+        const afterJson  = d.data_after  ? JSON.stringify(d.data_after, null, 2)  : (isDelete ? '[ DATA DELETED ]' : '[ Tidak ada perubahan ]');
+        const afterCss   = isDelete ? 'diff-after' : 'diff-after-ok';
+        const afterIcon  = isDelete ? 'AFTER (Data Dihapus)' : 'AFTER (Data Baru)';
+
+        document.getElementById('auditDrawerTime').textContent = d.waktu ?? '';
+        document.getElementById('auditDrawerBody').innerHTML = `
+            <div style="margin-bottom:20px;">
+                ${sectionTitle('Informasi Aksi')}
+                ${detailRow('Jenis Aktivitas', badgeHtml)}
+                ${detailRow('Waktu Eksekusi',  monoVal(d.waktu))}
+                ${detailRow('IP Address',      monoVal(d.ip_address))}
+                ${detailRow('Session ID',      monoVal(d.session_id))}
+            </div>
+            <div style="margin-bottom:20px;">
+                ${sectionTitle('Informasi Aktor')}
+                ${detailRow('Nama',  escHtml(d.nama))}
+                ${detailRow('Email', monoVal(d.email))}
+                ${detailRow('Role',  escHtml(roleLabel))}
+                ${detailRow('Bidang', escHtml(d.bidang))}
+            </div>
+            ${(d.nama_tabel && d.nama_tabel !== '—') ? `
+            <div style="margin-bottom:20px;">
+                ${sectionTitle('Target Data')}
+                ${detailRow('Tabel', `<code style="background:#f1f5f9;padding:1px 5px;border-radius:3px;font-size:11px;">${escHtml(d.nama_tabel)}</code>`)}
+                ${detailRow('ID Record', `<code style="font-family:'Courier New',monospace;font-size:11px;color:#01458E;font-weight:600;">${escHtml(d.id_record)}</code>`)}
+            </div>` : ''}
+            <div>
+                ${sectionTitle('Perubahan Data (Before → After)')}
+                <div class="diff-before" style="border-radius:10px;padding:12px;margin-bottom:10px;font-family:'Courier New',monospace;font-size:11px;line-height:1.6;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px;opacity:.7;">BEFORE</div>
+                    <pre style="white-space:pre-wrap;word-break:break-all;margin:0;">${escHtml(beforeJson)}</pre>
+                </div>
+                <div class="${afterCss}" style="border-radius:10px;padding:12px;font-family:'Courier New',monospace;font-size:11px;line-height:1.6;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px;opacity:.7;">${afterIcon}</div>
+                    <pre style="white-space:pre-wrap;word-break:break-all;margin:0;">${escHtml(afterJson)}</pre>
+                </div>
+            </div>
+        `;
+        document.getElementById('auditOverlay').classList.add('open');
+        document.getElementById('auditDrawer').classList.add('open');
+    }
+
+    function auditCloseDrawer() {
+        document.getElementById('auditOverlay').classList.remove('open');
+        document.getElementById('auditDrawer').classList.remove('open');
+    }
+    </script>
 </body>
 </html>

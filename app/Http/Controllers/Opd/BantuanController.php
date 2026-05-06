@@ -60,7 +60,7 @@ class BantuanController extends Controller
             );
         }
 
-        $artikels = $query->orderByDesc('total_views')->get();
+        $artikels = $query->orderByDesc('total_views')->paginate(10)->appends(['search' => $search]);
 
         return view('opd.bantuan.kategori', compact('kategori', 'artikels', 'search'));
     }

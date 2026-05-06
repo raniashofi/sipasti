@@ -119,7 +119,87 @@
                             </p>
                         </div>
 
-                        <div class="overflow-x-auto">
+                        {{-- Mobile card list --}}
+                        <div class="md:hidden divide-y divide-gray-100">
+                            @forelse($tikets as $tiket)
+                            @php
+                                $isUtama = $tiket->my_peran === 'teknisi_utama';
+                                $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
+                                $tiketJson = json_encode([
+                                    'id' => $tiket->id, 'subjek_masalah' => $tiket->subjek_masalah,
+                                    'detail_masalah' => $tiket->detail_masalah, 'opd_nama' => $tiket->opd?->nama_opd ?? '—',
+                                    'kategori_nama' => $kategoriNama, 'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
+                                    'lokasi' => $tiket->lokasi ?? '—', 'foto_bukti' => $tiket->foto_bukti,
+                                    'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
+                                    'kb_judul' => $tiket->kb?->nama_artikel_sop ?? null,
+                                    'sop_judul' => $tiket->sopInternal?->nama_artikel_sop ?? null,
+                                    'sop_konten' => $tiket->sopInternal?->isi_konten ?? null,
+                                    'created_at_tgl' => $tiket->created_at?->translatedFormat('d M Y'),
+                                    'created_at_jam' => $tiket->created_at?->format('H:i') . ' WIB',
+                                    'unread_count' => $tiket->unread_count, 'chat_url' => route('tim_teknis.tiket.chat', $tiket->id),
+                                    'is_utama' => $isUtama, 'peran_label' => $isUtama ? 'Teknisi Utama' : 'Pendamping',
+                                    'is_dibuka_kembali' => $tiket->latestStatus?->status_tiket === 'dibuka_kembali',
+                                    'pernah_dibuka_kembali' => $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->isNotEmpty(),
+                                    'pernah_dibuka_kembali_opd' => $tiket->pernah_dibuka_kembali_opd ?? false,
+                                    'alasan_buka_kembali' => $tiket->alasan_buka_kembali,
+                                    'file_bukti_buka_kembali' => $tiket->file_bukti_buka_kembali,
+                                    'catatan_admin' => $tiket->catatan_admin,
+                                ]);
+                            @endphp
+                            <div class="px-4 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                                 @click="openDetail({{ $tiketJson }})">
+                                <div class="flex items-start justify-between gap-2 mb-1.5">
+                                    <span class="font-mono text-xs font-semibold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded">
+                                        #{{ Str::upper(substr($tiket->id, -8)) }}
+                                    </span>
+                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0"
+                                          style="{{ $isUtama ? 'background:#EEF3F9;color:#01458E;' : 'background:#F3F4F6;color:#6B7280;' }}">
+                                        {{ $isUtama ? 'Utama' : 'Pendamping' }}
+                                    </span>
+                                </div>
+                                <p class="text-sm font-semibold text-gray-800 leading-snug mb-0.5">{{ $tiket->subjek_masalah }}</p>
+                                <div class="flex flex-wrap gap-x-2 text-xs text-gray-500 mb-2">
+                                    <span>{{ Str::limit($tiket->opd?->nama_opd ?? '—', 22) }}</span>
+                                    <span>•</span>
+                                    <span>{{ Str::limit($kategoriNama, 20) }}</span>
+                                    <span>•</span>
+                                    <span>{{ $tiket->created_at?->translatedFormat('d M Y') }}</span>
+                                </div>
+                                @if($tiket->unread_count > 0)
+                                <span class="inline-flex items-center gap-1 text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full mb-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"></span>
+                                    {{ $tiket->unread_count }} belum dibaca
+                                </span>
+                                @endif
+                                <div class="flex items-center gap-2 flex-wrap" @click.stop>
+                                    @if($isUtama)
+                                    <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
+                                       class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+                                       style="background:#01458E;">Chat</a>
+                                    <button type="button" @click="setTiket({{ $tiketJson }}); showModal = 'konfirmasi'"
+                                            class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+                                            style="background:#059669;">Selesai</button>
+                                    @else
+                                    <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
+                                       class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg"
+                                       style="background:#F3F4F6;color:#6B7280;">Lihat Chat</a>
+                                    @endif
+                                </div>
+                            </div>
+                            @empty
+                            <div class="px-6 py-12 flex flex-col items-center gap-3 text-center text-gray-400">
+                                <div class="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/>
+                                    </svg>
+                                </div>
+                                <p class="font-semibold text-gray-500">Tidak ada tiket dalam antrean</p>
+                            </div>
+                            @endforelse
+                        </div>
+
+                        {{-- Desktop table --}}
+                        <div class="hidden md:block overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-gray-100 bg-gray-50">
@@ -128,7 +208,7 @@
                                     <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">OPD</th>
                                     <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Kategori</th>
                                     <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Peran</th>
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Pesan</th>
+                                    {{-- <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Pesan</th> --}}
                                     <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ditugaskan</th>
                                     <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Aksi</th>
                                 </tr>
@@ -210,7 +290,7 @@
                                         </span>
                                         @endif
                                     </td>
-                                    <td class="px-5 py-4">
+                                    {{-- <td class="px-5 py-4">
                                         @if($tiket->unread_count > 0)
                                         <span class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-red-500 px-2.5 py-1 rounded-full">
                                             <span class="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"></span>
@@ -224,7 +304,7 @@
                                             Terbaca
                                         </span>
                                         @endif
-                                    </td>
+                                    </td> --}}
                                     <td class="px-5 py-4 text-gray-500 text-xs">
                                         <p class="font-medium">{{ $tiket->created_at?->translatedFormat('d M Y') }}</p>
                                         <p class="text-gray-400">{{ $tiket->created_at?->format('H:i') }} WIB</p>
@@ -306,9 +386,9 @@
                             </tbody>
                         </table>
                         </div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
             {{-- ── Overlay Drawer ── --}}
             <div x-show="selectedTiket && showDrawer"

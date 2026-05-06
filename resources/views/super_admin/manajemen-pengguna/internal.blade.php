@@ -23,12 +23,6 @@
     @include('layouts.sidebarSuperAdmin')
 
     @php
-        $bidangLabel = [
-            'e_government'                     => 'E-Government',
-            'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-            'statistik_persandian'             => 'Statistik & Persandian',
-        ];
-
         // Tim Teknis modal state
         $openTambahTT = session('open_tambah_tt') || (old('_modal') === 'tambah_tt' && $errors->any());
         $openEditTT   = session('open_edit_tt')   || (old('_modal') === 'edit_tt'   && $errors->any());
@@ -83,7 +77,7 @@
                     'nama_lengkap'   => $tt->nama_lengkap ?? '',
                     'email'          => $tt->user?->email ?? '',
                     'bidang_id'      => $tt->bidang_id ?? '',
-                    'bidang_label'   => $bidangLabel[$tt->bidang?->nama_bidang ?? ''] ?? '',
+                    'bidang_label'   => $tt->bidang?->nama_bidang ?? '',
                     'status_teknisi' => $tt->status_teknisi ?? '',
                     'last_login'     => $tt->user_id ? ActivityLogController::getLastLoginFormatted($tt->user_id) : null,
                 ])->values();
@@ -93,7 +87,7 @@
                     'nama_lengkap' => $ah->nama_lengkap ?? '',
                     'email'        => $ah->user?->email ?? '',
                     'bidang_id'    => $ah->bidang_id ?? '',
-                    'bidang_label' => $bidangLabel[$ah->bidang?->nama_bidang ?? ''] ?? '',
+                    'bidang_label' => $ah->bidang?->nama_bidang ?? '',
                     'last_login'   => $ah->user_id ? ActivityLogController::getLastLoginFormatted($ah->user_id) : null,
                 ])->values();
 
@@ -328,8 +322,42 @@
                     <span class="text-xs text-gray-400" x-text="`${currentFiltered.length} Data`"></span>
                 </div>
 
+                {{-- ── MOBILE CARDS TIM TEKNIS ── --}}
+                <div x-show="tab === 'tim_teknis'" class="md:hidden divide-y divide-gray-100">
+                    <template x-for="(row, index) in paginatedTT" :key="row.id">
+                        <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors">
+                            <div class="flex items-start justify-between gap-2 mb-0.5">
+                                <p class="text-sm font-semibold text-gray-900" x-text="row.nama_lengkap || '-'"></p>
+                                <span x-show="row.status_teknisi === 'online'" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span> Online
+                                </span>
+                                <span x-show="row.status_teknisi === 'offline'" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 shrink-0">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span> Offline
+                                </span>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-1" x-text="row.email || '-'"></p>
+                            <p class="text-xs text-gray-400 mb-2"><span x-text="row.bidang_label || '-'"></span></p>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-gray-400">
+                                    <template x-if="row.last_login"><span x-text="row.last_login"></span></template>
+                                    <template x-if="!row.last_login"><span class="text-gray-300">Belum login</span></template>
+                                </span>
+                                <div class="flex gap-2">
+                                    <button @click="openEditTT(row)" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white" style="background-color:#D97706;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit
+                                    </button>
+                                    <button @click="openHapusTT(row.id, row.nama_lengkap)" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white" style="background-color:#DC2626;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="filteredTT.length === 0" class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</div>
+                </div>
+
                 {{-- ── TABEL TIM TEKNIS ── --}}
-                <div x-show="tab === 'tim_teknis'" class="overflow-x-auto table-wrap flex-1 min-w-full">
+                <div x-show="tab === 'tim_teknis'" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
                     <table class="w-full min-w-[900px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -386,8 +414,36 @@
                     </table>
                 </div>
 
+                {{-- ── MOBILE CARDS ADMIN HELPDESK ── --}}
+                <div x-show="tab === 'admin_helpdesk'" style="display:none;" class="md:hidden divide-y divide-gray-100">
+                    <template x-for="(row, index) in paginatedAH" :key="row.id">
+                        <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors">
+                            <div class="flex items-start justify-between gap-2 mb-0.5">
+                                <p class="text-sm font-semibold text-gray-900" x-text="row.nama_lengkap || '-'"></p>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-1" x-text="row.email || '-'"></p>
+                            <p class="text-xs text-gray-400 mb-2"><span x-text="row.bidang_label || '-'"></span></p>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-gray-400">
+                                    <template x-if="row.last_login"><span x-text="row.last_login"></span></template>
+                                    <template x-if="!row.last_login"><span class="text-gray-300">Belum login</span></template>
+                                </span>
+                                <div class="flex gap-2">
+                                    <button @click="openEditAH(row)" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white" style="background-color:#D97706;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit
+                                    </button>
+                                    <button @click="openHapusAH(row.id, row.nama_lengkap)" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white" style="background-color:#DC2626;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="filteredAH.length === 0" class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</div>
+                </div>
+
                 {{-- ── TABEL ADMIN HELPDESK ── --}}
-                <div x-show="tab === 'admin_helpdesk'" style="display:none;" class="overflow-x-auto table-wrap flex-1 min-w-full">
+                <div x-show="tab === 'admin_helpdesk'" style="display:none;" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
                     <table class="w-full min-w-[800px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -434,8 +490,35 @@
                     </table>
                 </div>
 
+                {{-- ── MOBILE CARDS PIMPINAN ── --}}
+                <div x-show="tab === 'pimpinan'" style="display:none;" class="md:hidden divide-y divide-gray-100">
+                    <template x-for="(row, index) in paginatedPimpinan" :key="row.id">
+                        <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors">
+                            <div class="flex items-start justify-between gap-2 mb-0.5">
+                                <p class="text-sm font-semibold text-gray-900" x-text="row.nama_lengkap || '-'"></p>
+                            </div>
+                            <p class="text-xs text-gray-500 mb-2" x-text="row.email || '-'"></p>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs text-gray-400">
+                                    <template x-if="row.last_login"><span x-text="row.last_login"></span></template>
+                                    <template x-if="!row.last_login"><span class="text-gray-300">Belum login</span></template>
+                                </span>
+                                <div class="flex gap-2">
+                                    <button @click="openEditPimpinan(row)" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white" style="background-color:#D97706;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> Edit
+                                    </button>
+                                    <button @click="openHapusPimpinan(row.id, row.nama_lengkap)" class="flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold text-white" style="background-color:#DC2626;">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <div x-show="filteredPimpinan.length === 0" class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</div>
+                </div>
+
                 {{-- ── TABEL PIMPINAN ── --}}
-                <div x-show="tab === 'pimpinan'" style="display:none;" class="overflow-x-auto table-wrap flex-1 min-w-full">
+                <div x-show="tab === 'pimpinan'" style="display:none;" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
                     <table class="w-full min-w-[700px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -568,7 +651,7 @@
                                 <select name="bidang_id" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
                                     <option value="">— Pilih Bidang —</option>
                                     @foreach($bidangs as $b)
-                                    <option value="{{ $b->id }}" {{ ($openTambahTT && old('bidang_id') === $b->id) ? 'selected' : '' }}>{{ $bidangLabel[$b->nama_bidang] ?? $b->nama_bidang }}</option>
+                                    <option value="{{ $b->id }}" {{ ($openTambahTT && old('bidang_id') === $b->id) ? 'selected' : '' }}>{{ $b->nama_bidang }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -645,7 +728,7 @@
                                 <select name="bidang_id" x-model="editTT.bidang_id" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
                                     <option value="">— Pilih Bidang —</option>
                                     @foreach($bidangs as $b)
-                                    <option value="{{ $b->id }}">{{ $bidangLabel[$b->nama_bidang] ?? $b->nama_bidang }}</option>
+                                    <option value="{{ $b->id }}">{{ $b->nama_bidang }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -762,7 +845,7 @@
                                 <select name="bidang_id" required class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
                                     <option value="">— Pilih Bidang —</option>
                                     @foreach($bidangs as $b)
-                                    <option value="{{ $b->id }}" {{ ($openTambahAH && old('bidang_id') === $b->id) ? 'selected' : '' }}>{{ $bidangLabel[$b->nama_bidang] ?? $b->nama_bidang }}</option>
+                                    <option value="{{ $b->id }}" {{ ($openTambahAH && old('bidang_id') === $b->id) ? 'selected' : '' }}>{{ $b->nama_bidang }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -832,7 +915,7 @@
                                 <select name="bidang_id" x-model="editAH.bidang_id" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
                                     <option value="">— Pilih Bidang —</option>
                                     @foreach($bidangs as $b)
-                                    <option value="{{ $b->id }}">{{ $bidangLabel[$b->nama_bidang] ?? $b->nama_bidang }}</option>
+                                    <option value="{{ $b->id }}">{{ $b->nama_bidang }}</option>
                                     @endforeach
                                 </select>
                             </div>

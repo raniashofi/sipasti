@@ -404,7 +404,7 @@ class ActivityLogController extends Controller
                     $log->user_id ?? '',
                     $this->namaUser($log),
                     self::$roleLabel[$log->role_pelaku] ?? $log->role_pelaku,
-                    self::$bidangLabel[$bidangNama] ?? $bidangNama,
+                    $bidangNama,
                     $log->jenis_aktivitas,
                     $log->detail_tindakan ?? '',
                     $log->ip_address ?? '',
@@ -515,7 +515,7 @@ class ActivityLogController extends Controller
                     $log->user_id ?? '',
                     $this->namaUser($log),
                     self::$roleLabel[$log->role_pelaku] ?? $log->role_pelaku,
-                    self::$bidangLabel[$bidangNama] ?? $bidangNama,
+                    $bidangNama,
                     $log->jenis_aktivitas,
                     $log->detail_tindakan ?? '',
                     $log->ip_address ?? '',
@@ -634,12 +634,6 @@ class ActivityLogController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
-    private static array $bidangLabel = [
-        'e_government'                     => 'E-Government',
-        'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-        'statistik_persandian'             => 'Statistik & Persandian',
-    ];
-
     private function namaUser(ActivityLog $log): string
     {
         if (!$log->user) return '—';
@@ -654,7 +648,7 @@ class ActivityLogController extends Controller
         $nama = $log->user?->adminHelpdesk?->bidang?->nama_bidang
             ?? $log->user?->timTeknis?->bidang?->nama_bidang
             ?? null;
-        return self::$bidangLabel[$nama] ?? '—';
+        return $nama ?? '—';
     }
 
     private function toJs(ActivityLog $log): array

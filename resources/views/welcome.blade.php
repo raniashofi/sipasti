@@ -107,13 +107,13 @@
     </div>
 
     {{-- ── Header ── --}}
-    <header class="anim-fade-in relative z-20 flex justify-between items-center px-10 py-5 border-b border-gray-200"
+    <header class="anim-fade-in relative z-20 flex justify-between items-center px-4 sm:px-6 md:px-10 py-4 sm:py-5 border-b border-gray-200"
             style="background-color: rgba(249,250,252,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div class="flex items-center gap-3">
             <img src="{{ asset('storage/logo/logo_sipasti.png') }}" alt="SiPasti Logo" class="h-5 w-auto">
         </div>
 
-        <nav class="flex items-center gap-5">
+        <nav class="flex items-center gap-3 sm:gap-5">
             @auth
                 <a href="{{
                         match(auth()->user()?->role) {
@@ -125,19 +125,19 @@
                             default          => url('/'),
                         }
                 }}"
-                class="text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium">
+                class="text-xs sm:text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium">
                     Dashboard
                 </a>
                 <form method="POST" action="{{ route('logout') }}" class="inline">
                     @csrf
                     <button type="submit"
-                            class="text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium cursor-pointer">
+                            class="text-xs sm:text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium cursor-pointer">
                         Logout
                     </button>
                 </form>
             @else
                 <a href="{{ route('login') }}"
-                   class="text-sm px-5 py-2 bg-[#01458E] text-white rounded-lg font-semibold btn-primary-glow">
+                   class="text-xs sm:text-sm px-4 sm:px-5 py-2 bg-[#01458E] text-white rounded-lg font-semibold btn-primary-glow">
                     Login
                 </a>
             @endauth
@@ -145,12 +145,12 @@
     </header>
 
     {{-- ── Hero ── --}}
-    <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-16 pb-10">
+    <main class="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 pt-10 sm:pt-16 pb-10">
 
         {{-- Floating logo card --}}
-        <div class="anim-fade-in d-100 mb-8">
+        <div class="anim-fade-in d-100 mb-6 sm:mb-8">
             <div class="anim-float">
-                <div class="w-124 h-24 flex items-center justify-center p-4">
+                <div class="w-40 sm:w-56 md:w-72 h-16 sm:h-20 md:h-24 flex items-center justify-center p-3 sm:p-4">
                     <img src="{{ asset('storage/logo/logo_sipasti.png') }}" alt="SiPasti"
                          class="w-full h-full object-contain">
                 </div>
@@ -168,20 +168,20 @@
         </div>
 
         {{-- Headline --}}
-        <h1 class="anim-fade-in-up d-200 text-center text-[52px] font-bold text-black leading-[1.15] mb-5
-                   max-w-xl tracking-tight">
+        <h1 class="anim-fade-in-up d-200 text-center text-[32px] sm:text-[42px] md:text-[52px] font-bold text-black leading-[1.15] mb-4 sm:mb-5
+                   max-w-xs sm:max-w-md md:max-w-xl tracking-tight">
             Satu Platform,<br>
             <span class="text-gradient">Semua Layanan TIK</span>
         </h1>
 
         {{-- Subtitle --}}
-        <p class="anim-fade-in-up d-300 text-center text-gray-500 text-[15px] leading-relaxed mb-10 max-w-md">
+        <p class="anim-fade-in-up d-300 text-center text-gray-500 text-[13px] sm:text-[15px] leading-relaxed mb-8 sm:mb-10 max-w-xs sm:max-w-md px-2">
             SiPasti memudahkan pengelolaan tiket gangguan, koordinasi tim teknis,
             dan akses basis pengetahuan dalam satu sistem terintegrasi.
         </p>
 
         {{-- CTA Buttons --}}
-        <div class="anim-fade-in-up d-400 flex gap-3 justify-center flex-wrap">
+        <div class="anim-fade-in-up d-400 flex gap-3 justify-center flex-wrap w-full px-4 sm:px-0 sm:w-auto">
             @auth
                 <a href="{{
                         match(auth()->user()?->role) {
@@ -193,26 +193,26 @@
                             default          => url('/'),
                         }
                 }}"
-                   class="px-8 py-3 bg-[#01458E] text-white rounded-xl text-sm font-semibold shadow-sm btn-primary-glow">
+                   class="w-full sm:w-auto text-center px-8 py-3 bg-[#01458E] text-white rounded-xl text-sm font-semibold shadow-sm btn-primary-glow">
                     Buka Dashboard &rarr;
                 </a>
             @else
                 <a href="{{ route('login') }}"
-                   class="px-8 py-3 bg-[#01458E] text-white rounded-xl text-sm font-semibold shadow-sm btn-primary-glow">
+                   class="w-full sm:w-auto text-center px-8 py-3 bg-[#01458E] text-white rounded-xl text-sm font-semibold shadow-sm btn-primary-glow">
                     Masuk ke Akun &rarr;
                 </a>
             @endauth
         </div>
 
         {{-- Divider --}}
-        <div class="anim-fade-in-up d-500 mt-16 flex items-center gap-4 w-full max-w-4xl">
+        <div class="anim-fade-in-up d-500 mt-10 sm:mt-16 flex items-center gap-4 w-full max-w-4xl">
             <div class="flex-1 h-px bg-gray-200"></div>
             <span class="text-[11px] text-gray-400 font-medium uppercase tracking-widest">Fitur Unggulan</span>
             <div class="flex-1 h-px bg-gray-200"></div>
         </div>
 
         {{-- Feature Cards --}}
-        <div class="anim-fade-in-up d-600 mt-10 grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-4xl">
+        <div class="anim-fade-in-up d-600 mt-6 sm:mt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 w-full max-w-4xl">
 
             <div class="card-hover bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                 <div class="w-11 h-11 bg-[#01458E]/[0.08] rounded-xl flex items-center justify-center mb-4">

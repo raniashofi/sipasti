@@ -15,12 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
-    private array $bidangLabel = [
-        'e_government'                     => 'E-Government',
-        'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-        'statistik_persandian'             => 'Statistik & Persandian',
-    ];
-
     // Label human-readable untuk status tiket
     private array $statusLabel = [
         'verifikasi_admin' => 'Verifikasi Admin',
@@ -246,13 +240,11 @@ class DashboardController extends Controller
         }
 
         // ── 4. Distribusi per bidang ───────────────────────────────────
-        $bidangs       = Bidang::with('kategori')->get();
+        $bidangs        = Bidang::all();
         $tiketPerBidang = $bidangs->map(function ($bidang) use ($dateFrom, $dateTo) {
-            $kategoriIds = $bidang->kategori->pluck('id');
-            $rawNama     = (string) ($bidang->nama_bidang ?? $bidang->id);
             return [
-                'nama'  => $this->bidangLabel[$rawNama] ?? ucwords(str_replace('_', ' ', $rawNama)),
-                'total' => Tiket::whereIn('kategori_id', $kategoriIds)
+                'nama'  => (string) ($bidang->nama_bidang ?? $bidang->id),
+                'total' => Tiket::where('bidang_id', $bidang->id)
                     ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
                     ->count(),
             ];
@@ -271,7 +263,7 @@ class DashboardController extends Controller
             $rawBidang = (string) ($admin->bidang?->nama_bidang ?? '');
             return [
                 'nama'             => $admin->nama_lengkap,
-                'bidang'           => $rawBidang ? ($this->bidangLabel[$rawBidang] ?? ucwords(str_replace('_', ' ', $rawBidang))) : '—',
+                'bidang'           => $rawBidang ?: '—',
                 'ditangani'        => $tiketDitangani,
                 'diselesaikan'     => $tiketDiselesaikan,
                 'rate'             => $tiketDitangani > 0
@@ -294,7 +286,7 @@ class DashboardController extends Controller
             $rawBidangT = (string) ($t->bidang?->nama_bidang ?? '');
             return [
                 'nama'          => $t->nama_lengkap,
-                'bidang'        => $rawBidangT ? ($this->bidangLabel[$rawBidangT] ?? ucwords(str_replace('_', ' ', $rawBidangT))) : '—',
+                'bidang'        => $rawBidangT ?: '—',
                 'status'        => $t->status_teknisi,
                 'total_tugas'   => $total,
                 'tugas_aktif'   => $aktif,

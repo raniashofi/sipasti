@@ -16,7 +16,7 @@ Route::get('/dashboard', function () {
     return match ($user?->role) {
         'super_admin'    => redirect()->route('super_admin.dashboard'),
         'admin_helpdesk' => redirect()->route('admin_helpdesk.dashboard'),
-        'tim_teknis'     => redirect()->route('tim_teknis.antrean'),
+        'tim_teknis'     => redirect()->route('tim_teknis.dashboard'),
         'opd'            => redirect()->route('opd.dashboard'),
         'pimpinan'       => redirect()->route('pimpinan.dashboard'),
         default          => redirect('/'),

@@ -48,14 +48,7 @@
     @include('layouts.sidebarTimTeknis')
 
     @php
-        $bidangLabels = [
-            'e_government'                      => 'E-Government',
-            'infrastruktur_teknologi_informasi' => 'Infrastruktur TI',
-            'statistik_persandian'              => 'Statistik & Persandian',
-        ];
-        $bidangLabel = $teknis?->bidang
-            ? ($bidangLabels[$teknis->bidang->nama_bidang] ?? $teknis->bidang->nama_bidang)
-            : '—';
+        $bidangLabel = $teknis?->bidang?->nama_bidang ?? '—';
         $kodeArtikel = 'KB-' . strtoupper(substr($article->id, 0, 8));
     @endphp
 
