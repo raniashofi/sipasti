@@ -170,8 +170,19 @@
                                     @forelse($tikets as $tiket)
                                     @php
                                         $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
-                                        $teknisi      = $tiket->teknisiUtama?->timTeknis;
                                         $isDibukaKembali = $tiket->latestStatus?->status_tiket === 'dibuka_kembali';
+                                        
+                                        // Ambil semua teknisi dengan role mereka
+                                        $allTeknisi = [];
+                                        foreach ($tiket->tiketTeknisi as $tt) {
+                                            $allTeknisi[] = [
+                                                'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                                'role' => $tt->peran_teknisi === 'teknisi_utama' ? 'Utama' : 'Pendamping',
+                                                'status' => $tt->timTeknis?->status_teknisi ?? 'offline',
+                                            ];
+                                        }
+                                        $teknisiUtama = $allTeknisi[0] ?? null;
+                                        
                                         $tiketJson    = json_encode([
                                             'id'                    => $tiket->id,
                                             'subjek_masalah'        => $tiket->subjek_masalah,
@@ -182,7 +193,7 @@
                                             'lokasi'                => $tiket->lokasi ?? '—',
                                             'foto_bukti'            => $tiket->foto_bukti,
                                             'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
-                                            'teknisi_nama'          => $teknisi?->nama_lengkap ?? '—',
+                                            'teknisi_nama'          => $teknisiUtama['nama'] ?? '—',
                                             'catatan_status'        => $tiket->latestStatus?->catatan ?? '—',
                                             'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                             'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
@@ -208,19 +219,25 @@
                                             {{ Str::limit($tiket->opd?->nama_opd ?? '—', 30) }}
                                         </td>
                                         <td class="px-5 py-4 whitespace-nowrap">
-                                            @if($teknisi)
-                                            <p class="text-sm font-semibold text-gray-800">{{ $teknisi->nama_lengkap }}</p>
-                                            <div class="flex items-center gap-1.5 mt-0.5">
-                                                <span class="text-[11px] text-gray-500">Teknisi Utama</span>
-                                                @if($teknisi->status_teknisi === 'offline')
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Offline
-                                                </span>
-                                                @else
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
-                                                </span>
-                                                @endif
+                                            @if($allTeknisi)
+                                            <div class="space-y-1.5">
+                                                @foreach($allTeknisi as $tek)
+                                                <div>
+                                                    <p class="text-sm font-semibold text-gray-800">{{ $tek['nama'] }}</p>
+                                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                                        <span class="text-[11px] text-gray-500">{{ $tek['role'] }}</span>
+                                                        @if($tek['status'] === 'offline')
+                                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Offline
+                                                        </span>
+                                                        @else
+                                                        <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
+                                                        </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                @endforeach
                                             </div>
                                             @else
                                             <span class="text-sm text-gray-400">—</span>
