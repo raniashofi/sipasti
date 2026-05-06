@@ -165,40 +165,59 @@ class AntreanController extends Controller
             ->where('peran_teknisi', 'teknisi_utama'))
             ->findOrFail($id);
 
-        StatusTiket::create([
-            'id'           => 'STS-' . strtoupper(Str::random(10)),
-            'tiket_id'     => $tiket->id,
-            'status_tiket' => 'selesai',
-            'catatan'      => $request->catatan ?? 'Tiket berhasil diperbaiki oleh tim teknis.',
-            'created_at'   => now(),
-        ]);
-
-        TiketTeknisi::where('tiket_id', $tiket->id)
+        // Cek apakah ada teknisi pendamping yang masih aktif
+        $adaPendampingAktif = TiketTeknisi::where('tiket_id', $tiket->id)
+            ->where('peran_teknisi', 'teknisi_pendamping')
             ->where('status_tugas', 'aktif')
-            ->update(['status_tugas' => 'selesai']);
-
-        // Kasus 2: tiket pernah dibuka kembali → langsung tutup tanpa menunggu 7 hari
-        $pernahDibukaKembali = StatusTiket::where('tiket_id', $tiket->id)
-            ->where('status_tiket', 'dibuka_kembali')
             ->exists();
-        if ($pernahDibukaKembali) {
+
+        // Jika masih ada pendamping aktif, hanya set status ke 'selesai' untuk teknisi utama saja
+        // Jika tidak ada, set semua ke 'selesai'
+        if ($adaPendampingAktif) {
+            TiketTeknisi::where('tiket_id', $tiket->id)
+                ->where('teknis_id', $teknis?->id)
+                ->where('status_tugas', 'aktif')
+                ->update(['status_tugas' => 'selesai']);
+
+            // Status tiket tetap 'perbaikan_teknis' karena ada pendamping aktif
+            // Jangan buat status 'selesai'
+        } else {
+            // Tidak ada pendamping aktif, semua sudah selesai
+            TiketTeknisi::where('tiket_id', $tiket->id)
+                ->where('status_tugas', 'aktif')
+                ->update(['status_tugas' => 'selesai']);
+
             StatusTiket::create([
                 'id'           => 'STS-' . strtoupper(Str::random(10)),
                 'tiket_id'     => $tiket->id,
-                'status_tiket' => 'tiket_ditutup',
-                'catatan'      => 'Tiket ditutup otomatis setelah diselesaikan kembali oleh Tim Teknis.',
+                'status_tiket' => 'selesai',
+                'catatan'      => $request->catatan ?? 'Tiket berhasil diperbaiki oleh tim teknis.',
                 'created_at'   => now(),
             ]);
-        }
 
-        // Notifikasi ke OPD bahwa tiket selesai diperbaiki
-        $tiket->load('opd.user');
-        $tiket->opd?->user?->notify(new StatusTiketNotification(
-            kodeTiket  : $tiket->id,
-            status     : 'selesai',
-            keterangan : 'Perangkat Anda telah berhasil diperbaiki oleh tim teknis.',
-            url        : route('opd.tiket.show', $tiket->id),
-        ));
+            // Kasus 2: tiket pernah dibuka kembali → langsung tutup tanpa menunggu 7 hari
+            $pernahDibukaKembali = StatusTiket::where('tiket_id', $tiket->id)
+                ->where('status_tiket', 'dibuka_kembali')
+                ->exists();
+            if ($pernahDibukaKembali) {
+                StatusTiket::create([
+                    'id'           => 'STS-' . strtoupper(Str::random(10)),
+                    'tiket_id'     => $tiket->id,
+                    'status_tiket' => 'tiket_ditutup',
+                    'catatan'      => 'Tiket ditutup otomatis setelah diselesaikan kembali oleh Tim Teknis.',
+                    'created_at'   => now(),
+                ]);
+            }
+
+            // Notifikasi ke OPD bahwa tiket selesai diperbaiki
+            $tiket->load('opd.user');
+            $tiket->opd?->user?->notify(new StatusTiketNotification(
+                kodeTiket  : $tiket->id,
+                status     : 'selesai',
+                keterangan : 'Perangkat Anda telah berhasil diperbaiki oleh tim teknis.',
+                url        : route('opd.tiket.show', $tiket->id),
+            ));
+        }
 
         $this->logAktivitas('approve', "Tiket #{$tiket->id} selesai diperbaiki — {$tiket->subjek_masalah}", 'tiket', $tiket->id);
 
@@ -230,42 +249,64 @@ class AntreanController extends Controller
             ->where('peran_teknisi', 'teknisi_utama'))
             ->findOrFail($id);
 
-        StatusTiket::create([
-            'id'                          => 'STS-' . strtoupper(Str::random(10)),
-            'tiket_id'                    => $tiket->id,
-            'status_tiket'                => 'rusak_berat',
-            'catatan'                     => $request->analisis_kerusakan,
-            'spesifikasi_perangkat_rusak' => $request->spesifikasi_perangkat_rusak,
-            'rekomendasi'                 => $request->rekomendasi,
-            'created_at'                  => now(),
-        ]);
+        // Cek apakah ada teknisi pendamping yang masih aktif
+        $adaPendampingAktif = TiketTeknisi::where('tiket_id', $tiket->id)
+            ->where('peran_teknisi', 'teknisi_pendamping')
+            ->where('status_tugas', 'aktif')
+            ->exists();
 
+        // Hanya update status teknisi utama (yang sedang login)
         TiketTeknisi::where('tiket_id', $tiket->id)
+            ->where('teknis_id', $teknis?->id)
             ->where('status_tugas', 'aktif')
             ->update(['status_tugas' => 'selesai']);
 
-        // Kasus 2: tiket pernah dibuka kembali → langsung tutup
-        $pernahDibukaKembali = StatusTiket::where('tiket_id', $tiket->id)
-            ->where('status_tiket', 'dibuka_kembali')
-            ->exists();
-        if ($pernahDibukaKembali) {
+        // Jika tidak ada pendamping aktif, buat status tiket rusak_berat
+        if (!$adaPendampingAktif) {
+            StatusTiket::create([
+                'id'                          => 'STS-' . strtoupper(Str::random(10)),
+                'tiket_id'                    => $tiket->id,
+                'status_tiket'                => 'rusak_berat',
+                'catatan'                     => $request->analisis_kerusakan,
+                'spesifikasi_perangkat_rusak' => $request->spesifikasi_perangkat_rusak,
+                'rekomendasi'                 => $request->rekomendasi,
+                'created_at'                  => now(),
+            ]);
+        } else {
+            // Ada pendamping aktif, simpan analisis sebagai status tanpa menutup tiket
             StatusTiket::create([
                 'id'           => 'STS-' . strtoupper(Str::random(10)),
                 'tiket_id'     => $tiket->id,
-                'status_tiket' => 'tiket_ditutup',
-                'catatan'      => 'Tiket ditutup otomatis setelah ditangani kembali oleh Tim Teknis.',
+                'status_tiket' => 'perbaikan_teknis',
+                'catatan'      => '[Analisis Kerusakan dari Teknisi Utama] ' . $request->analisis_kerusakan,
                 'created_at'   => now(),
             ]);
         }
 
-        // Notifikasi ke OPD bahwa perangkat dinyatakan rusak berat
-        $tiket->load('opd.user');
-        $tiket->opd?->user?->notify(new StatusTiketNotification(
-            kodeTiket  : $tiket->id,
-            status     : 'selesai',
-            keterangan : 'Perangkat Anda dinyatakan rusak berat dan tidak dapat diperbaiki. Lihat detail tiket untuk rekomendasi selanjutnya.',
-            url        : route('opd.tiket.show', $tiket->id),
-        ));
+        // Jika tidak ada pendamping aktif dan pernah dibuka kembali → langsung tutup
+        if (!$adaPendampingAktif) {
+            $pernahDibukaKembali = StatusTiket::where('tiket_id', $tiket->id)
+                ->where('status_tiket', 'dibuka_kembali')
+                ->exists();
+            if ($pernahDibukaKembali) {
+                StatusTiket::create([
+                    'id'           => 'STS-' . strtoupper(Str::random(10)),
+                    'tiket_id'     => $tiket->id,
+                    'status_tiket' => 'tiket_ditutup',
+                    'catatan'      => 'Tiket ditutup otomatis setelah ditangani kembali oleh Tim Teknis.',
+                    'created_at'   => now(),
+                ]);
+            }
+
+            // Notifikasi ke OPD bahwa perangkat dinyatakan rusak berat
+            $tiket->load('opd.user');
+            $tiket->opd?->user?->notify(new StatusTiketNotification(
+                kodeTiket  : $tiket->id,
+                status     : 'selesai',
+                keterangan : 'Perangkat Anda dinyatakan rusak berat dan tidak dapat diperbaiki. Lihat detail tiket untuk rekomendasi selanjutnya.',
+                url        : route('opd.tiket.show', $tiket->id),
+            ));
+        }
 
         $this->logAktivitas('reject', "Tiket #{$tiket->id} gagal diperbaiki (rusak berat) — {$tiket->subjek_masalah}", 'tiket', $tiket->id);
 
@@ -333,37 +374,59 @@ class AntreanController extends Controller
             ->where('peran_teknisi', 'teknisi_utama'))
             ->findOrFail($id);
 
-        StatusTiket::create([
-            'id'           => 'STS-' . strtoupper(Str::random(10)),
-            'tiket_id'     => $tiket->id,
-            'status_tiket' => 'verifikasi_admin',
-            'catatan'      => '[Dikembalikan oleh Tim Teknis] ' . $request->alasan_kembalikan,
-            'created_at'   => now(),
-        ]);
+        // Cek apakah ada teknisi pendamping yang masih aktif
+        $adaPendampingAktif = TiketTeknisi::where('tiket_id', $tiket->id)
+            ->where('peran_teknisi', 'teknisi_pendamping')
+            ->where('status_tugas', 'aktif')
+            ->exists();
 
+        // Hanya update status teknisi utama (yang sedang login)
         TiketTeknisi::where('tiket_id', $tiket->id)
+            ->where('teknis_id', $teknis?->id)
             ->where('status_tugas', 'aktif')
             ->update(['status_tugas' => 'selesai']);
 
-        // Notifikasi ke Admin Helpdesk pemilik tiket
-        $tiket->load('admin.user');
-        if ($tiket->admin?->user) {
-            $tiket->admin->user->notify(new TiketMasukNotification(
-                kodeTiket : $tiket->id,
-                namaOpd   : 'Tim Teknis',
-                url       : route('admin_helpdesk.tiket.menunggu'),
-            ));
+        // Jika tidak ada pendamping aktif, kembalikan ke verifikasi admin
+        if (!$adaPendampingAktif) {
+            StatusTiket::create([
+                'id'           => 'STS-' . strtoupper(Str::random(10)),
+                'tiket_id'     => $tiket->id,
+                'status_tiket' => 'verifikasi_admin',
+                'catatan'      => '[Dikembalikan oleh Tim Teknis] ' . $request->alasan_kembalikan,
+                'created_at'   => now(),
+            ]);
         } else {
-            // Admin belum assign → kirim ke semua admin bidang yang sesuai
-            $adminQuery = AdminHelpdesk::with('user');
-            if ($tiket->bidang_id) {
-                $adminQuery->where('bidang_id', $tiket->bidang_id);
+            // Ada pendamping aktif, buat status untuk tracking tapi tidak ubah status_tiket
+            StatusTiket::create([
+                'id'           => 'STS-' . strtoupper(Str::random(10)),
+                'tiket_id'     => $tiket->id,
+                'status_tiket' => 'perbaikan_teknis',
+                'catatan'      => '[Dikembalikan oleh Teknisi Utama ke Admin] ' . $request->alasan_kembalikan,
+                'created_at'   => now(),
+            ]);
+        }
+
+        // Notifikasi ke Admin Helpdesk pemilik tiket (hanya jika tidak ada pendamping aktif)
+        if (!$adaPendampingAktif) {
+            $tiket->load('admin.user');
+            if ($tiket->admin?->user) {
+                $tiket->admin->user->notify(new TiketMasukNotification(
+                    kodeTiket : $tiket->id,
+                    namaOpd   : 'Tim Teknis',
+                    url       : route('admin_helpdesk.tiket.menunggu'),
+                ));
+            } else {
+                // Admin belum assign → kirim ke semua admin bidang yang sesuai
+                $adminQuery = AdminHelpdesk::with('user');
+                if ($tiket->bidang_id) {
+                    $adminQuery->where('bidang_id', $tiket->bidang_id);
+                }
+                $adminQuery->get()->each(fn ($a) => $a->user?->notify(new TiketMasukNotification(
+                    kodeTiket : $tiket->id,
+                    namaOpd   : 'Tim Teknis',
+                    url       : route('admin_helpdesk.tiket.menunggu'),
+                )));
             }
-            $adminQuery->get()->each(fn ($a) => $a->user?->notify(new TiketMasukNotification(
-                kodeTiket : $tiket->id,
-                namaOpd   : 'Tim Teknis',
-                url       : route('admin_helpdesk.tiket.menunggu'),
-            )));
         }
 
         $this->logAktivitas('escalate', "Tiket #{$tiket->id} dikembalikan ke admin helpdesk — {$request->alasan_kembalikan}", 'tiket', $tiket->id);

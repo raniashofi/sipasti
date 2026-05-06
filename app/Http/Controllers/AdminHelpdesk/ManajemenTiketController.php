@@ -355,9 +355,14 @@ class ManajemenTiketController extends Controller
     {
         $admin = $this->adminProfile();
 
-        $query = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'statusTiket', 'teknisiUtama.timTeknis', 'solutionNode'])
+        $query = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'statusTiket', 'teknisiUtama.timTeknis', 'tiketTeknisi.timTeknis', 'solutionNode'])
             ->where('admin_id', $admin?->id)
-            ->whereHas('latestStatus', fn($q) => $q->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']));
+            ->where(function($q) {
+                // Tiket dengan status perbaikan_teknis atau dibuka_kembali
+                $q->whereHas('latestStatus', fn($lq) => $lq->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']))
+                  // ATAU tiket yang masih punya TiketTeknisi aktif (untuk kasus 2 teknisi, salah satu sudah selesai)
+                  ->orWhereHas('tiketTeknisi', fn($tq) => $tq->where('status_tugas', 'aktif'));
+            });
 
         if ($request->filled('opd_id'))    $query->where('opd_id', $request->opd_id);
         if ($request->filled('kategori_id')) $query->where('kategori_id', $request->kategori_id);
