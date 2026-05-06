@@ -144,6 +144,9 @@
                                     'alasan_buka_kembali' => $tiket->alasan_buka_kembali,
                                     'file_bukti_buka_kembali' => $tiket->file_bukti_buka_kembali,
                                     'catatan_admin' => $tiket->catatan_admin,
+                                    'url_selesai' => route('tim_teknis.tiket.selesai', $tiket->id),
+                                    'url_gagal' => route('tim_teknis.tiket.gagal', $tiket->id),
+                                    'url_kembalikan' => route('tim_teknis.tiket.kembalikan', $tiket->id),
                                 ]);
                             @endphp
                             <div class="px-4 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -244,6 +247,9 @@
                                         'alasan_buka_kembali'       => $tiket->alasan_buka_kembali,
                                         'file_bukti_buka_kembali'   => $tiket->file_bukti_buka_kembali,
                                         'catatan_admin'             => $tiket->catatan_admin,
+                                        'url_selesai'               => route('tim_teknis.tiket.selesai', $tiket->id),
+                                        'url_gagal'                 => route('tim_teknis.tiket.gagal', $tiket->id),
+                                        'url_kembalikan'            => route('tim_teknis.tiket.kembalikan', $tiket->id),
                                     ]);
                                 @endphp
                                 <tr class="hover:bg-gray-50 cursor-pointer transition-colors"
@@ -717,7 +723,7 @@
                     <p class="text-sm font-semibold mb-1 text-center" style="color:#01458E;" x-text="'#' + selectedTiket?.id + ' — ' + selectedTiket?.subjek_masalah"></p>
                     <p class="text-sm text-gray-500 mb-4 text-center">Tiket telah sukses dan berhasil diperbaiki</p>
                     <form x-ref="formSelesai" method="POST" action="#"
-                          @submit.prevent="submitForm($refs.formSelesai, '/tim-teknis/tiket/' + selectedTiket.id + '/selesai')">
+                          @submit.prevent="submitForm($refs.formSelesai, selectedTiket.url_selesai)">
                         @csrf
                         <div class="mb-4">
                             <label class="block text-xs font-semibold text-gray-700 mb-1.5">Catatan Tambahan untuk OPD</label>
@@ -759,7 +765,7 @@
                     <p class="text-sm font-semibold mb-1 text-center" style="color:#01458E;" x-text="'#' + selectedTiket?.id + ' — ' + selectedTiket?.subjek_masalah"></p>
                     <p class="text-sm text-gray-500 mb-4 text-center">Tiket tidak dapat diperbaiki karena aset rusak total</p>
                     <form x-ref="formGagal" method="POST" action="#"
-                          @submit.prevent="submitForm($refs.formGagal, '/tim-teknis/tiket/' + selectedTiket.id + '/gagal')">
+                          @submit.prevent="submitForm($refs.formGagal, selectedTiket.url_gagal)">
                         @csrf
                         <div class="mb-3">
                             <label class="block text-xs font-semibold text-gray-700 mb-1.5">Analisis Kerusakan <span class="text-red-500">*</span></label>
@@ -813,7 +819,7 @@
                     <p class="text-sm font-semibold mb-1 text-center" style="color:#01458E;" x-text="'#' + selectedTiket?.id + ' — ' + selectedTiket?.subjek_masalah"></p>
                     <p class="text-sm text-gray-500 mb-4 text-center">Tiket akan dikembalikan ke Admin Helpdesk</p>
                     <form x-ref="formKembalikan" method="POST" action="#"
-                          @submit.prevent="submitForm($refs.formKembalikan, '/tim-teknis/tiket/' + selectedTiket.id + '/kembalikan')">
+                          @submit.prevent="submitForm($refs.formKembalikan, selectedTiket.url_kembalikan)">
                         @csrf
                         <div class="mb-4">
                             <label class="block text-xs font-semibold text-gray-700 mb-1.5">Alasan pengembalian tiket <span class="text-red-500">*</span></label>

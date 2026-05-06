@@ -17,11 +17,11 @@ Route::prefix('tim-teknis')->name('tim_teknis.')->middleware(['auth', 'role:tim_
 
     // Tiket Actions
     Route::prefix('tiket')->name('tiket.')->group(function () {
-        Route::post('{id}/selesai', [AntreanController::class, 'selesai'])->name('selesai');
-        Route::post('{id}/gagal', [AntreanController::class, 'gagal'])->name('gagal');
-        Route::post('{id}/kembalikan', [AntreanController::class, 'kembalikan'])->name('kembalikan');
-        Route::get('{id}/chat', [ChatController::class, 'show'])->name('chat');
-        Route::post('{id}/chat/send', [ChatController::class, 'send'])->name('chat.send');
+        Route::post('{id}/selesai', [AntreanController::class, 'selesai'])->name('selesai')->where('id', '[A-Z0-9\-]+');
+        Route::post('{id}/gagal', [AntreanController::class, 'gagal'])->name('gagal')->where('id', '[A-Z0-9\-]+');
+        Route::post('{id}/kembalikan', [AntreanController::class, 'kembalikan'])->name('kembalikan')->where('id', '[A-Z0-9\-]+');
+        Route::get('{id}/chat', [ChatController::class, 'show'])->name('chat')->where('id', '[A-Z0-9\-]+');
+        Route::post('{id}/chat/send', [ChatController::class, 'send'])->name('chat.send')->where('id', '[A-Z0-9\-]+');
     });
 
     // Pustaka Teknis (SOP)
