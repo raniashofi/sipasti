@@ -45,22 +45,29 @@
 
             {{-- ── Stat Cards ── --}}
             @php
+            // Penanganan fallback (?? 0) agar tidak blank jika key tidak ditemukan dari Controller
+            $valMenunggu = $stats['menunggu_verifikasi'] ?? $stats['menunggu_verif'] ?? 0;
+            $valPanduan  = $stats['panduan_remote'] ?? 0;
+            $valEskalasi = $stats['eskalasi'] ?? 0;
+            $valSelesai  = $stats['selesai'] ?? 0;
+            $valTotalKb  = $stats['total_kb'] ?? 0;
+
             $cards = [
                 [
                     'label' => 'Menunggu Verifikasi',
-                    'value' => $stats['menunggu_verif'],
+                    'value' => $valMenunggu,
                     'desc'  => 'Tiket baru masuk, perlu tindakan',
                     'color' => '#D97706',
                     'bg'    => '#FEF3C7',
                     'icon'  => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
                     'route' => 'admin_helpdesk.tiket.menunggu',
-                    'badge' => $stats['menunggu_verif'] > 0 ? 'Perlu Aksi' : null,
+                    'badge' => $valMenunggu > 0 ? 'Perlu Aksi' : null,
                     'badge_color' => '#D97706',
                     'badge_bg'    => '#FEF3C7',
                 ],
                 [
                     'label' => 'Panduan Remote',
-                    'value' => $stats['panduan_remote'],
+                    'value' => $valPanduan,
                     'desc'  => 'Tiket sedang ditangani via chat',
                     'color' => '#0263C8',
                     'bg'    => '#EBF3FF',
@@ -70,7 +77,7 @@
                 ],
                 [
                     'label' => 'Eskalasi ke Teknisi',
-                    'value' => $stats['eskalasi'],
+                    'value' => $valEskalasi,
                     'desc'  => 'Tiket yang diteruskan tim teknis',
                     'color' => '#7C3AED',
                     'bg'    => '#EDE9FE',
@@ -80,7 +87,7 @@
                 ],
                 [
                     'label' => 'Tiket Selesai',
-                    'value' => $stats['selesai'],
+                    'value' => $valSelesai,
                     'desc'  => 'Tiket berhasil diselesaikan',
                     'color' => '#059669',
                     'bg'    => '#D1FAE5',
@@ -108,7 +115,8 @@
 
                     <div class="relative z-10 flex-1 min-w-0">
                         <div class="flex items-start justify-between gap-1">
-                            <p class="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format($card['value']) }}</p>
+                            {{-- Pastikan value numerik untuk number_format --}}
+                            <p class="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format((int)$card['value']) }}</p>
                             @if(!empty($card['badge']))
                             <span class="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full shrink-0 mt-1 whitespace-nowrap"
                                   style="background-color:{{ $card['badge_bg'] }};color:{{ $card['badge_color'] }};">
@@ -129,28 +137,30 @@
                 {{-- Donut chart (2 cols) --}}
                 <div id="card-distribusi" class="xl:col-span-2 bg-white rounded-2xl p-5 sm:p-7 shadow-sm border border-gray-100 flex flex-col self-start hover:shadow-md transition-shadow">
                     <h2 class="text-base font-bold text-gray-800">Distribusi Status Tiket</h2>
-                    <p class="text-sm text-gray-400 mb-6 mt-1">Sebaran tiket yang sedang ditangani</p>
+                    <p class="text-sm text-gray-400 mb-6 mt-1">Sebaran tiket berdasarkan status saat ini</p>
 
-                    <div class="flex items-center justify-center relative">
-                        <canvas id="tiketChart" width="200" height="200" class="max-h-[200px]"></canvas>
-                    </div>
-
-                    @php
-                    $chartColors = ['#D97706','#EF4444','#0263C8','#7C3AED','#DC2626','#059669'];
-                    $ci = 0;
-                    @endphp
-                    <div class="mt-6 space-y-2.5 px-1">
-                        @foreach($tiketPerStatus as $label => $count)
-                        <div class="flex items-center justify-between group">
-                            <div class="flex items-center gap-3">
-                                <span class="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125"
-                                      style="background-color:{{ $chartColors[$ci] }};"></span>
-                                <span class="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">{{ $label }}</span>
-                            </div>
-                            <span class="text-sm font-bold text-gray-800 bg-gray-50 px-2.5 py-0.5 rounded-md">{{ $count }}</span>
+                    <div class="flex-1 flex flex-col justify-center">
+                        <div class="flex items-center justify-center relative">
+                            <canvas id="tiketChart" width="220" height="220" class="max-h-[220px]"></canvas>
                         </div>
-                        @php $ci++; @endphp
-                        @endforeach
+
+                        @php
+                        $chartColors = ['#D97706','#EF4444','#0263C8','#7C3AED','#DC2626','#059669'];
+                        $ci = 0;
+                        @endphp
+                        <div class="mt-8 space-y-3 px-2">
+                            @foreach($tiketPerStatus as $label => $count)
+                            <div class="flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="w-3 h-3 rounded-full shrink-0 shadow-sm transition-transform group-hover:scale-125"
+                                          style="background-color:{{ $chartColors[$ci % count($chartColors)] }};"></span>
+                                    <span class="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition-colors">{{ $label }}</span>
+                                </div>
+                                <span class="text-sm font-bold text-gray-800 bg-gray-50 px-2.5 py-0.5 rounded-md">{{ $count }}</span>
+                            </div>
+                            @php $ci++; @endphp
+                            @endforeach
+                        </div>
                     </div>
                 </div>
 
@@ -170,7 +180,7 @@
                         </a>
                     </div>
 
-                    @if($recentActivity->isEmpty())
+                    @if(empty($recentActivity) || $recentActivity->isEmpty())
                     <div class="flex flex-col items-center justify-center py-12 text-gray-400">
                         <div class="bg-gray-50 p-4 rounded-full mb-3">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -181,7 +191,7 @@
                     </div>
                     @else
                     <div class="overflow-y-auto flex-1 pr-1" style="scrollbar-width:thin;scrollbar-color:#E5E7EB transparent;">
-                        <div class="relative border-l-2 border-gray-100 ml-4 space-y-5 mt-2">
+                        <div class="relative border-l-2 border-gray-100 ml-4 space-y-6 mt-2">
                             @foreach($recentActivity as $log)
                             @php
                             $badgeMap = [
@@ -196,9 +206,18 @@
                                 'transfer' => ['bg'=>'bg-orange-100', 'text'=>'text-orange-700', 'label'=>'Transfer', 'dot'=>'bg-orange-500'],
                             ];
                             $badge = $badgeMap[$log->jenis_aktivitas] ?? ['bg'=>'bg-gray-100','text'=>'text-gray-600','label'=>$log->jenis_aktivitas,'dot'=>'bg-gray-400'];
+                            $roleLabelMap = [
+                                'admin_helpdesk' => 'Admin Helpdesk',
+                                'super_admin'    => 'Super Admin',
+                                'tim_teknis'     => 'Tim Teknis',
+                                'opd'            => 'OPD',
+                                'pimpinan'       => 'Pimpinan',
+                            ];
+                            $roleLabel = $roleLabelMap[$log->role_pelaku] ?? $log->role_pelaku;
                             @endphp
                             <div class="flex items-start gap-4 relative">
                                 <div class="absolute -left-[25px] mt-1 w-3.5 h-3.5 rounded-full border-2 border-white {{ $badge['dot'] }} shadow-sm"></div>
+
                                 <div class="flex-1 bg-gray-50/50 hover:bg-gray-50 rounded-xl p-3.5 border border-gray-100 transition-colors">
                                     <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
                                         <div class="flex items-center gap-2">
@@ -207,14 +226,17 @@
                                                 {{ $badge['label'] }}
                                             </span>
                                         </div>
-                                        <span class="text-xs text-gray-400 flex items-center gap-1">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
+                                        <span class="text-xs font-medium text-gray-400 flex items-center gap-1">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                             {{ $log->waktu_eksekusi?->diffForHumans() ?? '-' }}
                                         </span>
                                     </div>
-                                    <p class="text-sm text-gray-600 break-words">{{ $log->detail_tindakan ?? '-' }}</p>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-semibold px-2 py-0.5 bg-white border border-gray-200 text-gray-500 rounded uppercase tracking-wide shrink-0">
+                                            {{ $roleLabel }}
+                                        </span>
+                                        <p class="text-sm text-gray-600 truncate">{{ $log->detail_tindakan ?? '-' }}</p>
+                                    </div>
                                 </div>
                             </div>
                             @endforeach
@@ -231,6 +253,7 @@
                 </div>
 
                 @php
+                // Menerapkan nilai dari variabel fallback di atas
                 $quickLinks = [
                     [
                         'label' => 'Menunggu Verif',
@@ -239,7 +262,7 @@
                         'color' => '#D97706',
                         'bg'    => '#FEF3C7',
                         'icon'  => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-                        'count' => $stats['menunggu_verif'],
+                        'count' => $valMenunggu,
                     ],
                     [
                         'label' => 'Panduan Remote',
@@ -248,7 +271,7 @@
                         'color' => '#0263C8',
                         'bg'    => '#EBF3FF',
                         'icon'  => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
-                        'count' => $stats['panduan_remote'],
+                        'count' => $valPanduan,
                     ],
                     [
                         'label' => 'Distribusi & Eskalasi',
@@ -257,7 +280,7 @@
                         'color' => '#7C3AED',
                         'bg'    => '#EDE9FE',
                         'icon'  => 'M13 10V3L4 14h7v7l9-11h-7z',
-                        'count' => $stats['eskalasi'],
+                        'count' => $valEskalasi,
                     ],
                     [
                         'label' => 'Pustaka Solusi',
@@ -266,7 +289,7 @@
                         'color' => '#059669',
                         'bg'    => '#D1FAE5',
                         'icon'  => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253',
-                        'count' => $stats['total_kb'],
+                        'count' => $valTotalKb,
                     ],
                 ];
                 @endphp
@@ -304,8 +327,8 @@
 
     <script>
     (function () {
-        const labels = @json(array_keys($tiketPerStatus));
-        const data   = @json(array_values($tiketPerStatus));
+        const labels = @json(array_keys($tiketPerStatus ?? []));
+        const data   = @json(array_values($tiketPerStatus ?? []));
         const colors = ['#D97706','#EF4444','#0263C8','#7C3AED','#DC2626','#059669'];
         const total  = data.reduce((a, b) => a + b, 0);
 
@@ -330,6 +353,8 @@
                         backgroundColor: 'rgba(17, 24, 39, 0.9)',
                         padding: 12,
                         cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 13 },
+                        bodyFont: { family: 'Inter', size: 14, weight: 'bold' },
                         callbacks: {
                             label: ctx => ` ${ctx.label}: ${ctx.parsed} tiket`
                         }
@@ -342,21 +367,21 @@
                 beforeDraw(chart) {
                     const { ctx, chartArea: { width, height, left, top } } = chart;
                     ctx.save();
-                    ctx.font = 'bold 28px Inter';
+                    ctx.font = 'bold 30px Inter';
                     ctx.fillStyle = '#111827';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
                     ctx.fillText(total, left + width / 2, top + height / 2 - 10);
-                    ctx.font = '500 12px Inter';
+                    ctx.font = '500 13px Inter';
                     ctx.fillStyle = '#6B7280';
-                    ctx.fillText('Total Tiket', left + width / 2, top + height / 2 + 16);
+                    ctx.fillText('Total Tiket', left + width / 2, top + height / 2 + 18);
                     ctx.restore();
                 }
             }]
         });
     })();
 
-    // Perbaikan: Sync height hanya aktif di layar Desktop (xl) ke atas
+    // Sync height hanya aktif di layar Desktop (xl) ke atas
     (function syncCardHeight() {
         const donutCard    = document.getElementById('card-distribusi');
         const activityCard = document.getElementById('card-activity');

@@ -192,6 +192,7 @@
                     sending: false,
                     myId: '{{ $myUserId }}',
                     roomId: '{{ $room->id }}',
+                    chatIsActive: {{ json_encode($chatIsActive) }},
 
                     init() {
                         this.$nextTick(() => this.scrollBottom());
@@ -351,49 +352,58 @@
                 </div>
 
                 {{-- Input Bar --}}
-                <div class="px-3 sm:px-5 py-3 sm:py-4 bg-white shrink-0 z-20" style="box-shadow: 0 -4px 10px rgba(0,0,0,0.02);">
-                    <div class="flex items-end gap-2 border border-gray-200 rounded-2xl px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50
-                                focus-within:border-[#01458E] focus-within:ring-4 focus-within:ring-[#01458E]/10 focus-within:bg-white transition-all duration-200">
-
-                        {{-- Attach image (Kiri) --}}
-                        <label class="shrink-0 self-end mb-1 sm:mb-1.5 cursor-pointer p-1.5 sm:p-2 rounded-xl text-gray-400 hover:text-[#01458E] hover:bg-blue-50 transition-colors">
-                            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                      d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
-                            </svg>
-                            <input type="file" x-ref="fileInput" accept="image/jpg,image/jpeg,image/png" class="sr-only" @change="handleFile($event)">
-                        </label>
-
-                        {{-- Textarea (Tengah) --}}
-                        <textarea x-model="newMessage"
-                                  @keydown.enter="handleEnter($event)"
-                                  placeholder="Tulis pesan..."
-                                  rows="1"
-                                  class="flex-1 bg-transparent text-[13px] sm:text-sm text-gray-800 resize-none border-0 outline-none ring-0 shadow-none
-                                         focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none
-                                         placeholder-gray-400 max-h-24 sm:max-h-32 py-2 sm:py-2.5 px-1"
-                                  style="line-height:1.5;"></textarea>
-
-                        {{-- Send button (Kanan) --}}
-                        <button @click="send()"
-                                :disabled="sending || (!newMessage.trim() && !selectedFile)"
-                                class="shrink-0 self-end mb-1 sm:mb-1.5 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-200"
-                                :class="(sending || (!newMessage.trim() && !selectedFile))
-                                    ? 'cursor-not-allowed bg-gray-200 text-gray-400'
-                                    : 'bg-[#01458E] text-white hover:opacity-90 hover:scale-105 active:scale-95 shadow-md'">
-                            <svg x-show="!sending" class="w-4 h-4 sm:w-4.5 sm:h-4.5 translate-x-[1px] translate-y-[1px]" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
-                            </svg>
-                            <svg x-show="sending" class="w-4 h-4 sm:w-5 sm:h-5 animate-spin" fill="none" viewBox="0 0 24 24" style="display:none;">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                            </svg>
-                        </button>
+                <template x-if="!chatIsActive">
+                    <div class="px-3 sm:px-5 py-4 sm:py-5 bg-gray-50 shrink-0 text-center border-t border-gray-100">
+                        <p class="text-sm font-semibold text-gray-600 mb-1">Chat Tidak Aktif</p>
+                        <p class="text-xs text-gray-500">Riwayat percakapan tidak dapat diubah. Sesi panduan remote telah berakhir.</p>
                     </div>
-                    <p class="hidden sm:block text-[10px] text-gray-400 text-center mt-2 font-medium">
-                        Tekan <kbd class="px-1 py-0.5 rounded bg-gray-100 border border-gray-200">Enter</kbd> untuk kirim, <kbd class="px-1 py-0.5 rounded bg-gray-100 border border-gray-200">Shift + Enter</kbd> untuk baris baru.
-                    </p>
-                </div>
+                </template>
+
+                <template x-if="chatIsActive">
+                    <div class="px-3 sm:px-5 py-3 sm:py-4 bg-white shrink-0 z-20" style="box-shadow: 0 -4px 10px rgba(0,0,0,0.02);">
+                        <div class="flex items-end gap-2 border border-gray-200 rounded-2xl px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-50
+                                    focus-within:border-[#01458E] focus-within:ring-4 focus-within:ring-[#01458E]/10 focus-within:bg-white transition-all duration-200">
+
+                            {{-- Attach image (Kiri) --}}
+                            <label class="shrink-0 self-end mb-1 sm:mb-1.5 cursor-pointer p-1.5 sm:p-2 rounded-xl text-gray-400 hover:text-[#01458E] hover:bg-blue-50 transition-colors">
+                                <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                                </svg>
+                                <input type="file" x-ref="fileInput" accept="image/jpg,image/jpeg,image/png" class="sr-only" @change="handleFile($event)">
+                            </label>
+
+                            {{-- Textarea (Tengah) --}}
+                            <textarea x-model="newMessage"
+                                      @keydown.enter="handleEnter($event)"
+                                      placeholder="Tulis pesan..."
+                                      rows="1"
+                                      class="flex-1 bg-transparent text-[13px] sm:text-sm text-gray-800 resize-none border-0 outline-none ring-0 shadow-none
+                                             focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none
+                                             placeholder-gray-400 max-h-24 sm:max-h-32 py-2 sm:py-2.5 px-1"
+                                      style="line-height:1.5;"></textarea>
+
+                            {{-- Send button (Kanan) --}}
+                            <button @click="send()"
+                                    :disabled="sending || (!newMessage.trim() && !selectedFile)"
+                                    class="shrink-0 self-end mb-1 sm:mb-1.5 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all duration-200"
+                                    :class="(sending || (!newMessage.trim() && !selectedFile))
+                                        ? 'cursor-not-allowed bg-gray-200 text-gray-400'
+                                        : 'bg-[#01458E] text-white hover:opacity-90 hover:scale-105 active:scale-95 shadow-md'">
+                                <svg x-show="!sending" class="w-4 h-4 sm:w-4.5 sm:h-4.5 translate-x-[1px] translate-y-[1px]" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z"/>
+                                </svg>
+                                <svg x-show="sending" class="w-4 h-4 sm:w-5 sm:h-5 animate-spin" fill="none" viewBox="0 0 24 24" style="display:none;">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="hidden sm:block text-[10px] text-gray-400 text-center mt-2 font-medium">
+                            Tekan <kbd class="px-1 py-0.5 rounded bg-gray-100 border border-gray-200">Enter</kbd> untuk kirim, <kbd class="px-1 py-0.5 rounded bg-gray-100 border border-gray-200">Shift + Enter</kbd> untuk baris baru.
+                        </p>
+                    </div>
+                </template>
             </div>
             {{-- end right panel --}}
 

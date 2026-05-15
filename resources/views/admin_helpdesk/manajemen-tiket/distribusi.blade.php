@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
@@ -47,13 +47,10 @@
             </div>
         </header>
 
-        <main class="flex-1 flex overflow-hidden">
+        <main class="flex-1 px-4 lg:px-6 py-4 lg:py-6 flex flex-col overflow-hidden w-full">
 
-            {{-- ── Konten utama (tabel + filter) ── --}}
-            <div class="flex-1 flex flex-col overflow-hidden w-full">
-
-                {{-- Filter --}}
-                <div class="px-4 sm:px-6 pt-5 pb-2">
+            {{-- ── Filter ── --}}
+            <div class="pb-2">
                     <form method="GET" action="{{ route('admin_helpdesk.tiket.distribusi') }}" id="filterFormDistribusi"
                           class="bg-white rounded-2xl border border-gray-100 px-4 sm:px-5 py-4 mb-3 sm:mb-5 shadow-sm">
                         <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Filter &amp; Pencarian</p>
@@ -136,24 +133,89 @@
                     </form>
                 </div>
 
-                {{-- Flash Messages --}}
-                @if(session('success'))
-                <div class="mx-4 sm:mx-6 mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl flex items-center gap-2">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    {{ session('success') }}
-                </div>
-                @endif
-                @if(session('error'))
-                <div class="mx-4 sm:mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    {{ session('error') }}
-                </div>
-                @endif
+            {{-- Flash Messages --}}
+            @if(session('success'))
+            <div class="mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ session('success') }}
+            </div>
+            @endif
+            @if(session('error'))
+            <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ session('error') }}
+            </div>
+            @endif
 
-                {{-- Tabel --}}
-                <div class="flex-1 overflow-auto px-4 sm:px-6 pb-6">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
-                        <div class="overflow-x-auto flex-1">
+            {{-- ── Data Table ── --}}
+            <div class="flex-1 overflow-auto pb-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
+                    <div class="overflow-x-auto flex-1 w-full">
+
+                        {{-- Mobile Cards --}}
+                        <div class="sm:hidden divide-y divide-gray-100">
+                            @forelse($tikets as $tiket)
+                            @php
+                                $kategoriNamaM = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
+                                $isDibukaKembaliM = $tiket->latestStatus?->status_tiket === 'dibuka_kembali';
+                                $allTeknisiM = [];
+                                foreach ($tiket->tiketTeknisi as $tt) {
+                                    $allTeknisiM[] = [
+                                        'nama'     => $tt->timTeknis?->nama_lengkap ?? '—',
+                                        'role'     => $tt->peran_teknisi === 'teknisi_utama' ? 'Utama' : 'Pendamping',
+                                        'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                    ];
+                                }
+                                $tJM = json_encode([
+                                    'id'                    => $tiket->id,
+                                    'subjek_masalah'        => $tiket->subjek_masalah,
+                                    'detail_masalah'        => $tiket->detail_masalah,
+                                    'opd_nama'              => $tiket->opd?->nama_opd ?? '—',
+                                    'kategori_nama'         => $kategoriNamaM,
+                                    'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
+                                    'lokasi'                => $tiket->lokasi ?? '—',
+                                    'foto_bukti'            => $tiket->foto_bukti,
+                                    'rekomendasi_penanganan'=> $tiket->rekomendasi_penanganan,
+                                    'teknisi_nama'          => $allTeknisiM[0]['nama'] ?? '—',
+                                    'all_teknisi'           => $allTeknisiM,
+                                    'catatan_status'        => $tiket->latestStatus?->catatan ?? '—',
+                                    'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
+                                    'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
+                                    'status_updated_at'     => $tiket->latestStatus?->created_at?->translatedFormat('d M Y H:i') . ' WIB',
+                                    'is_dibuka_kembali'     => $isDibukaKembaliM,
+                                    'file_bukti_buka_kembali' => $isDibukaKembaliM ? $tiket->latestStatus?->file_bukti : null,
+                                    'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
+                                    'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
+                                ]);
+                            @endphp
+                            <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                 @click="openDetail({{ $tJM }})">
+                                <div class="flex items-start justify-between gap-2 mb-1">
+                                    <span class="font-mono text-xs font-bold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">#{{ Str::upper(substr($tiket->id, -8)) }}</span>
+                                    @if($isDibukaKembaliM)
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">Dibuka Kembali</span>
+                                    @else
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">On Progress</span>
+                                    @endif
+                                </div>
+                                <p class="text-sm font-semibold text-gray-800 mb-0.5 line-clamp-1">{{ $tiket->subjek_masalah }}</p>
+                                <p class="text-xs text-gray-400 mb-2 line-clamp-1">{{ $tiket->detail_masalah }}</p>
+                                <div class="flex items-center justify-between gap-2">
+                                    <div class="text-xs text-gray-400 min-w-0">
+                                        <span class="line-clamp-1">{{ $tiket->opd?->nama_opd ?? '—' }}</span>
+                                        @if($allTeknisiM)
+                                        <span class="text-gray-500 text-[11px]">{{ $allTeknisiM[0]['nama'] }}</span>
+                                        @endif
+                                    </div>
+                                    <span class="text-[11px] font-medium px-2 py-0.5 rounded border border-gray-200 text-gray-600 bg-gray-50 shrink-0">{{ $kategoriNamaM }}</span>
+                                </div>
+                            </div>
+                            @empty
+                            <div class="px-4 py-10 text-center text-sm text-gray-400">Tidak ada tiket dalam Perbaikan Teknis.</div>
+                            @endforelse
+                        </div>
+
+                        <div class="hidden sm:block overflow-x-auto">
                             <table class="w-full text-sm text-left">
                                 <thead>
                                     <tr class="border-b border-gray-100 bg-gray-50/50">
@@ -170,8 +232,19 @@
                                     @forelse($tikets as $tiket)
                                     @php
                                         $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
-                                        $teknisi      = $tiket->teknisiUtama?->timTeknis;
                                         $isDibukaKembali = $tiket->latestStatus?->status_tiket === 'dibuka_kembali';
+
+                                        // Ambil semua teknisi dengan role mereka
+                                        $allTeknisi = [];
+                                        foreach ($tiket->tiketTeknisi as $tt) {
+                                            $allTeknisi[] = [
+                                                'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                                'role' => $tt->peran_teknisi === 'teknisi_utama' ? 'Utama' : 'Pendamping',
+                                                'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                            ];
+                                        }
+                                        $teknisiUtama = $allTeknisi[0] ?? null;
+
                                         $tiketJson    = json_encode([
                                             'id'                    => $tiket->id,
                                             'subjek_masalah'        => $tiket->subjek_masalah,
@@ -182,7 +255,8 @@
                                             'lokasi'                => $tiket->lokasi ?? '—',
                                             'foto_bukti'            => $tiket->foto_bukti,
                                             'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
-                                            'teknisi_nama'          => $teknisi?->nama_lengkap ?? '—',
+                                            'teknisi_nama'          => $teknisiUtama['nama'] ?? '—',
+                                            'all_teknisi'           => $allTeknisi,
                                             'catatan_status'        => $tiket->latestStatus?->catatan ?? '—',
                                             'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                             'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
@@ -208,19 +282,16 @@
                                             {{ Str::limit($tiket->opd?->nama_opd ?? '—', 30) }}
                                         </td>
                                         <td class="px-5 py-4 whitespace-nowrap">
-                                            @if($teknisi)
-                                            <p class="text-sm font-semibold text-gray-800">{{ $teknisi->nama_lengkap }}</p>
-                                            <div class="flex items-center gap-1.5 mt-0.5">
-                                                <span class="text-[11px] text-gray-500">Teknisi Utama</span>
-                                                @if($teknisi->status_teknisi === 'offline')
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Offline
-                                                </span>
-                                                @else
-                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-100 text-green-700">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online
-                                                </span>
-                                                @endif
+                                            @if($allTeknisi)
+                                            <div class="space-y-1.5">
+                                                @foreach($allTeknisi as $tek)
+                                                <div>
+                                                    <p class="text-sm font-semibold text-gray-800">{{ $tek['nama'] }}</p>
+                                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                                        <span class="text-[11px] text-gray-500">{{ $tek['role'] }}</span>
+                                                    </div>
+                                                </div>
+                                                @endforeach
                                             </div>
                                             @else
                                             <span class="text-sm text-gray-400">—</span>
@@ -264,15 +335,17 @@
                                     @endforelse
                                 </tbody>
                             </table>
-                        </div>
+                        </div>{{-- /hidden sm:block --}}
+                    </div>{{-- /overflow-x-auto flex-1 w-full --}}
 
-                        {{-- Pagination 10 Data --}}
-                        <div class="px-5 py-4 border-t border-gray-100 w-full shrink-0">
+                    {{-- Pagination --}}
+                    <div class="px-5 py-4 border-t border-gray-100 w-full shrink-0">
+                        @if(method_exists($tikets, 'links'))
                             {{ $tikets->appends(request()->query())->links() }}
-                        </div>
+                        @endif
                     </div>
-                </div>
-            </div>
+                </div>{{-- /bg-white card --}}
+            </div>{{-- /flex-1 overflow-auto --}}
 
             {{-- ── Detail Drawer Overlay ── --}}
             <div x-show="selectedTiket"
@@ -349,6 +422,36 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Section: Tim Teknisi yang Bertugas --}}
+                    <template x-if="selectedTiket?.all_teknisi && selectedTiket?.all_teknisi?.length > 0">
+                        <div>
+                            <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-100">Tim Teknisi yang Bertugas</h4>
+                            <div class="space-y-2.5">
+                                <template x-for="(tek, idx) in selectedTiket.all_teknisi" :key="idx">
+                                    <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                        <div class="flex-1">
+                                            <p class="text-xs font-semibold text-gray-900" x-text="tek.nama"></p>
+                                            <div class="flex items-center gap-1.5 mt-1">
+                                                <template x-if="tek.is_utama">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                        Utama
+                                                    </span>
+                                                </template>
+                                                <template x-if="!tek.is_utama">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                                                        Pendamping
+                                                    </span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
 
                     {{-- Section 2: Catatan Penugasan --}}
                     <div>

@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pimpinan', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('user_id')->nullable();
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->nullable();
             $table->string('nama_lengkap')->nullable();
             $table->timestamps();
 

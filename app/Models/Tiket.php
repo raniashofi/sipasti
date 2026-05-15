@@ -79,6 +79,27 @@ class Tiket extends Model
         return $this->hasMany(ChatRoom::class);
     }
 
+    public function chatRoom()
+    {
+        return $this->hasOne(ChatRoom::class);
+    }
+
+    // Helper method untuk check apakah tiket ini ditransfer
+    public function isTransferred()
+    {
+        $chatRoom = $this->chatRoom;
+        return $chatRoom && $chatRoom->transferred_from_admin_id;
+    }
+
+    // Get transferred from admin
+    public function getTransferredFromAdmin()
+    {
+        $chatRoom = $this->chatRoom;
+        return $chatRoom && $chatRoom->transferred_from_admin_id
+            ? \App\Models\User::find($chatRoom->transferred_from_admin_id)
+            : null;
+    }
+
     public function solutionNode()
     {
         return $this->hasOne(NodeDiagnosis::class, 'kb_id', 'kb_id')

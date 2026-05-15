@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class ChatRoomUser extends Model
 {
     protected $table = 'chat_room_users';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    protected $primaryKey = ['room_id', 'user_id'];
+    public $timestamps = false;
 
     protected $fillable = [
         'room_id',
@@ -18,8 +22,6 @@ class ChatRoomUser extends Model
     protected $casts = [
         'last_read_at' => 'datetime',
     ];
-
-    public $timestamps = false;
 
     public function user()
     {

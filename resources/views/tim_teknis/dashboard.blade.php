@@ -10,29 +10,16 @@
         * { font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
 
-        body { background-color: #F4F6FA; }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(14px); }
-            to   { opacity: 1; transform: translateY(0); }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+            transform: translateY(15px);
         }
-        .fu  { animation: fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .fu1 { animation-delay: 0.04s; }
-        .fu2 { animation-delay: 0.10s; }
-        .fu3 { animation-delay: 0.16s; }
-        .fu4 { animation-delay: 0.22s; }
-        .fu5 { animation-delay: 0.28s; }
-        .fu6 { animation-delay: 0.34s; }
-
-        .card {
-            background: #fff;
-            border-radius: 20px;
-            border: 1px solid #EAECF0;
-            box-shadow: 0 2px 6px rgba(16,24,40,0.02);
-            transition: box-shadow 0.25s ease, transform 0.25s ease;
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        @keyframes fadeInUp {
+            to { opacity: 1; transform: translateY(0); }
         }
-        .card:hover { box-shadow: 0 10px 30px rgba(1,69,142,0.06); }
-        .stat-card:hover { transform: translateY(-3px); }
 
         .pill {
             display: inline-flex;
@@ -63,17 +50,17 @@
         .bar-lbl  { font-size: 9px; color: #94a3b8; font-weight: 600; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="bg-gradient-to-br from-[#F4F7FB] to-[#E9F0F8] min-h-screen text-gray-800">
 
     @include('layouts.sidebarTimTeknis')
 
     <div class="ml-0 lg:ml-64 min-h-screen flex flex-col">
 
         {{-- Top bar --}}
-        <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+        <header class="bg-white/80 backdrop-blur-md border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
             <div>
-                <h1 class="text-lg font-bold text-gray-900">Dashboard</h1>
-                <p class="text-xs text-gray-400 mt-0.5">Ringkasan aktivitas dan tugas teknis Anda</p>
+                <h1 class="text-xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
+                <p class="text-sm text-gray-500 mt-0.5">Ringkasan aktivitas dan tugas teknis Anda</p>
             </div>
             @if($lastLogin)
             <div class="text-xs text-gray-400 font-medium hidden md:block">
@@ -82,14 +69,14 @@
             @endif
         </header>
 
-        <main class="flex-1 px-4 py-4 lg:px-8 lg:py-8 space-y-7 max-w-screen-xl w-full mx-auto">
+        <main class="flex-1 px-4 py-4 lg:px-8 lg:py-8 space-y-6 lg:space-y-8">
 
             {{-- ── Hero Banner ── --}}
             @php
             $bidangLabel = $teknis->bidang?->nama_bidang ?? '—';
             @endphp
 
-            <div class="fu fu1 relative overflow-hidden rounded-3xl text-white shadow-lg"
+            <div class="animate-fade-in-up relative overflow-hidden rounded-3xl text-white shadow-lg"
                  style="background: linear-gradient(135deg, #01458E 0%, #0263C8 60%, #2A93D5 100%);">
                 <div class="absolute -right-20 -top-20 w-80 h-80 rounded-full opacity-10 bg-white blur-2xl"></div>
                 <div class="absolute -left-10 -bottom-10 w-40 h-40 rounded-full opacity-10 bg-white blur-xl"></div>
@@ -127,74 +114,85 @@
             </div>
 
             {{-- ── Stat Cards ── --}}
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+            <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 animate-fade-in-up delay-100">
                 @php
                 $statCards = [
                     [
-                        'label'    => 'Tugas Aktif',
-                        'value'    => $stats['aktif'],
-                        'badge'    => 'Sedang Berjalan',
-                        'badgeCls' => 'bg-amber-50 text-amber-600',
-                        'iconBg'   => 'rgba(245,158,11,0.12)',
-                        'iconClr'  => '#D97706',
-                        'icon'     => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+                        'label'  => 'Tugas Aktif',
+                        'value'  => $stats['aktif'],
+                        'sub'    => 'Sedang berjalan saat ini',
+                        'color'  => '#D97706',
+                        'bg'     => '#FEF3C7',
+                        'icon'   => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
                     ],
                     [
-                        'label'    => 'Selesai sbg Utama',
-                        'value'    => $stats['selesai_utama'],
-                        'badge'    => 'Teknisi Utama',
-                        'badgeCls' => 'bg-blue-50 text-blue-600',
-                        'iconBg'   => 'rgba(1,69,142,0.08)',
-                        'iconClr'  => '#01458E',
-                        'icon'     => 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+                        'label'  => 'Selesai Utama',
+                        'value'  => $stats['selesai_utama'],
+                        'sub'    => 'Sebagai Teknisi Utama',
+                        'color'  => '#01458E',
+                        'bg'     => '#EEF3F9',
+                        'icon'   => 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
                     ],
                     [
-                        'label'    => 'Selesai sbg Pendamping',
-                        'value'    => $stats['selesai_pendamping'],
-                        'badge'    => 'Pendamping',
-                        'badgeCls' => 'bg-purple-50 text-purple-600',
-                        'iconBg'   => 'rgba(139,92,246,0.10)',
-                        'iconClr'  => '#7C3AED',
-                        'icon'     => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+                        'label'  => 'Selesai Pendamping',
+                        'value'  => $stats['selesai_pendamping'],
+                        'sub'    => 'Sebagai Teknisi Pendamping',
+                        'color'  => '#7C3AED',
+                        'bg'     => '#EDE9FE',
+                        'icon'   => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
                     ],
                     [
-                        'label'    => 'Total Tugas Selesai',
-                        'value'    => $stats['total_selesai'],
-                        'badge'    => 'Semua',
-                        'badgeCls' => 'bg-emerald-50 text-emerald-600',
-                        'iconBg'   => 'rgba(16,185,129,0.12)',
-                        'iconClr'  => '#059669',
-                        'icon'     => 'M5 13l4 4L19 7',
+                        'label'  => 'Total Tugas Selesai',
+                        'value'  => $stats['total_selesai'],
+                        'sub'    => 'Keseluruhan tugas diselesaikan',
+                        'color'  => '#0263C8',
+                        'bg'     => '#EBF3FF',
+                        'icon'   => 'M5 13l4 4L19 7',
+                    ],
+                    [
+                        'label'  => 'Selesai Tepat Waktu',
+                        'value'  => $stats['tepat_waktu'],
+                        'sub'    => 'Diselesaikan dalam SLA',
+                        'color'  => '#059669',
+                        'bg'     => '#D1FAE5',
+                        'icon'   => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                    ],
+                    [
+                        'label'  => 'Melebihi SLA',
+                        'value'  => $stats['telat'],
+                        'sub'    => 'Penyelesaian terlambat',
+                        'color'  => $stats['telat'] > 0 ? '#DC2626' : '#9CA3AF',
+                        'bg'     => $stats['telat'] > 0 ? '#FEE2E2' : '#F3F4F6',
+                        'icon'   => 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
                     ],
                 ];
                 @endphp
 
-                @foreach($statCards as $i => $s)
-                <div class="fu fu{{ $i+2 }} card stat-card p-6 flex flex-col justify-between">
-                    <div class="flex items-start justify-between mb-5 gap-2">
-                        <div class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                             style="background-color: {{ $s['iconBg'] }};">
-                            <svg class="w-5 h-5" style="color:{{ $s['iconClr'] }};"
-                                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $s['icon'] }}"/>
-                            </svg>
-                        </div>
-                        <span class="pill {{ $s['badgeCls'] }} text-[10px] text-center leading-tight"
-                              style="white-space: normal; max-width: calc(100% - 52px);">{{ $s['badge'] }}</span>
+                @foreach($statCards as $i => $card)
+                <div class="bg-white rounded-2xl p-4 sm:p-6 flex items-center gap-3 sm:gap-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden group cursor-default">
+                    <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20 transition-transform duration-500 group-hover:scale-125" style="background-color:{{ $card['color'] }};"></div>
+
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 relative z-10 transition-transform duration-300 group-hover:scale-110"
+                         style="background-color:{{ $card['bg'] }};">
+                        <svg class="w-5 h-5 sm:w-7 sm:h-7" style="color:{{ $card['color'] }};"
+                             fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $card['icon'] }}"/>
+                        </svg>
                     </div>
-                    <div>
-                        <p class="text-3xl font-extrabold text-gray-900 leading-none mb-1.5">{{ $s['value'] }}</p>
-                        <p class="text-xs text-gray-500 font-medium">{{ $s['label'] }}</p>
+                    <div class="relative z-10 flex-1 min-w-0">
+                        <p class="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs sm:text-sm font-medium text-gray-500 mt-0.5 leading-tight">{{ $card['label'] }}</p>
+                        <p class="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate hidden sm:block">{{ $card['sub'] }}</p>
                     </div>
                 </div>
                 @endforeach
             </div>
 
             {{-- ── Main 2-col grid ── --}}
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 animate-fade-in-up delay-200">
 
                 {{-- LEFT: Tugas Aktif Terbaru --}}
-                <div class="lg:col-span-2">
+                <div class="lg:col-span-3">
 
                     {{-- Mobile card list (tampil di mobile, sembunyi di md+) --}}
                     @php
@@ -206,7 +204,7 @@
                         'rusak_berat'      => ['label' => 'Rusak Berat',       'pill' => 'bg-red-50 text-red-600',        'dot' => 'bg-red-500'],
                     ];
                     @endphp
-                    <div class="md:hidden fu fu4 card overflow-hidden flex flex-col">
+                    <div class="md:hidden bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden flex flex-col">
                         <div class="flex items-center justify-between px-4 py-4 border-b border-gray-100">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
@@ -281,7 +279,7 @@
                     </div>
 
                     {{-- Desktop table (sembunyi di mobile, tampil di md+) --}}
-                    <div class="hidden md:block fu fu4 card overflow-hidden flex flex-col h-full">
+                    <div class="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow overflow-hidden flex flex-col h-full">
                         <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
@@ -411,13 +409,12 @@
                         </div>
                         </div>
                     </div>
-                </div>
 
                 {{-- RIGHT col --}}
-                <div class="space-y-6">
+                <div class="lg:col-span-2 space-y-6">
 
                     {{-- Chart Selesai 6 Bulan --}}
-                    <div class="fu fu5 card p-6">
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow p-6">
                         <div class="flex items-center gap-2.5 mb-5">
                             <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
                             <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Tugas Selesai (6 Bln)</h2>
@@ -445,95 +442,64 @@
                                 <span class="bar-lbl">{{ $col['label'] }}</span>
                             </div>
                             @endforeach
+                                 </div>
                         </div>
                     </div>
+                </div>
 
-                    {{-- Akses Cepat --}}
-                    <div class="fu fu5 card p-6">
-                        <div class="flex items-center gap-2.5 mb-5">
-                            <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
-                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Akses Cepat</h2>
+            {{-- ── Quick Access (Akses Cepat) ── --}}
+            <div class="animate-fade-in-up delay-200 mt-6">
+                <div class="flex items-center gap-2.5 mb-5">
+                    <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
+                    <h2 class="text-base font-bold text-gray-900 uppercase tracking-wide">Akses Cepat</h2>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
+                    @php
+                    $quickLinks = [
+                        [
+                            'label'   => 'Antrean Tugas',
+                            'desc'    => 'Tiket yang ditugaskan kepada Anda',
+                            'route'   => 'tim_teknis.antrean',
+                            'iconBg'  => 'rgba(245,158,11,0.10)',
+                            'iconClr' => '#D97706',
+                            'icon'    => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+                        ],
+                        [
+                            'label'   => 'Riwayat Tugas',
+                            'desc'    => 'Tugas yang telah diselesaikan',
+                            'route'   => 'tim_teknis.riwayat',
+                            'iconBg'  => 'rgba(1,69,142,0.08)',
+                            'iconClr' => '#01458E',
+                            'icon'    => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+                        ],
+                        [
+                            'label'   => 'Pustaka Teknis (SOP)',
+                            'desc'    => 'Panduan dan prosedur teknis',
+                            'route'   => 'tim_teknis.pustaka',
+                            'iconBg'  => 'rgba(16,185,129,0.10)',
+                            'iconClr' => '#059669',
+                            'icon'    => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253',
+                        ],
+                    ];
+                    @endphp
+                    @foreach($quickLinks as $ql)
+                    <a href="{{ route($ql['route']) }}"
+                       class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col gap-4 hover:shadow-xl hover:-translate-y-1 transition-all group">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
+                             style="background-color:{{ $ql['iconBg'] }};">
+                            <svg class="w-6 h-6" style="color:{{ $ql['iconClr'] }};"
+                                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $ql['icon'] }}"/>
+                            </svg>
                         </div>
-                        <div class="space-y-2">
-                            @php
-                            $quickLinks = [
-                                [
-                                    'label'   => 'Antrean Tugas',
-                                    'desc'    => 'Tiket yang ditugaskan kepada Anda',
-                                    'route'   => 'tim_teknis.antrean',
-                                    'iconBg'  => 'rgba(245,158,11,0.10)',
-                                    'iconClr' => '#D97706',
-                                    'icon'    => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
-                                ],
-                                [
-                                    'label'   => 'Riwayat Tugas',
-                                    'desc'    => 'Tugas yang telah diselesaikan',
-                                    'route'   => 'tim_teknis.riwayat',
-                                    'iconBg'  => 'rgba(1,69,142,0.08)',
-                                    'iconClr' => '#01458E',
-                                    'icon'    => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
-                                ],
-                                [
-                                    'label'   => 'Pustaka Teknis (SOP)',
-                                    'desc'    => 'Panduan dan prosedur teknis',
-                                    'route'   => 'tim_teknis.pustaka',
-                                    'iconBg'  => 'rgba(16,185,129,0.10)',
-                                    'iconClr' => '#059669',
-                                    'icon'    => 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
-                                ],
-                            ];
-                            @endphp
-                            @foreach($quickLinks as $ql)
-                            <a href="{{ route($ql['route']) }}"
-                               class="flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                                <div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                                     style="background-color:{{ $ql['iconBg'] }};">
-                                    <svg class="w-4 h-4" style="color:{{ $ql['iconClr'] }};"
-                                         fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="{{ $ql['icon'] }}"/>
-                                    </svg>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-gray-800 group-hover:text-[#01458E] transition-colors">{{ $ql['label'] }}</p>
-                                    <p class="text-[11px] text-gray-400">{{ $ql['desc'] }}</p>
-                                </div>
-                                <svg class="w-3.5 h-3.5 text-gray-300 shrink-0 group-hover:text-gray-400 transition-colors"
-                                     fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                                </svg>
-                            </a>
-                            @endforeach
+                        <div>
+                            <p class="text-sm font-bold text-gray-900 group-hover:text-[#01458E] transition-colors">{{ $ql['label'] }}</p>
+                            <p class="text-xs text-gray-500 mt-0.5">{{ $ql['desc'] }}</p>
                         </div>
-                    </div>
-
-                    {{-- Status Teknisi --}}
-                    <div class="fu fu6 card p-6">
-                        <div class="flex items-center gap-2.5 mb-5">
-                            <div class="w-1.5 h-4 rounded-full bg-[#01458E]"></div>
-                            <h2 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Status Teknisi</h2>
-                        </div>
-                        @php
-                        $statusTeknisi = $teknis->status_teknisi ?? 'tidak_aktif';
-                        $isAktif = $statusTeknisi === 'aktif';
-                        @endphp
-                        <div class="flex items-center gap-4 p-4 rounded-xl {{ $isAktif ? 'bg-emerald-50' : 'bg-gray-50' }}">
-                            <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 {{ $isAktif ? 'bg-emerald-100' : 'bg-gray-200' }}">
-                                <div class="w-3 h-3 rounded-full {{ $isAktif ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400' }}"></div>
-                            </div>
-                            <div>
-                                <p class="text-sm font-bold {{ $isAktif ? 'text-emerald-700' : 'text-gray-600' }}">
-                                    {{ $isAktif ? 'Aktif' : 'Tidak Aktif' }}
-                                </p>
-                                <p class="text-[11px] {{ $isAktif ? 'text-emerald-500' : 'text-gray-400' }}">
-                                    {{ $isAktif ? 'Siap menerima penugasan baru' : 'Tidak tersedia untuk tugas baru' }}
-                                </p>
-                            </div>
-                            <a href="{{ route('tim_teknis.profile') }}"
-                               class="ml-auto text-xs font-semibold text-[#01458E] hover:underline">
-                                Ubah
-                            </a>
-                        </div>
-                    </div>
+                    </a>
+                    @endforeach
+                </div>
+            </div>                  
 
                 </div>
             </div>

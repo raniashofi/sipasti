@@ -11,7 +11,7 @@ class Bidang extends Model
     protected $keyType = 'string';
     public $timestamps = false;
 
-    protected $fillable = ['id', 'nama_bidang'];
+    protected $fillable = ['id', 'nama_bidang', 'batas_hari_pengerjaan'];
 
     public function knowledgeBases()
     {

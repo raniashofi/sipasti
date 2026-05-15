@@ -72,8 +72,6 @@
 
                         @php
                             $bidangNama  = $profil?->bidang?->nama_bidang ?? '—';
-                            $statusKey   = $profil?->status_teknisi ?? 'offline';
-                            $isOnline    = $statusKey === 'online';
                         @endphp
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -90,104 +88,11 @@
                                 <p class="text-sm font-medium text-gray-800">{{ $user->email }}</p>
                             </div>
                             <div>
-                                <p class="text-xs text-gray-400 mb-1">Status Ketersediaan</p>
-                                @if($isOnline)
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
-                                        Online
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
-                                        Offline
-                                    </span>
-                                @endif
-                            </div>
-                            <div>
                                 <p class="text-xs text-gray-400 mb-1">Login Terakhir</p>
                                 <p class="text-sm font-medium text-gray-800">
                                     {{ $user->last_login_at ? $user->last_login_at->locale('id')->isoFormat('D MMM YYYY, HH:mm') : '—' }}
                                 </p>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Ubah Status --}}
-                <div class="fu fu2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div class="px-6 py-5 border-b border-gray-100">
-                        <h2 class="text-sm font-semibold text-gray-900">Status Ketersediaan</h2>
-                        <p class="text-xs text-gray-400 mt-0.5">Atur ketersediaan Anda untuk menerima penugasan tiket</p>
-                    </div>
-                    <div class="px-6 py-5 space-y-4">
-
-                        {{-- Error ubah status --}}
-                        @error('status_teknisi')
-                        <div class="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
-                            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            {{ $message }}
-                        </div>
-                        @enderror
-
-                        {{-- Peringatan tiket aktif --}}
-                        @if($isOnline && $tiketAktifCount > 0)
-                        <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
-                            <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span>Anda memiliki <strong>{{ $tiketAktifCount }} tiket aktif</strong>. Selesaikan atau kembalikan tiket tersebut sebelum mengubah status ke Offline.</span>
-                        </div>
-                        @endif
-
-                        <div class="flex items-center gap-4">
-                            {{-- Status saat ini --}}
-                            <div class="flex-1">
-                                <p class="text-xs text-gray-400 mb-2">Status saat ini</p>
-                                @if($isOnline)
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold bg-green-50 text-green-700 border border-green-200">
-                                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block"></span>
-                                        Online — Siap menerima tugas
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-semibold bg-red-50 text-red-600 border border-red-200">
-                                        <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
-                                        Offline — Tidak tersedia
-                                    </span>
-                                @endif
-                            </div>
-
-                            {{-- Tombol ubah status --}}
-                            <form method="POST" action="{{ route('tim_teknis.profile.status') }}">
-                                @csrf
-                                @if($isOnline)
-                                    <input type="hidden" name="status_teknisi" value="offline">
-                                    <button type="submit"
-                                            @if($tiketAktifCount > 0)
-                                            title="Tidak dapat offline — masih ada {{ $tiketAktifCount }} tiket aktif"
-                                            @endif
-                                            class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-colors
-                                                   {{ $tiketAktifCount > 0 ? 'bg-red-300 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600' }}">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
-                                        </svg>
-                                        Set Offline
-                                        @if($tiketAktifCount > 0)
-                                        <span class="ml-0.5 bg-red-200 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{{ $tiketAktifCount }}</span>
-                                        @endif
-                                    </button>
-                                @else
-                                    <input type="hidden" name="status_teknisi" value="online">
-                                    <button type="submit"
-                                            class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-green-500 hover:bg-green-600 transition-colors">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        Set Online
-                                    </button>
-                                @endif
-                            </form>
                         </div>
                     </div>
                 </div>

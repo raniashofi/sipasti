@@ -17,13 +17,16 @@ class BantuanController extends Controller
 
         $kategoris = KategoriArtikel::withCount([
             'knowledgeBases as artikel_count' => fn($q) =>
-                $q->where('status_publikasi', 'published'),
+                $q->where('status_publikasi', 'published')
+                  ->where('visibilitas_akses', 'opd'),
         ])
-        ->whereHas('knowledgeBases', fn($q) => $q->where('status_publikasi', 'published'))
+        ->whereHas('knowledgeBases', fn($q) => $q->where('status_publikasi', 'published')
+                                                  ->where('visibilitas_akses', 'opd'))
         ->orderBy('nama_kategori')
         ->get();
 
         $topArtikel = KnowledgeBase::where('status_publikasi', 'published')
+            ->where('visibilitas_akses', 'opd')
             ->orderByDesc('total_views')
             ->limit(4)
             ->get();
@@ -31,6 +34,7 @@ class BantuanController extends Controller
         $hasilCari = collect();
         if ($search) {
             $hasilCari = KnowledgeBase::where('status_publikasi', 'published')
+                ->where('visibilitas_akses', 'opd')
                 ->where(fn($q) =>
                     $q->where('nama_artikel_sop', 'like', "%{$search}%")
                       ->orWhere('deskripsi_singkat', 'like', "%{$search}%")
@@ -50,7 +54,8 @@ class BantuanController extends Controller
         $search   = $request->query('search', '');
 
         $query = KnowledgeBase::where('kategori_artikel_id', $id)
-            ->where('status_publikasi', 'published');
+            ->where('status_publikasi', 'published')
+            ->where('visibilitas_akses', 'opd');
 
         if ($search) {
             $query->where(fn($q) =>
@@ -68,6 +73,7 @@ class BantuanController extends Controller
     public function artikel(string $id)
     {
         $artikel = KnowledgeBase::where('status_publikasi', 'published')
+            ->where('visibilitas_akses', 'opd')
             ->with('kategoriArtikel')
             ->findOrFail($id);
 
@@ -96,6 +102,7 @@ class BantuanController extends Controller
         $terkait = KnowledgeBase::where('kategori_artikel_id', $artikel->kategori_artikel_id)
             ->where('id', '!=', $artikel->id)
             ->where('status_publikasi', 'published')
+            ->where('visibilitas_akses', 'opd')
             ->limit(4)
             ->get();
 
@@ -110,7 +117,7 @@ class BantuanController extends Controller
     {
         $request->validate(['rating' => 'required|integer|min:1|max:5']);
 
-        $artikel  = KnowledgeBase::where('status_publikasi', 'published')->findOrFail($id);
+        $artikel  = KnowledgeBase::where('status_publikasi', 'published')->where('visibilitas_akses', 'opd')->findOrFail($id);
         $userId   = Auth::id();
         $newValue = (int) $request->input('rating');
 

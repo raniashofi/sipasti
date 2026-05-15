@@ -120,8 +120,9 @@
     $teknisChatActive = $displayStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
 
     /* ── Re-open limit ── */
-    $sudahPernahDibukakembali = $allStatuses->where('status_tiket', 'dibuka_kembali')->isNotEmpty();
-    $bisaBukaKembali          = $currentStatus === 'selesai' && !$sudahPernahDibukakembali;
+    $jumlahSelesai  = $allStatuses->where('status_tiket', 'selesai')->count();
+    $maxSelesai     = 3;
+    $bisaBukaKembali = $currentStatus === 'selesai' && $jumlahSelesai < $maxSelesai;
 
     /* ── Cek apakah tiket ditutup otomatis atau manual OPD ── */
     $ditutupOtomatis = false;

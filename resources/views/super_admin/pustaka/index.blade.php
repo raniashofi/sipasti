@@ -42,12 +42,14 @@
             showDeleteBidang:  false,
             editBidangId:      '',
             editBidangNama:    '',
+            editBidangBatas:   '',
             deleteBidangId:    '',
             deleteBidangNama:  '',
-            openEditBidang(id, nama) {
-                this.editBidangId   = id;
-                this.editBidangNama = nama;
-                this.showEditBidang = true;
+            openEditBidang(id, nama, batas) {
+                this.editBidangId    = id;
+                this.editBidangNama  = nama;
+                this.editBidangBatas = batas ?? '';
+                this.showEditBidang  = true;
             },
             openDeleteBidang(id, nama) {
                 this.deleteBidangId   = id;
@@ -56,45 +58,72 @@
             },
          }">
 
-        {{-- ── Top Bar ── --}}
-        <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center justify-between sticky top-0 z-30">
+        {{-- ── Top Bar Wrapper ── --}}
+        <div class="sticky top-0 z-30 shrink-0">
+            <header class="bg-white border-b border-gray-100 pl-14 pr-4 sm:px-8 py-4 flex items-center justify-between gap-4">
 
-            {{-- Tabs OPD / Internal --}}
-            <div class="flex items-center gap-0">
-                <a href="{{ route('super_admin.pustaka.opd') }}"
-                   class="px-6 py-4 text-sm border-b-2 transition-colors {{ !$isInternal ? 'font-semibold border-[#01458E] text-[#01458E]' : 'font-medium border-transparent text-gray-400 hover:text-gray-600' }}">
-                    Publik (OPD)
-                </a>
-                <a href="{{ route('super_admin.pustaka.internal') }}"
-                   class="px-6 py-4 text-sm border-b-2 transition-colors {{ $isInternal ? 'font-semibold border-[#01458E] text-[#01458E]' : 'font-medium border-transparent text-gray-400 hover:text-gray-600' }}">
-                    Internal (Rahasia)
-                </a>
+                {{-- Tabs OPD / Internal --}}
+                <div class="flex items-center gap-0 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0" style="scrollbar-width:none;">
+                    <a href="{{ route('super_admin.pustaka.opd') }}"
+                       class="px-4 sm:px-6 py-2 sm:py-4 text-sm border-b-2 transition-colors whitespace-nowrap {{ !$isInternal ? 'font-semibold border-[#01458E] text-[#01458E]' : 'font-medium border-transparent text-gray-400 hover:text-gray-600' }}">
+                        Publik (OPD)
+                    </a>
+                    <a href="{{ route('super_admin.pustaka.internal') }}"
+                       class="px-4 sm:px-6 py-2 sm:py-4 text-sm border-b-2 transition-colors whitespace-nowrap {{ $isInternal ? 'font-semibold border-[#01458E] text-[#01458E]' : 'font-medium border-transparent text-gray-400 hover:text-gray-600' }}">
+                        Internal (Rahasia)
+                    </a>
+                </div>
+
+                {{-- Desktop Action Button --}}
+                <div class="hidden sm:block shrink-0">
+                    @if(!$isInternal)
+                    <button @click="showCreateKat = true"
+                            class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 w-full sm:w-auto"
+                            style="background-color:#01458E;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Tambah Kategori
+                    </button>
+                    @else
+                    <button @click="showCreateBidang = true"
+                            class="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 w-full sm:w-auto"
+                            style="background-color:#01458E;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Tambah Bidang
+                    </button>
+                    @endif
+                </div>
+            </header>
+
+            {{-- Mobile Action Button --}}
+            <div class="sm:hidden bg-white border-b border-gray-100 px-4 py-3">
+                @if(!$isInternal)
+                <button @click="showCreateKat = true"
+                        class="flex w-full items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                        style="background-color:#01458E;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Tambah Kategori
+                </button>
+                @else
+                <button @click="showCreateBidang = true"
+                        class="flex w-full items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                        style="background-color:#01458E;">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Tambah Bidang
+                </button>
+                @endif
             </div>
-
-            {{-- Action Button --}}
-            @if(!$isInternal)
-            <button @click="showCreateKat = true"
-                    class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                    style="background-color:#01458E;">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-                Tambah Kategori
-            </button>
-            @else
-            <button @click="showCreateBidang = true"
-                    class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-                    style="background-color:#01458E;">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-                </svg>
-                Tambah Bidang
-            </button>
-            @endif
-        </header>
+        </div>
 
         {{-- ── Main Content ── --}}
-        <main class="flex-1 px-8 py-7">
+        <main class="flex-1 px-4 sm:px-8 py-7 flex flex-col min-w-0">
 
             {{-- Flash Messages --}}
             @if(session('success'))
@@ -165,7 +194,7 @@
                     </a>
 
                     {{-- Edit & Delete buttons (hover) --}}
-                    <div class="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div class="absolute top-3 right-3 flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                         <button type="button"
                                 @click.stop="openEditKat('{{ $kat->id }}', '{{ addslashes($kat->nama_kategori) }}', '{{ addslashes($kat->deskripsi ?? '') }}')"
                                 class="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#01458E] hover:border-blue-200 transition-colors shadow-sm"
@@ -222,17 +251,27 @@
 
                         <p class="text-sm font-semibold text-gray-900 leading-snug mb-1 pr-10">{{ $namaDisplay }}</p>
 
-                        <div class="flex items-center gap-1.5 mt-2">
-                            <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            <span class="text-xs text-gray-400">{{ $bidang->artikel_count }} artikel</span>
+                        <div class="flex items-center gap-3 mt-2">
+                            <div class="flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span class="text-xs text-gray-400">{{ $bidang->artikel_count }} artikel</span>
+                            </div>
+                            @if($bidang->batas_hari_pengerjaan)
+                            <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                SLA {{ $bidang->batas_hari_pengerjaan }} hari
+                            </span>
+                            @endif
                         </div>
                     </a>
 
-                    <div class="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div class="absolute top-3 right-3 flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                         <button type="button"
-                                @click.stop="openEditBidang('{{ $bidang->id }}', '{{ addslashes($namaDisplay) }}')"
+                                @click.stop="openEditBidang('{{ $bidang->id }}', '{{ addslashes($namaDisplay) }}', '{{ $bidang->batas_hari_pengerjaan ?? '' }}')"
                                 class="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#01458E] hover:border-blue-200 transition-colors shadow-sm"
                                 title="Edit bidang">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -264,7 +303,7 @@
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
             <div class="absolute inset-0 bg-gray-500/40" @click="showCreateKat = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-8" @click.stop>
+            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-6 sm:p-8" @click.stop>
                 <button @click="showCreateKat = false"
                         class="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -305,7 +344,7 @@
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
             <div class="absolute inset-0 bg-gray-500/40" @click="showEditKat = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-8" @click.stop>
+            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-6 sm:p-8" @click.stop>
                 <button @click="showEditKat = false"
                         class="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -334,7 +373,7 @@
                         <button type="submit"
                                 class="flex-1 px-4 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
                                 style="background-color:#01458E;">
-                            Simpan Perubahan
+                            Simpan
                         </button>
                     </div>
                 </form>
@@ -347,7 +386,7 @@
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
             <div class="absolute inset-0 bg-gray-500/40" @click="showDeleteKat = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 text-center" @click.stop>
+            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-6 sm:p-8 text-center" @click.stop>
                 <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                     <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -381,7 +420,7 @@
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
             <div class="absolute inset-0 bg-gray-500/40" @click="showCreateBidang = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-8" @click.stop>
+            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-6 sm:p-8" @click.stop>
                 <button @click="showCreateBidang = false"
                         class="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -391,10 +430,16 @@
                 <h3 class="text-lg font-bold text-gray-900 mb-6">Tambah Bidang</h3>
                 <form method="POST" action="{{ route('super_admin.pustaka.bidang.store') }}">
                     @csrf
-                    <div class="mb-6">
+                    <div class="mb-4">
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Bidang <span class="text-red-500">*</span></label>
                         <input type="text" name="nama_bidang" required placeholder="mis. Infrastruktur TI, E-Government..."
                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E]">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Batas Hari Pengerjaan (SLA) <span class="text-red-500">*</span></label>
+                        <input type="number" name="batas_hari_pengerjaan" min="1" max="365" placeholder="mis. 3, 5, 7..." required
+                               class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E]">
+                        <p class="text-[11px] text-gray-400 mt-1.5">Jumlah hari maksimal tiket wajib diselesaikan oleh teknisi di bidang ini.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button type="button" @click="showCreateBidang = false"
@@ -417,7 +462,7 @@
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
             <div class="absolute inset-0 bg-gray-500/40" @click="showEditBidang = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-8" @click.stop>
+            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 p-6 sm:p-8" @click.stop>
                 <button @click="showEditBidang = false"
                         class="absolute top-5 right-5 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -428,10 +473,16 @@
                 <form method="POST" :action="`{{ url('super-admin/pustaka/bidang') }}/${editBidangId}`">
                     @csrf
                     @method('PUT')
-                    <div class="mb-6">
+                    <div class="mb-4">
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Bidang <span class="text-red-500">*</span></label>
                         <input type="text" name="nama_bidang" x-model="editBidangNama" required
                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E]">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Batas Hari Pengerjaan (SLA) <span class="text-red-500">*</span></label>
+                        <input type="number" name="batas_hari_pengerjaan" x-model="editBidangBatas" min="1" max="365" placeholder="mis. 3, 5, 7..." required
+                               class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E]">
+                        <p class="text-[11px] text-gray-400 mt-1.5">Jumlah hari maksimal tiket wajib diselesaikan oleh teknisi di bidang ini.</p>
                     </div>
                     <div class="flex items-center gap-3">
                         <button type="button" @click="showEditBidang = false"
@@ -441,7 +492,7 @@
                         <button type="submit"
                                 class="flex-1 px-4 py-2.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
                                 style="background-color:#01458E;">
-                            Simpan Perubahan
+                            Simpan
                         </button>
                     </div>
                 </form>
@@ -454,7 +505,7 @@
              x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
             <div class="absolute inset-0 bg-gray-500/40" @click="showDeleteBidang = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 text-center" @click.stop>
+            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-6 sm:p-8 text-center" @click.stop>
                 <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                     <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>

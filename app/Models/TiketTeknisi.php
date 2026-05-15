@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class TiketTeknisi extends Model
 {
     protected $table = 'tiket_teknisi';
+    public $incrementing = false;
+    protected $keyType = 'string';
+    protected $primaryKey = ['tiket_id', 'teknis_id'];
     public $timestamps = false;
 
     protected $fillable = ['tiket_id', 'teknis_id', 'peran_teknisi', 'waktu_ditugaskan', 'status_tugas', 'alasan_dibatalkan'];

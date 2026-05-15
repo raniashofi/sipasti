@@ -65,7 +65,12 @@ class PengaduanSayaController extends Controller
                       ])
                       ->findOrFail($id);
 
-        return view('opd.pengaduan-saya.detail', compact('tiket'));
+        // ✅ Check if ticket has ever been reopened (dibuka_kembali in history)
+        $sudahPernahDibukakembali = $tiket->statusTiket
+            ->where('status_tiket', 'dibuka_kembali')
+            ->isNotEmpty();
+
+        return view('opd.pengaduan-saya.detail', compact('tiket', 'sudahPernahDibukakembali'));
     }
 
     public function chat(string $id)
@@ -129,20 +134,15 @@ class PengaduanSayaController extends Controller
             return back()->with('error', 'Tiket tidak dalam status selesai.');
         }
 
-        // Cek sudah pernah dibuka kembali (oleh teknisi) ATAU kembali ke admin setelah selesai
-        $latestSelesai  = $tiket->statusTiket->where('status_tiket', 'selesai')->sortByDesc('created_at')->first();
-        $selesaiAt      = $latestSelesai?->created_at;
-        $kembaliKeAdmin = $selesaiAt && $tiket->statusTiket
-            ->where('status_tiket', 'panduan_remote')
-            ->filter(fn($s) => $s->created_at > $selesaiAt)
-            ->isNotEmpty();
+        // Cek berapa kali tiket sudah selesai (batasan: max 3 kali selesai)
+        $jumlahSelesai = $tiket->statusTiket->where('status_tiket', 'selesai')->count();
+        $maxSelesai    = 3;
 
-        $sudahPernahDibukakembali = $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->isNotEmpty()
-            || $kembaliKeAdmin;
-
-        if ($sudahPernahDibukakembali) {
-            return back()->with('error', 'Tiket ini sudah pernah dibuka kembali sebelumnya dan tidak dapat dibuka kembali lagi.');
+        if ($jumlahSelesai >= $maxSelesai) {
+            return back()->with('error', 'Tiket ini sudah diselesaikan sebanyak ' . $maxSelesai . ' kali dan tidak dapat dibuka kembali lagi.');
         }
+
+        $latestSelesai = $tiket->statusTiket->where('status_tiket', 'selesai')->sortByDesc('created_at')->first();
 
         $request->validate([
             'alasan'     => 'required|string|max:1000',

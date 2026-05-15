@@ -12,6 +12,9 @@ use App\Models\Tiket;
 use App\Models\TimTeknis;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Cell\StringCell;
 
 class DashboardController extends Controller
 {
@@ -273,7 +276,7 @@ class DashboardController extends Controller
         })->sortByDesc('ditangani')->values();
 
         // ── 6. Beban kerja Tim Teknis ──────────────────────────────────
-        $workloadTeknis = TimTeknis::with(['user', 'bidang', 'tiketTeknisi'])->get()->map(function ($t) use ($dateFrom, $dateTo) {
+        $workloadTeknis = TimTeknis::with(['user', 'bidang', 'tiketTeknisi.tiket.statusTiket'])->get()->map(function ($t) use ($dateFrom, $dateTo) {
             $filteredTugas = $t->tiketTeknisi->filter(fn($tt) =>
                 \Carbon\Carbon::parse($tt->created_at)->between(
                     \Carbon\Carbon::parse($dateFrom),
@@ -284,6 +287,36 @@ class DashboardController extends Controller
             $selesai   = $filteredTugas->where('status_tugas', 'selesai')->count();
             $aktif     = $filteredTugas->where('status_tugas', 'aktif')->count();
             $rawBidangT = (string) ($t->bidang?->nama_bidang ?? '');
+
+            // Hitung tepat waktu & telat berdasarkan SLA bidang
+            $batasHari = $t->bidang?->batas_hari_pengerjaan;
+            $tepatWaktu = 0;
+            $telat = 0;
+
+            if ($batasHari) {
+                $selesaiTugas = $filteredTugas->where('status_tugas', 'selesai');
+                foreach ($selesaiTugas as $tt) {
+                    $waktuDitugaskan = $tt->waktu_ditugaskan;
+                    if (!$waktuDitugaskan) continue;
+
+                    $statusSelesai = $tt->tiket?->statusTiket
+                        ?->whereIn('status_tiket', ['selesai', 'rusak_berat', 'tiket_ditutup'])
+                        ->sortByDesc('created_at')
+                        ->first();
+
+                    if (!$statusSelesai || !$statusSelesai->created_at) continue;
+
+                    $deadline = \Carbon\Carbon::parse($waktuDitugaskan)->addDays($batasHari);
+                    if (\Carbon\Carbon::parse($statusSelesai->created_at)->gt($deadline)) {
+                        $telat++;
+                    } else {
+                        $tepatWaktu++;
+                    }
+                }
+            } else {
+                $tepatWaktu = $selesai;
+            }
+
             return [
                 'nama'          => $t->nama_lengkap,
                 'bidang'        => $rawBidangT ?: '—',
@@ -291,7 +324,9 @@ class DashboardController extends Controller
                 'total_tugas'   => $total,
                 'tugas_aktif'   => $aktif,
                 'tugas_selesai' => $selesai,
-                'beban'         => $aktif,   // workload = tugas aktif saat ini
+                'tepat_waktu'   => $tepatWaktu,
+                'telat'         => $telat,
+                'beban'         => $aktif,
             ];
         })->sortByDesc('tugas_aktif')->values();
 
@@ -341,70 +376,156 @@ class DashboardController extends Controller
     }
 
     /**
-     * Export laporan tiket ke CSV.
+     * Export laporan tiket ke Excel (Fokus Kinerja Karyawan & Detail Teknisi).
      */
     public function exportCsv(Request $request)
     {
         $dateFrom = $request->query('date_from', now()->startOfYear()->toDateString());
         $dateTo   = $request->query('date_to', now()->toDateString());
 
-        $tikets = Tiket::with(['opd', 'kategori', 'latestStatus', 'admin', 'solutionNode'])
+        // Tambahkan relasi tiketTeknisi untuk mendapatkan semua teknisi yang ditugaskan
+        $tikets = Tiket::with([
+            'opd', 'kategori', 'kb.kategori', 'latestStatus', 'admin', 'bidang',
+            'tiketTeknisi.timTeknis.bidang', // Relasi ke semua teknisi via TiketTeknisi
+            'statusTiket',
+        ])
             ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
             ->orderByDesc('created_at')
             ->get();
 
-        $filename = 'laporan_tiket_' . $dateFrom . '_sd_' . $dateTo . '.csv';
+        $filename = 'laporan_kinerja_tiket_' . $dateFrom . '_sd_' . $dateTo . '.xlsx';
+        $tempPath = storage_path('temp/' . uniqid() . '.xlsx');
+        @mkdir(storage_path('temp'), 0755, true);
 
-        $headers = [
-            'Content-Type'        => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
+        $writer = new Writer();
+        $writer->openToFile($tempPath);
 
-        $callback = function () use ($tikets) {
-            $handle = fopen('php://output', 'w');
+        // Header Row
+        $writer->addRow(new Row([
+            new StringCell('No'),
+            new StringCell('ID Tiket'),
+            new StringCell('Subjek Masalah'),
+            new StringCell('Kategori'),
+            new StringCell('Waktu Dibuat'),
+            new StringCell('Waktu Diselesaikan'),
+            new StringCell('Durasi Penyelesaian (Jam)'),
+            new StringCell('Batas SLA (Hari)'),
+            new StringCell('Status Ketepatan'),
+            new StringCell('Status Akhir'),
+            new StringCell('Ditangani Oleh (Admin)'),
+            new StringCell('Tim Teknis'),
+            new StringCell('Skor Kepuasan (/5)'),
+            new StringCell('Asal Instansi (OPD)'),
+        ]));
 
-            // BOM UTF-8 agar Excel tidak rusak
-            fputs($handle, "\xEF\xBB\xBF");
+        $statusSelesai = ['selesai', 'rusak_berat', 'tiket_ditutup'];
+        $rowNumber = 0;
 
-            // Header row
-            fputcsv($handle, [
-                'No', 'ID Tiket', 'OPD', 'Kategori',
-                'Subjek Masalah', 'Prioritas', 'Status Terakhir',
-                'Admin Helpdesk', 'Penilaian', 'Tanggal Buat',
-            ]);
+        foreach ($tikets as $tiket) {
+            $statusAkhir = $tiket->latestStatus?->status_tiket;
+            $labelStatus = $this->statusLabel[$statusAkhir] ?? ($statusAkhir ?? '—');
 
-            $statusLabel = [
-                'verifikasi_admin' => 'Verifikasi Admin',
-                'panduan_remote'   => 'Panduan Remote',
-                'perlu_revisi'     => 'Perlu Revisi',
-                'perbaikan_teknis' => 'Perbaikan Teknis',
-                'selesai'          => 'Selesai',
-                'rusak_berat'      => 'Rusak Berat',
-                'dibuka_kembali'   => 'Dibuka Kembali',
-            ];
+            // Perhitungan Waktu dan Durasi Penyelesaian (SLA)
+            $waktuMasuk = $tiket->created_at;
+            $waktuSelesai = null;
+            $durasiJam = '—';
 
-            foreach ($tikets as $i => $tiket) {
-                fputcsv($handle, [
-                    $i + 1,
-                    $tiket->id,
-                    $tiket->opd?->nama_opd ?? '—',
-                    $tiket->kategori?->nama_kategori ?? '—',
-                    $tiket->subjek_masalah,
-                    match($tiket->rekomendasi_penanganan) {
-                        'eskalasi' => 'Perlu Dieskalasi ke Tim Teknis',
-                        'admin'    => 'Dapat Ditangani Admin',
-                        default    => '—',
-                    },
-                    $statusLabel[$tiket->latestStatus?->status_tiket] ?? ($tiket->latestStatus?->status_tiket ?? '—'),
-                    $tiket->admin?->nama_lengkap ?? '—',
-                    $tiket->penilaian ?? '—',
-                    $tiket->created_at?->format('d/m/Y H:i') ?? '—',
-                ]);
+            if (in_array($statusAkhir, $statusSelesai) && $tiket->latestStatus) {
+                $waktuSelesai = $tiket->latestStatus->created_at;
+
+                if ($waktuMasuk && $waktuSelesai) {
+                    $durasiJam = (string) round($waktuMasuk->diffInMinutes($waktuSelesai) / 60, 1);
+                }
             }
 
-            fclose($handle);
-        };
+            $kategori = $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—');
 
-        return response()->stream($callback, 200, $headers);
+            // SLA: Batas hari dari bidang tiket
+            $batasHariBidang = $tiket->bidang?->batas_hari_pengerjaan;
+            $batasSlaLabel = $batasHariBidang ? (string)$batasHariBidang : '—';
+
+            // Hitung status ketepatan per tiket (berdasarkan teknisi utama)
+            $statusKetepatan = '—';
+            if ($batasHariBidang && in_array($statusAkhir, $statusSelesai)) {
+                $teknisiUtama = $tiket->tiketTeknisi->where('peran_teknisi', 'teknisi_utama')->first();
+                if ($teknisiUtama && $teknisiUtama->waktu_ditugaskan) {
+                    $deadline = \Carbon\Carbon::parse($teknisiUtama->waktu_ditugaskan)->addDays($batasHariBidang);
+                    $statusSelesaiRecord = $tiket->statusTiket
+                        ->whereIn('status_tiket', ['selesai', 'rusak_berat', 'tiket_ditutup'])
+                        ->sortByDesc('created_at')
+                        ->first();
+                    if ($statusSelesaiRecord && $statusSelesaiRecord->created_at) {
+                        $waktuPenyelesaian = \Carbon\Carbon::parse($statusSelesaiRecord->created_at);
+                        if ($waktuPenyelesaian->gt($deadline)) {
+                            $selisihHari = (int) $deadline->diffInDays($waktuPenyelesaian);
+                            $statusKetepatan = "Telat ({$selisihHari} hari)";
+                        } else {
+                            $statusKetepatan = 'Tepat Waktu';
+                        }
+                    }
+                }
+            } elseif (!$batasHariBidang && in_array($statusAkhir, $statusSelesai)) {
+                $statusKetepatan = 'Tidak Ada Batas';
+            }
+
+            // Cek status eskalasi
+            $isEskalasiBool = ($tiket->rekomendasi_penanganan === 'eskalasi' || $statusAkhir === 'perbaikan_teknis' || (in_array($statusAkhir, ['selesai', 'rusak_berat']) && $tiket->rekomendasi_penanganan === 'eskalasi'));
+
+            // Ambil daftar teknisi yang ditugaskan
+            $teknisiList = [];
+            if ($isEskalasiBool) {
+                $teknisiList = $tiket->tiketTeknisi
+                    ->map(fn($tt) => $tt->timTeknis?->nama_lengkap ?? 'Tidak diketahui')
+                    ->unique()
+                    ->values()
+                    ->toArray();
+            }
+
+            // Jika tidak ada teknisi, tetap tambahkan 1 baris dengan "—"
+            if (empty($teknisiList)) {
+                $rowNumber++;
+                $writer->addRow(new Row([
+                    new StringCell((string)$rowNumber),
+                    new StringCell($tiket->id),
+                    new StringCell($tiket->subjek_masalah),
+                    new StringCell($kategori),
+                    new StringCell($waktuMasuk ? $waktuMasuk->format('d/m/Y H:i') : '—'),
+                    new StringCell($waktuSelesai ? $waktuSelesai->format('d/m/Y H:i') : '—'),
+                    new StringCell($durasiJam),
+                    new StringCell($batasSlaLabel),
+                    new StringCell($statusKetepatan),
+                    new StringCell($labelStatus),
+                    new StringCell($tiket->admin?->nama_lengkap ?? '—'),
+                    new StringCell('—'),
+                    new StringCell((string)($tiket->penilaian ?? 'Belum Dinilai')),
+                    new StringCell($tiket->opd?->nama_opd ?? '—'),
+                ]));
+            } else {
+                // Tambahkan satu baris untuk setiap teknisi
+                foreach ($teknisiList as $teknisi) {
+                    $rowNumber++;
+                    $writer->addRow(new Row([
+                        new StringCell((string)$rowNumber),
+                        new StringCell($tiket->id),
+                        new StringCell($tiket->subjek_masalah),
+                        new StringCell($kategori),
+                        new StringCell($waktuMasuk ? $waktuMasuk->format('d/m/Y H:i') : '—'),
+                        new StringCell($waktuSelesai ? $waktuSelesai->format('d/m/Y H:i') : '—'),
+                        new StringCell($durasiJam),
+                        new StringCell($batasSlaLabel),
+                        new StringCell($statusKetepatan),
+                        new StringCell($labelStatus),
+                        new StringCell($tiket->admin?->nama_lengkap ?? '—'),
+                        new StringCell($teknisi),
+                        new StringCell((string)($tiket->penilaian ?? 'Belum Dinilai')),
+                        new StringCell($tiket->opd?->nama_opd ?? '—'),
+                    ]));
+                }
+            }
+        }
+
+        $writer->close();
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
     }
 }

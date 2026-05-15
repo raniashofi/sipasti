@@ -38,7 +38,7 @@
             </div>
             </header>
 
-        <main class="flex-1 px-8 py-8 space-y-8">
+        <main class="flex-1 px-4 py-4 lg:px-8 lg:py-8 space-y-6 lg:space-y-8">
 
             {{-- ── Stat Cards ── --}}
             @php
@@ -74,31 +74,31 @@
             ];
             @endphp
 
-            <div class="grid grid-cols-2 xl:grid-cols-4 gap-6 animate-fade-in-up">
+            <div class="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-6 animate-fade-in-up">
                 @foreach($cards as $card)
-                <div class="bg-white rounded-2xl p-6 flex items-center gap-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden group cursor-default">
+                <div class="bg-white rounded-2xl p-4 sm:p-6 flex items-center gap-3 sm:gap-5 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 relative overflow-hidden group cursor-default">
                     <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full opacity-20 transition-transform duration-500 group-hover:scale-125" style="background-color:{{ $card['color'] }};"></div>
 
-                    <div class="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 relative z-10 transition-transform duration-300 group-hover:scale-110"
+                    <div class="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 relative z-10 transition-transform duration-300 group-hover:scale-110"
                          style="background-color:{{ $card['bg'] }};">
-                        <svg class="w-7 h-7" style="color:{{ $card['color'] }};"
+                        <svg class="w-5 h-5 sm:w-7 sm:h-7" style="color:{{ $card['color'] }};"
                              fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="{{ $card['icon'] }}"/>
                         </svg>
                     </div>
-                    <div class="relative z-10">
-                        <p class="text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format($card['value']) }}</p>
-                        <p class="text-sm font-medium text-gray-500 mt-1">{{ $card['label'] }}</p>
+                    <div class="relative z-10 flex-1 min-w-0">
+                        <p class="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">{{ number_format($card['value']) }}</p>
+                        <p class="text-xs sm:text-sm font-medium text-gray-500 mt-0.5 leading-tight">{{ $card['label'] }}</p>
                     </div>
                 </div>
                 @endforeach
             </div>
 
             {{-- ── Metrik Kepuasan & KB ── --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fade-in-up delay-100">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 animate-fade-in-up delay-100">
 
                 {{-- Rata-rata Penilaian Tiket --}}
-                <div class="bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 flex items-center gap-4 sm:gap-5 hover:shadow-md transition-shadow">
                     <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:#FEF3C7;">
                         <svg class="w-6 h-6" style="color:#D97706;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
@@ -126,7 +126,7 @@
 
                 {{-- Tiket Dibuka Kembali --}}
                 @php $dibukakembali = $tiketPerStatus['Dibuka Kembali'] ?? 0; @endphp
-                <div class="bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 flex items-center gap-4 sm:gap-5 hover:shadow-md transition-shadow">
                     <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:#FEE2E2;">
                         <svg class="w-6 h-6" style="color:#DC2626;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -143,7 +143,7 @@
                 </div>
 
                 {{-- Knowledge Base Terbit --}}
-                <div class="bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100 flex items-center gap-5 hover:shadow-md transition-shadow">
+                <div class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 flex items-center gap-4 sm:gap-5 hover:shadow-md transition-shadow">
                     <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style="background:#D1FAE5;">
                         <svg class="w-6 h-6" style="color:#059669;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
@@ -165,7 +165,7 @@
             <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 animate-fade-in-up delay-200">
 
                 {{-- Donut chart (2 cols) --}}
-                <div id="card-distribusi" class="xl:col-span-2 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 flex flex-col self-start hover:shadow-md transition-shadow">
+                <div id="card-distribusi" class="xl:col-span-2 bg-white rounded-2xl p-5 sm:p-7 shadow-sm border border-gray-100 flex flex-col self-start hover:shadow-md transition-shadow">
                     <h2 class="text-base font-bold text-gray-800">Distribusi Status Tiket</h2>
                     <p class="text-sm text-gray-400 mb-6 mt-1">Sebaran tiket berdasarkan status saat ini</p>
 
@@ -195,7 +195,7 @@
                 </div>
 
                 {{-- Recent Activity (3 cols) with Timeline UI --}}
-                <div id="card-activity" class="xl:col-span-3 bg-white rounded-2xl p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col self-start overflow-hidden">
+                <div id="card-activity" class="xl:col-span-3 bg-white rounded-2xl p-5 sm:p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col self-start overflow-hidden">
                     <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-50 shrink-0">
                         <div>
                             <h2 class="text-base font-bold text-gray-800">Log Aktivitas Terbaru</h2>
@@ -315,10 +315,10 @@
                 ];
                 @endphp
 
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
                     @foreach($quickLinks as $link)
                     <a href="{{ route($link['route']) }}"
-                       class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:-translate-y-1 {{ $link['border'] }} hover:shadow-lg transition-all duration-300 group flex items-start gap-4">
+                       class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 hover:-translate-y-1 {{ $link['border'] }} hover:shadow-lg transition-all duration-300 group flex items-start gap-3 sm:gap-4">
                         <div class="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
                              style="background-color:{{ $link['bg'] }};">
                             <svg class="w-6 h-6" style="color:{{ $link['color'] }};"
@@ -406,9 +406,14 @@
         if (!donutCard || !activityCard) return;
 
         function sync() {
-            const h = donutCard.offsetHeight;
-            activityCard.style.maxHeight = h + 'px';
-            activityCard.style.height    = h + 'px';
+            if (window.innerWidth >= 1280) { // breakpoint xl di Tailwind
+                const h = donutCard.offsetHeight;
+                activityCard.style.maxHeight = h + 'px';
+                activityCard.style.height    = h + 'px';
+            } else {
+                activityCard.style.maxHeight = '450px';
+                activityCard.style.height    = 'auto';
+            }
         }
 
         // Jalankan setelah chart selesai render

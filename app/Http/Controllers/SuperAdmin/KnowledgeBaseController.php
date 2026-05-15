@@ -150,11 +150,15 @@ class KnowledgeBaseController extends Controller
 
     public function storeBidang(Request $request)
     {
-        $request->validate(['nama_bidang' => 'required|string|max:255']);
+        $request->validate([
+            'nama_bidang' => 'required|string|max:255',
+            'batas_hari_pengerjaan' => 'required|integer|min:1|max:365',
+        ]);
 
         Bidang::create([
-            'id'         => (string) Str::uuid(),
-            'nama_bidang' => $request->nama_bidang,
+            'id'                    => (string) Str::uuid(),
+            'nama_bidang'           => $request->nama_bidang,
+            'batas_hari_pengerjaan' => $request->batas_hari_pengerjaan,
         ]);
 
         return redirect()->route('super_admin.pustaka.internal')
@@ -163,9 +167,15 @@ class KnowledgeBaseController extends Controller
 
     public function updateBidang(Request $request, $id)
     {
-        $request->validate(['nama_bidang' => 'required|string|max:255']);
+        $request->validate([
+            'nama_bidang' => 'required|string|max:255',
+            'batas_hari_pengerjaan' => 'required|integer|min:1|max:365',
+        ]);
 
-        Bidang::findOrFail($id)->update(['nama_bidang' => $request->nama_bidang]);
+        Bidang::findOrFail($id)->update([
+            'nama_bidang'           => $request->nama_bidang,
+            'batas_hari_pengerjaan' => $request->batas_hari_pengerjaan,
+        ]);
 
         return redirect()->route('super_admin.pustaka.internal')
             ->with('success', 'Bidang berhasil diperbarui.');
@@ -218,7 +228,7 @@ class KnowledgeBaseController extends Controller
     {
         $request->validate([
             'nama_artikel_sop'    => 'required|string|max:500',
-            'isi_konten'          => 'nullable|string',
+            'isi_konten'          => 'nullable|string|max:4000000',
             'deskripsi_singkat'   => 'nullable|string|max:500',
             'status_publikasi'    => 'required|in:draft,published',
             'visibilitas_akses'   => 'required|in:opd,internal',
@@ -230,6 +240,7 @@ class KnowledgeBaseController extends Controller
             'nama_artikel_sop.required'  => 'Judul artikel wajib diisi.',
             'status_publikasi.required'  => 'Status publikasi wajib dipilih.',
             'visibilitas_akses.required' => 'Visibilitas akses wajib dipilih.',
+            'isi_konten.max'             => 'Konten artikel terlalu besar (max ~4MB). Gunakan fitur Upload Gambar daripada menyalin-tempel gambar dari internet.',
             'header_image.image'         => 'File header harus berupa gambar.',
             'header_image.mimes'         => 'Format header harus JPG atau PNG.',
             'header_image.max'           => 'Ukuran header maksimal 20 MB.',
@@ -309,7 +320,7 @@ class KnowledgeBaseController extends Controller
 
         $request->validate([
             'nama_artikel_sop'    => 'required|string|max:500',
-            'isi_konten'          => 'nullable|string',
+            'isi_konten'          => 'nullable|string|max:4000000',
             'deskripsi_singkat'   => 'nullable|string|max:500',
             'status_publikasi'    => 'required|in:draft,published',
             'visibilitas_akses'   => 'required|in:opd,internal',
@@ -321,6 +332,7 @@ class KnowledgeBaseController extends Controller
             'nama_artikel_sop.required'  => 'Judul artikel wajib diisi.',
             'status_publikasi.required'  => 'Status publikasi wajib dipilih.',
             'visibilitas_akses.required' => 'Visibilitas akses wajib dipilih.',
+            'isi_konten.max'             => 'Konten artikel terlalu besar (max ~4MB). Gunakan fitur Upload Gambar daripada menyalin-tempel gambar dari internet.',
             'header_image.image'         => 'File header harus berupa gambar.',
             'header_image.mimes'         => 'Format header harus JPG atau PNG.',
             'header_image.max'           => 'Ukuran header maksimal 20 MB.',

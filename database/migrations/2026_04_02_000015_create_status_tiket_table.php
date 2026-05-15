@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('status_tiket', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('tiket_id')->nullable();
+            $table->uuid('id')->primary();
+            $table->uuid('tiket_id')->nullable();
             $table->enum('status_tiket', [
                 'verifikasi_admin',
                 'perlu_revisi',

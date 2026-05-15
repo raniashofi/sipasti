@@ -99,6 +99,17 @@
                                 $tiket = $row->tiket;
                                 $statusAkhir = $tiket?->latestStatus?->status_tiket ?? '';
                                 $kategoriNama = $tiket?->kategori?->nama_kategori ?? $tiket?->kb?->kategori?->nama_kategori ?? '—';
+
+                                // Kumpulkan semua teknisi (utama + pendamping)
+                                $allTeknisi = [];
+                                foreach ($tiket?->tiketTeknisi ?? [] as $tt) {
+                                    $allTeknisi[] = [
+                                        'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                        'peran' => $tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping',
+                                        'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                    ];
+                                }
+
                                 $hasilConfig = match($statusAkhir) {
                                     'selesai'     => ['label' => 'Berhasil Diperbaiki', 'bg' => '#f0fdf4', 'color' => '#16a34a', 'border' => '#bbf7d0'],
                                     'rusak_berat' => ['label' => 'Rusak Berat',         'bg' => '#fef2f2', 'color' => '#dc2626', 'border' => '#fecaca'],
@@ -112,6 +123,7 @@
                                     'rekomendasi_penanganan' => $tiket?->rekomendasi_penanganan,
                                     'is_utama' => ($row->peran_teknisi === 'teknisi_utama'),
                                     'peran_label' => ($row->peran_teknisi === 'teknisi_utama') ? 'Teknisi Utama' : 'Pendamping',
+                                    'all_teknisi' => $allTeknisi,
                                     'waktu_tgl' => $row->waktu_ditugaskan?->translatedFormat('d M Y') ?? '—',
                                     'waktu_jam' => ($row->waktu_ditugaskan?->format('H:i') ?? '') . ' WIB',
                                     'status_akhir' => $statusAkhir, 'hasil_label' => $hasilConfig['label'],
@@ -119,6 +131,8 @@
                                     'analisis_kerusakan' => $tiket?->latestStatus?->catatan,
                                     'spesifikasi_perangkat_rusak' => $tiket?->latestStatus?->spesifikasi_perangkat_rusak,
                                     'rekomendasi' => $tiket?->latestStatus?->rekomendasi,
+                                    'is_telat' => $row->is_telat ?? false,
+                                    'hari_telat' => $row->hari_telat ?? 0,
                                 ]);
                             @endphp
                             <div class="px-4 py-4 hover:bg-gray-50/80 cursor-pointer transition-colors"
@@ -127,10 +141,17 @@
                                     <span class="font-mono text-[11px] font-bold text-[#01458E] bg-blue-50 px-2.5 py-1 rounded-md border border-blue-100">
                                         #{{ Str::upper(substr($tiket?->id ?? '', -8)) }}
                                     </span>
-                                    <span class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 border"
-                                          style="background:{{ $hasilConfig['bg'] }};color:{{ $hasilConfig['color'] }};border-color:{{ $hasilConfig['border'] }};">
-                                        {{ $hasilConfig['label'] }}
-                                    </span>
+                                    <div class="flex gap-1.5 items-center">
+                                        @if($row->is_telat ?? false)
+                                            <span class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 border bg-red-50 text-red-600 border-red-200">
+                                                Telat {{ $row->hari_telat }} Hari
+                                            </span>
+                                        @endif
+                                        <span class="text-[10px] font-bold px-2 py-1 rounded-full shrink-0 border"
+                                              style="background:{{ $hasilConfig['bg'] }};color:{{ $hasilConfig['color'] }};border-color:{{ $hasilConfig['border'] }};">
+                                            {{ $hasilConfig['label'] }}
+                                        </span>
+                                    </div>
                                 </div>
                                 <p class="text-[13px] font-semibold text-gray-800 leading-snug mb-1">{{ $tiket?->subjek_masalah ?? '—' }}</p>
                                 <div class="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-gray-500 font-medium">
@@ -171,6 +192,16 @@
                                             $statusAkhir = $tiket?->latestStatus?->status_tiket ?? '';
                                             $kategoriNama = $tiket?->kategori?->nama_kategori ?? $tiket?->kb?->kategori?->nama_kategori ?? '—';
 
+                                            // Kumpulkan semua teknisi (utama + pendamping)
+                                            $allTeknisi = [];
+                                            foreach ($tiket?->tiketTeknisi ?? [] as $tt) {
+                                                $allTeknisi[] = [
+                                                    'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                                    'peran' => $tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping',
+                                                    'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                                ];
+                                            }
+
                                             $hasilConfig = match($statusAkhir) {
                                                 'selesai' => ['label' => 'Berhasil Diperbaiki', 'bg' => '#f0fdf4', 'color' => '#16a34a', 'border' => '#bbf7d0'],
                                                 'rusak_berat' => ['label' => 'Rusak Berat', 'bg' => '#fef2f2', 'color' => '#dc2626', 'border' => '#fecaca'],
@@ -189,6 +220,7 @@
                                                 'rekomendasi_penanganan' => $tiket?->rekomendasi_penanganan,
                                                 'is_utama' => ($row->peran_teknisi === 'teknisi_utama'),
                                                 'peran_label' => ($row->peran_teknisi === 'teknisi_utama') ? 'Teknisi Utama' : 'Pendamping',
+                                                'all_teknisi' => $allTeknisi,
                                                 'waktu_tgl' => $row->waktu_ditugaskan?->translatedFormat('d M Y') ?? '—',
                                                 'waktu_jam' => ($row->waktu_ditugaskan?->format('H:i') ?? '') . ' WIB',
                                                 'status_akhir' => $statusAkhir,
@@ -198,6 +230,8 @@
                                                 'analisis_kerusakan' => $tiket?->latestStatus?->catatan,
                                                 'spesifikasi_perangkat_rusak' => $tiket?->latestStatus?->spesifikasi_perangkat_rusak,
                                                 'rekomendasi' => $tiket?->latestStatus?->rekomendasi,
+                                                'is_telat' => $row->is_telat ?? false,
+                                                'hari_telat' => $row->hari_telat ?? 0,
                                             ]);
                                         @endphp
                                         <tr class="hover:bg-blue-50/50 cursor-pointer transition-colors" @click="openDetail({{ $rowJson }})">
@@ -219,10 +253,17 @@
                                                 </span>
                                             </td>
                                             <td class="px-5 py-4 whitespace-nowrap">
-                                                <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border"
-                                                      style="background:{{ $hasilConfig['bg'] }};color:{{ $hasilConfig['color'] }};border-color:{{ $hasilConfig['border'] }};">
-                                                    {{ $hasilConfig['label'] }}
-                                                </span>
+                                                <div class="flex items-center gap-2">
+                                                    @if($row->is_telat ?? false)
+                                                        <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-red-50 text-red-600 border-red-200" title="Melebihi SLA batas waktu pengerjaan">
+                                                            Telat {{ $row->hari_telat }} Hari
+                                                        </span>
+                                                    @endif
+                                                    <span class="text-[11px] font-bold px-2.5 py-1 rounded-full border"
+                                                          style="background:{{ $hasilConfig['bg'] }};color:{{ $hasilConfig['color'] }};border-color:{{ $hasilConfig['border'] }};">
+                                                        {{ $hasilConfig['label'] }}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td class="px-5 py-4 text-right whitespace-nowrap">
                                                 <span class="text-gray-300 text-base font-bold">›</span>
@@ -335,8 +376,51 @@
                             <span class="text-xs text-gray-500 whitespace-nowrap mt-0.5">Ditugaskan Pada</span>
                             <span class="text-xs font-semibold text-gray-900 text-right leading-snug" x-text="(selected?.waktu_tgl ?? '—') + ', ' + (selected?.waktu_jam ?? '')"></span>
                         </div>
+
+                        {{-- Status SLA --}}
+                        <div class="flex justify-between items-start gap-4">
+                            <span class="text-xs text-gray-500 whitespace-nowrap mt-0.5">Status SLA</span>
+                            <div class="text-right">
+                                <template x-if="selected?.is_telat">
+                                    <span class="inline-block text-[10px] font-bold text-red-600 px-2.5 py-0.5 rounded-md bg-red-50 border border-red-200" x-text="`Telat ${selected.hari_telat} Hari`"></span>
+                                </template>
+                                <template x-if="!selected?.is_telat">
+                                    <span class="inline-block text-[10px] font-bold text-teal-600 px-2.5 py-0.5 rounded-md bg-teal-50 border border-teal-200">SLA Terpenuhi</span>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {{-- Tim Teknisi yang Bertugas --}}
+                <template x-if="selected?.all_teknisi && selected?.all_teknisi?.length > 0">
+                    <div>
+                        <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-100">Tim Teknisi yang Bertugas</h4>
+                        <div class="space-y-2.5">
+                            <template x-for="(tek, idx) in selected.all_teknisi" :key="idx">
+                                <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                    <div class="flex-1">
+                                        <p class="text-xs font-semibold text-gray-900" x-text="tek.nama"></p>
+                                        <div class="flex items-center gap-1.5 mt-1">
+                                            <template x-if="tek.is_utama">
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                    Utama
+                                                </span>
+                                            </template>
+                                            <template x-if="!tek.is_utama">
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                                                    Pendamping
+                                                </span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
 
                 {{-- Detail Masalah --}}
                 <div>

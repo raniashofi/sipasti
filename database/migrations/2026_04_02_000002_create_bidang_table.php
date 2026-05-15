@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('bidang', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('nama_bidang');
+            $table->uuid('id')->primary();
+            $table->string('nama_bidang')->unique();
+            $table->unsignedInteger('batas_hari_pengerjaan')->default(7);
         });
     }
 

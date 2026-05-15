@@ -120,14 +120,27 @@
     @php
         $hasContext    = !empty($kategoriId) || !empty($bidangId);
 
-        // Breadcrumb back URL — kembali ke sub-halaman kategori/bidang jika ada konteks
-        if (!empty($kategoriId)) {
-            $listRoute = route('super_admin.pustaka.opd.kategori', $kategoriId);
-        } elseif (!empty($bidangId)) {
-            $listRoute = route('super_admin.pustaka.internal.bidang', $bidangId);
-        } else {
-            $listRoute = $isInternal ? route('super_admin.pustaka.internal') : route('super_admin.pustaka.opd');
+        // Breadcrumb data
+        $pustakaRootRoute = $isInternal ? route('super_admin.pustaka.internal') : route('super_admin.pustaka.opd');
+        $pustakaRootName  = $isInternal ? 'Pustaka Internal' : 'Pustaka OPD';
+        $parentName = '';
+        $parentRoute = '';
+
+        if (!$isInternal && !empty($kategoriId)) {
+            $kat = $kategoris->firstWhere('id', $kategoriId);
+            if ($kat) {
+                $parentName = $kat->nama_kategori;
+                $parentRoute = route('super_admin.pustaka.opd.kategori', $kategoriId);
+            }
+        } elseif ($isInternal && !empty($bidangId)) {
+            $bid = $bidangs->firstWhere('id', $bidangId);
+            if ($bid) {
+                $parentName = ucwords(str_replace('_', ' ', $bid->nama_bidang));
+                $parentRoute = route('super_admin.pustaka.internal.bidang', $bidangId);
+            }
         }
+
+        $listRoute = $parentRoute ?: $pustakaRootRoute;
 
         $formAction  = $isEdit
             ? route('super_admin.pustaka.update', $article->id)
@@ -197,25 +210,85 @@
         }"
         x-cloak>
 
-        {{-- ── Header ── --}}
-        <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-6 py-3.5 flex items-center justify-between shrink-0 sticky top-0 z-30">
-            <div class="flex items-center gap-2 text-sm">
-                <a href="{{ $listRoute }}" class="text-gray-400 text-xs hover:text-gray-600 transition-colors">
-                    Pustaka Pengetahuan
-                </a>
-                <svg class="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                </svg>
-                <span class="font-semibold text-gray-800 text-sm">
-                    {{ $isEdit ? ($isInternal ? 'Edit SOP' : 'Edit Artikel') : ($visibility === 'internal' ? 'SOP Baru' : 'Artikel Baru') }}
-                </span>
-            </div>
+        {{-- ── Header & Mobile Actions Wrapper ── --}}
+        <div class="sticky top-0 z-30 shrink-0">
+            {{-- Header --}}
+            <header class="bg-white border-b border-gray-100 pl-14 pr-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0" style="scrollbar-width:none;">
+                    <a href="{{ $listRoute }}"
+                       class="w-8 h-8 shrink-0 rounded-lg bg-[#F0F4F8] flex items-center justify-center text-gray-500 hover:bg-[#E5EBF3] transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </a>
 
-            <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 text-sm whitespace-nowrap">
+                        @if($parentName)
+                        <a href="{{ $parentRoute }}" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            {{ $parentName }}
+                        </a>
+                        <svg class="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        @else
+                        <a href="{{ $pustakaRootRoute }}" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            {{ $pustakaRootName }}
+                        </a>
+                        <svg class="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        @endif
+                        <span class="font-semibold text-gray-800">
+                            {{ $isEdit ? ($isInternal ? 'Edit SOP' : 'Edit Artikel') : ($visibility === 'internal' ? 'SOP Baru' : 'Artikel Baru') }}
+                        </span>
+                        @if($isInternal)
+                        <span class="ml-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 border border-amber-200">RAHASIA</span>
+                        @endif
+                    </div>
+                </div>
 
-                {{-- Preview Selalu via Modal --}}
+                {{-- Desktop Buttons --}}
+                <div class="hidden lg:flex items-center justify-end gap-2 w-auto shrink-0">
+                    {{-- Preview Selalu via Modal --}}
+                    <button type="button" @click="openPreviewModal()"
+                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        Pratinjau
+                    </button>
+
+                    {{-- Delete (edit only) --}}
+                    @if($isEdit)
+                    <button type="button" @click="deleteConfirmOpen = true"
+                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 bg-red-600">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Hapus
+                    </button>
+                    @endif
+
+                    <a href="{{ $listRoute }}"
+                       class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                        Batal
+                    </a>
+                    <button type="submit" form="form-artikel"
+                            class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            style="background-color:#16A34A;">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        Simpan {{ $visibility === 'internal' ? 'SOP' : 'Artikel' }}
+                    </button>
+                </div>
+            </header>
+
+            {{-- Mobile Actions --}}
+            <div class="lg:hidden bg-white border-b border-gray-100 px-4 sm:px-6 py-3 flex flex-wrap items-center gap-2">
                 <button type="button" @click="openPreviewModal()"
-                        class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                        class="flex flex-1 justify-center items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
@@ -223,10 +296,9 @@
                     Pratinjau
                 </button>
 
-                {{-- Delete (edit only) --}}
                 @if($isEdit)
                 <button type="button" @click="deleteConfirmOpen = true"
-                        class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 bg-red-600">
+                        class="flex flex-1 justify-center items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 bg-red-600">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                     </svg>
@@ -235,11 +307,11 @@
                 @endif
 
                 <a href="{{ $listRoute }}"
-                   class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
+                   class="flex flex-1 justify-center items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold border border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50 transition-colors">
                     Batal
                 </a>
                 <button type="submit" form="form-artikel"
-                        class="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                        class="flex flex-1 justify-center items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-white transition-opacity hover:opacity-90 w-full sm:w-auto"
                         style="background-color:#16A34A;">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -247,7 +319,7 @@
                     Simpan {{ $visibility === 'internal' ? 'SOP' : 'Artikel' }}
                 </button>
             </div>
-        </header>
+        </div>
 
         {{-- ── Warning Banner (Internal) ── --}}
         <div x-show="visibility === 'internal'"
@@ -288,13 +360,13 @@
                 <input type="hidden" name="bidang_id" value="{{ $bidangId }}">
                 @endif
 
-                <div class="flex gap-8 items-start">
+                <div class="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
                     {{-- ── EDITOR AREA ── --}}
-                    <div class="flex-1 flex flex-col gap-6">
+                    <div class="flex-1 flex flex-col gap-6 w-full lg:w-auto">
 
                         {{-- Title Input --}}
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-8">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5 sm:p-8">
                             <input type="text" name="nama_artikel_sop"
                                    value="{{ old('nama_artikel_sop', $article?->nama_artikel_sop) }}"
                                    placeholder="Tulis judul artikel di sini..."
@@ -302,7 +374,7 @@
                         </div>
 
                         {{-- Deskripsi Singkat --}}
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-8">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5 sm:p-8">
                             <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Deskripsi Singkat (Excerpt)</p>
                             <textarea name="deskripsi_singkat"
                                       placeholder="Ringkasan artikel untuk preview..."
@@ -311,7 +383,7 @@
                         </div>
 
                         {{-- Content Editor --}}
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-8">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5 sm:p-8">
                             <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Konten Artikel</p>
                             <div class="quill-wrapper">
                                 <div id="editor"></div>
@@ -322,7 +394,7 @@
                     </div>
 
                     {{-- ── SIDEBAR ── --}}
-                    <div class="w-80 shrink-0 space-y-4">
+                    <div class="w-full lg:w-80 shrink-0 space-y-4">
 
                         {{-- Status Publikasi --}}
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
@@ -921,6 +993,41 @@
         @if($isEdit && $article?->isi_konten)
             quill.root.innerHTML = @json($article->isi_konten);
         @endif
+
+        // Monitor paste events and warn about base64 images
+        quill.on('text-change', function() {
+            const htmlContent = quill.root.innerHTML;
+            const base64ImageRegex = /data:image\/[a-zA-Z0-9]+;base64,/g;
+            const hasBase64Images = base64ImageRegex.test(htmlContent);
+
+            if (hasBase64Images) {
+                // Show warning modal about large base64 images
+                const existingAlert = document.querySelector('[data-base64-warning]');
+                if (!existingAlert) {
+                    const warningHtml = `
+                        <div class="fixed top-4 right-4 z-50 bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-sm shadow-lg" data-base64-warning>
+                            <div class="flex gap-3">
+                                <svg class="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <div class="flex-1">
+                                    <h3 class="font-semibold text-yellow-900 text-sm mb-1">Gambar Base64 Terdeteksi</h3>
+                                    <p class="text-yellow-800 text-xs mb-2">Gambar yang disalin dari internet disimpan sebagai base64 yang sangat besar. Ini dapat membuat konten artikel terlalu besar.</p>
+                                    <button onclick="this.closest('[data-base64-warning]').remove()" class="text-xs font-medium text-yellow-700 hover:text-yellow-900">Tutup</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.insertAdjacentHTML('beforeend', warningHtml);
+
+                    // Auto-hide warning after 10 seconds
+                    setTimeout(() => {
+                        const alert = document.querySelector('[data-base64-warning]');
+                        if (alert) alert.remove();
+                    }, 10000);
+                }
+            }
+        });
 
         // Sync Quill content to hidden input before form submission
         const form = document.getElementById('form-artikel');

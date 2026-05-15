@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
@@ -41,14 +41,6 @@
                 <h1 class="text-lg font-bold text-gray-900">Menunggu Verifikasi</h1>
                 <p class="text-xs text-gray-400 mt-0.5">Daftar tiket masuk yang perlu diverifikasi dan diproses</p>
             </div>
-            <a href="{{ route('admin_helpdesk.tiket.menunggu.export') }}"
-               class="inline-flex items-center self-start sm:self-auto gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-               style="background-color:#01458E;">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                Export CSV
-            </a>
         </header>
 
         <main class="flex-1 flex overflow-hidden">
@@ -209,6 +201,8 @@
                                         'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                         'can_terima'            => $tiket->can_terima,
                                         'alasan_kembalikan'     => null,
+                                        'transfer_message'      => $tiket->transfer_message ?? null,
+                                        'bidang_id'             => $tiket->bidang_id,
                                         'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
                                         'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
                                     ]);
@@ -290,6 +284,8 @@
                                                 'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                                 'can_terima'            => $tiket->can_terima,
                                                 'alasan_kembalikan'     => null,
+                                                'transfer_message'      => $tiket->transfer_message ?? null,
+                                                'bidang_id'             => $tiket->bidang_id,
                                                 'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
                                                 'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
                                             ]);
@@ -303,7 +299,7 @@
                                             </td>
                                             <td class="px-5 py-4 min-w-[250px] max-w-sm">
                                                 <p class="font-semibold text-gray-800 line-clamp-1">{{ $tiket->subjek_masalah }}</p>
-                                                <p class="text-xs text-gray-400 line-clamp-1 mt-0.5">{{ $tiket->detail_masalah }}</p>
+                                                <p class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ $tiket->detail_masalah }}</p>
                                             </td>
                                             <td class="px-5 py-4 text-gray-600 font-medium whitespace-nowrap">
                                                 {{ Str::limit($tiket->opd?->nama_opd ?? '—', 30) }}
@@ -375,8 +371,8 @@
                                                         </svg>
                                                     </div>
                                                     <div>
-                                                        <p class="font-semibold text-gray-500 text-sm">Tidak ada tiket baru</p>
-                                                        <p class="text-xs text-gray-400 mt-1">Semua tiket sudah diproses atau belum ada pengajuan baru.</p>
+                                                        <p class="text-sm font-bold text-gray-800">Tidak ada tiket baru</p>
+                                                        <p class="text-xs text-gray-500 mt-1">Semua tiket sudah diproses atau belum ada pengajuan baru.</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -421,6 +417,8 @@
                                         'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                         'can_terima'            => $tiket->can_terima,
                                         'alasan_kembalikan'     => $tiket->alasan_kembalikan,
+                                        'transfer_message'      => $tiket->transfer_message ?? null,
+                                        'bidang_id'             => $tiket->bidang_id,
                                         'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
                                         'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
                                     ]);
@@ -504,6 +502,8 @@
                                                 'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                                 'can_terima'            => $tiket->can_terima,
                                                 'alasan_kembalikan'     => $tiket->alasan_kembalikan,
+                                                'transfer_message'      => $tiket->transfer_message ?? null,
+                                                'bidang_id'             => $tiket->bidang_id,
                                                 'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
                                                 'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
                                             ]);
@@ -694,6 +694,17 @@
                             <div class="flex gap-2 items-start">
                                 <span class="text-base leading-none mt-0.5 text-orange-600">↩</span>
                                 <p class="text-xs text-orange-900 leading-relaxed whitespace-pre-wrap break-words" x-text="selectedTiket?.alasan_kembalikan"></p>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Section: Transfer Message --}}
+                    <template x-if="selectedTiket?.transfer_message">
+                        <div class="border-l-4 border-blue-500 bg-blue-50 rounded-r-xl p-3 sm:p-4">
+                            <h4 class="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-2 pb-1.5 border-b border-blue-200">Pesan Transfer dari Admin Bidang Lama</h4>
+                            <div class="flex gap-2 items-start">
+                                <span class="text-base leading-none mt-0.5 text-blue-600">→</span>
+                                <p class="text-xs text-blue-900 leading-relaxed whitespace-pre-wrap break-words" x-text="selectedTiket?.transfer_message"></p>
                             </div>
                         </div>
                     </template>
@@ -911,7 +922,7 @@
                                 style="background:#7C3AED;">
                             Admin Helpdesk
                         </button>
-                        <button @click="showModal = 'eskalasi'; pendampingIds = []; tekUtamaId = ''"
+                        <button @click="showModal = 'eskalasi'; pendampingIds = []; tekUtamaId = ''; utamaOpen = false"
                                 class="w-full sm:flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 focus:outline-none"
                                 style="background:#D97706;">
                             Tim Teknis
@@ -945,16 +956,54 @@
                     <form x-ref="formTransfer" method="POST" action="#"
                           @submit.prevent="submitForm($refs.formTransfer, '/admin-helpdesk/tiket/' + selectedTiket.id + '/transfer')">
                         @csrf
+
+                        {{-- Bidang Tujuan Dropdown (Alpine Custom) --}}
                         <div class="mb-4">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Bidang Tujuan</label>
-                            <select name="bidang_id" required
-                                    class="w-full px-3.5 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] bg-white">
-                                <option value="">Pilih bidang</option>
-                                @foreach($bidangs as $bidang)
-                                <option value="{{ $bidang->id }}">{{ $bidang->nama_bidang }}</option>
-                                @endforeach
-                            </select>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Bidang Tujuan <span class="text-red-500">*</span></label>
+                            <input type="hidden" name="bidang_id" :value="bidangId" required>
+                            <div class="relative" @click.outside="bidangOpen = false">
+                                <button type="button" @click="bidangOpen = !bidangOpen"
+                                        class="w-full text-left px-3.5 py-3 text-sm border border-gray-200 rounded-xl bg-white flex items-center justify-between hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#01458E]/20"
+                                        :class="bidangOpen ? 'border-[#01458E] ring-2 ring-[#01458E]/20' : ''">
+                                    <span x-show="!bidangId" class="text-gray-400">Pilih Bidang Tujuan</span>
+                                    <span x-show="bidangId" class="text-gray-700 font-medium truncate" x-text="bidangList.find(b => String(b.id) === String(bidangId))?.nama"></span>
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150 ml-2"
+                                         :class="bidangOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <div x-show="bidangOpen"
+                                     x-transition:enter="transition ease-out duration-100"
+                                     x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                     x-transition:leave="transition ease-in duration-75"
+                                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                                     x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+                                     class="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-[110] max-h-44 overflow-y-auto"
+                                     style="display:none;">
+                                    <template x-for="bidang in bidangList.filter(b => String(b.id) !== String(selectedTiket?.bidang_id))" :key="'bidang-' + bidang.id">
+                                        <div @click="bidangId = bidang.id; bidangOpen = false"
+                                             class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                                             :class="bidangId === bidang.id ? 'bg-blue-50/50 hover:bg-blue-50/80' : ''">
+                                            <div class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
+                                                 :class="bidangId === bidang.id ? 'bg-[#01458E] border-[#01458E]' : 'border-gray-300'">
+                                                <svg x-show="bidangId === bidang.id" class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3.5" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-800 truncate" x-text="bidang.nama"></p>
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <div x-show="bidangList.filter(b => String(b.id) !== String(selectedTiket?.bidang_id)).length === 0"
+                                         class="px-4 py-4 text-xs text-gray-400 text-center">
+                                        Tidak ada bidang lain tersedia
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="mb-6">
                             <label class="block text-xs font-semibold text-gray-700 mb-1.5">Instruksi Khusus (opsional)</label>
                             <textarea name="instruksi" rows="3" placeholder="Masukkan instruksi khusus (opsional)..."
@@ -996,20 +1045,67 @@
                     <form x-ref="formEskalasi" method="POST" action="#"
                           @submit.prevent="submitForm($refs.formEskalasi, '/admin-helpdesk/tiket/' + selectedTiket.id + '/eskalasi')">
                         @csrf
-                        {{-- Teknisi Utama --}}
+
+                        {{-- Teknisi Utama (Custom Dropdown Alpine) --}}
                         <div class="mb-4">
                             <label class="block text-xs font-semibold text-gray-700 mb-1.5">Teknisi Utama <span class="text-red-500">*</span></label>
-                            <select name="teknisi_utama_id" required x-model="tekUtamaId"
-                                    class="w-full px-3.5 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] bg-white">
-                                <option value="">Pilih Teknisi</option>
-                                @foreach($teknisis as $tek)
-                                <option value="{{ $tek->id }}">
-                                    {{ $tek->nama_lengkap }}
-                                    @if($tek->bidang) — {{ $tek->bidang->nama_bidang }} @endif
-                                    · {{ $tek->tiket_aktif_count }} tiket aktif
-                                </option>
-                                @endforeach
-                            </select>
+                            <div class="relative" @click.outside="utamaOpen = false">
+                                <button type="button" @click="utamaOpen = !utamaOpen"
+                                        class="w-full text-left px-3.5 py-3 text-sm border border-gray-200 rounded-xl bg-white flex items-center justify-between hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#01458E]/20"
+                                        :class="utamaOpen ? 'border-[#01458E] ring-2 ring-[#01458E]/20' : ''">
+                                    <span x-show="!tekUtamaId" class="text-gray-400">Pilih Teknisi</span>
+                                    <span x-show="tekUtamaId" class="text-gray-700 font-medium"
+                                          x-text="teknisiList.find(t => String(t.id) === String(tekUtamaId))?.nama ?? 'Pilih Teknisi'"></span>
+                                    <svg class="w-4 h-4 text-gray-400 flex-shrink-0 transition-transform duration-150"
+                                         :class="utamaOpen ? 'rotate-180' : ''"
+                                         fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+
+                                {{-- Dropdown list --}}
+                                <div x-show="utamaOpen"
+                                     x-transition:enter="transition ease-out duration-100"
+                                     x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                     x-transition:leave="transition ease-in duration-75"
+                                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                                     x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+                                     class="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-[110] max-h-44 overflow-y-auto"
+                                     style="display:none;">
+                                    <template x-for="tek in teknisiList" :key="'utama-' + tek.id">
+                                        <div @click="tekUtamaId = tek.id; utamaOpen = false"
+                                             class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                                             :class="String(tekUtamaId) === String(tek.id) ? 'bg-blue-50/50 hover:bg-blue-50/80' : ''">
+
+                                            {{-- Radio style indicator --}}
+                                            <div class="w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
+                                                 :class="String(tekUtamaId) === String(tek.id) ? 'bg-[#01458E] border-[#01458E]' : 'border-gray-300'">
+                                                <div x-show="String(tekUtamaId) === String(tek.id)" class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                                            </div>
+
+                                            {{-- Nama & bidang --}}
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-800 truncate" x-text="tek.nama"></p>
+                                                <p class="text-[11px] text-gray-400 truncate" x-text="tek.bidang ?? '—'"></p>
+                                            </div>
+
+                                            {{-- Jumlah tiket aktif --}}
+                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md flex-shrink-0"
+                                                  :class="tek.tiket_aktif === 0
+                                                      ? 'bg-green-50 text-green-700'
+                                                      : tek.tiket_aktif <= 2
+                                                          ? 'bg-amber-50 text-amber-700'
+                                                          : 'bg-red-50 text-red-600'"
+                                                  x-text="tek.tiket_aktif + ' aktif'"></span>
+                                        </div>
+                                    </template>
+                                    <div x-show="teknisiList.length === 0" class="px-4 py-4 text-xs text-gray-400 text-center">
+                                        Tidak ada teknisi tersedia
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="hidden" name="teknisi_utama_id" :value="tekUtamaId">
                         </div>
 
                         {{-- Teknisi Pendamping (multi-select) --}}
@@ -1219,6 +1315,12 @@
             'bidang'      => $t->bidang?->nama_bidang,
             'tiket_aktif' => (int) ($t->tiket_aktif_count ?? 0),
         ]);
+
+        // Menyusun array JSON untuk dropdown custom bidang
+        $bidangListData = $bidangs->map(fn($b) => [
+            'id'   => $b->id,
+            'nama' => $b->nama_bidang
+        ]);
         @endphp
         return {
             selectedTiket: null,
@@ -1229,16 +1331,25 @@
             sopPreviewOpen: false,
             sopPreviewContent: '',
             sopPreviewTitle: '',
-            bidangFilter: '',
+
+            // Variabel AlpineJS untuk Bidang (Transfer)
+            bidangList: @json($bidangListData),
+            bidangId: '',
+            bidangOpen: false,
+
+            // Variabel AlpineJS untuk Teknisi (Eskalasi)
             tekUtamaId: '',
+            utamaOpen: false,
             pendampingIds: [],
             pendampingOpen: false,
             teknisiList: @json($teknisiListData),
+
             activeTab: new URLSearchParams(window.location.search).get('tab') || 'baru',
 
             init() {
+                // Auto hapus teknisi utama dari list pendamping jika sudah terpilih
                 this.$watch('tekUtamaId', (newVal) => {
-                    this.pendampingIds = this.pendampingIds.filter(id => id !== newVal);
+                    this.pendampingIds = this.pendampingIds.filter(id => String(id) !== String(newVal));
                 });
 
                 // Menutup modal/drawer jika tombol ESC ditekan
@@ -1302,6 +1413,16 @@
                 return map[p] ?? 'background:#F3F4F6;color:#9CA3AF;border: 1px solid #E5E7EB;';
             },
             submitForm(form, url) {
+                // Validasi form Transfer
+                if (form === this.$refs.formTransfer && !this.bidangId) {
+                    alert('Silakan pilih Bidang Tujuan terlebih dahulu sebelum melakukan transfer.');
+                    return;
+                }
+                // Validasi form Eskalasi
+                if (form === this.$refs.formEskalasi && !this.tekUtamaId) {
+                    alert('Silakan pilih Teknisi Utama terlebih dahulu sebelum melakukan eskalasi.');
+                    return;
+                }
                 form.action = url;
                 form.submit();
             },

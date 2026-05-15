@@ -8,6 +8,9 @@ use App\Models\TimTeknis;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Cell\StringCell;
 
 class ActivityLogController extends Controller
 {
@@ -496,37 +499,49 @@ class ActivityLogController extends Controller
         }
 
         $logs     = $query->get();
-        $filename = 'log_pimpinan_' . now()->format('Ymd_His') . '.csv';
+        $filename = 'log_pimpinan_' . now()->format('Ymd_His') . '.xlsx';
+        $tempPath = storage_path('temp/' . uniqid() . '.xlsx');
+        @mkdir(storage_path('temp'), 0755, true);
 
-        $headers = [
-            'Content-Type'        => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
+        $writer = new Writer();
+        $writer->openToFile($tempPath);
 
-        $callback = function () use ($logs) {
-            $f = fopen('php://output', 'w');
-            fputcsv($f, ['Waktu', 'User ID', 'Nama', 'Role', 'Bidang', 'Jenis Aktivitas', 'Detail', 'IP Address', 'Tabel', 'ID Record']);
-            foreach ($logs as $log) {
-                $bidangNama = $log->user?->adminHelpdesk?->bidang?->nama_bidang
-                           ?? $log->user?->timTeknis?->bidang?->nama_bidang
-                           ?? '';
-                fputcsv($f, [
-                    $log->waktu_eksekusi?->format('Y-m-d H:i:s') ?? '',
-                    $log->user_id ?? '',
-                    $this->namaUser($log),
-                    self::$roleLabel[$log->role_pelaku] ?? $log->role_pelaku,
-                    $bidangNama,
-                    $log->jenis_aktivitas,
-                    $log->detail_tindakan ?? '',
-                    $log->ip_address ?? '',
-                    $log->nama_tabel ?? '',
-                    $log->id_record ?? '',
-                ]);
-            }
-            fclose($f);
-        };
+        // Header row
+        $writer->addRow(new Row([
+            new StringCell('Waktu'),
+            new StringCell('User ID'),
+            new StringCell('Nama'),
+            new StringCell('Role'),
+            new StringCell('Bidang'),
+            new StringCell('Jenis Aktivitas'),
+            new StringCell('Detail'),
+            new StringCell('IP Address'),
+            new StringCell('Tabel'),
+            new StringCell('ID Record'),
+        ]));
 
-        return response()->stream($callback, 200, $headers);
+        foreach ($logs as $log) {
+            $bidangNama = $log->user?->adminHelpdesk?->bidang?->nama_bidang
+                       ?? $log->user?->timTeknis?->bidang?->nama_bidang
+                       ?? '';
+
+            $writer->addRow(new Row([
+                new StringCell($log->waktu_eksekusi?->format('Y-m-d H:i:s') ?? ''),
+                new StringCell((string)($log->user_id ?? '')),
+                new StringCell($this->namaUser($log)),
+                new StringCell(self::$roleLabel[$log->role_pelaku] ?? $log->role_pelaku),
+                new StringCell($bidangNama),
+                new StringCell($log->jenis_aktivitas),
+                new StringCell($log->detail_tindakan ?? ''),
+                new StringCell($log->ip_address ?? ''),
+                new StringCell($log->nama_tabel ?? ''),
+                new StringCell($log->id_record ?? ''),
+            ]));
+        }
+
+        $writer->close();
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
     }
 
     private function bidangLogQuery(
