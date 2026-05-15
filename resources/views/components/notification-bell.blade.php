@@ -19,7 +19,7 @@
                       d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
             {{-- Badge unread --}}
-            <span x-show="unread > 0"
+            <span x-show="unread > 0" x-cloak
                   x-text="unread > 9 ? '9+' : unread"
                   class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none"
                   style="background:#DC2626;"></span>
@@ -33,7 +33,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
-                <span x-show="unread > 0"
+                <span x-show="unread > 0" x-cloak
                       x-text="unread > 9 ? '9+' : unread"
                       class="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-0.5 rounded-full text-[8px] font-bold text-white flex items-center justify-center leading-none"
                       style="background:#DC2626;"></span>
@@ -59,12 +59,12 @@
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div class="flex items-center gap-2">
                 <p class="text-sm font-bold text-gray-900">Notifikasi</p>
-                <span x-show="unread > 0"
+                <span x-show="unread > 0" x-cloak
                       x-text="unread + ' baru'"
                       class="text-[10px] font-semibold px-2 py-0.5 rounded-full text-white"
                       style="background:#DC2626;"></span>
             </div>
-            <button x-show="unread > 0" @click="markAll()"
+            <button x-show="unread > 0" x-cloak @click="markAll()"
                     class="text-[11px] font-medium text-[#01458E] hover:underline transition-colors">
                 Tandai semua dibaca
             </button>

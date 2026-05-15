@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
@@ -41,15 +41,20 @@
                 <h1 class="text-lg font-bold text-gray-900">Riwayat Tiket</h1>
                 <p class="text-xs text-gray-400 mt-0.5">Daftar tiket yang telah selesai ditangani</p>
             </div>
+            <a href="{{ route('admin_helpdesk.tiket.riwayat.export', request()->only(['search','rekomendasi_penanganan','kategori_id'])) }}"
+               class="inline-flex items-center self-start sm:self-auto gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 shrink-0"
+               style="background-color:#01458E;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export CSV
+            </a>
         </header>
 
-        <main class="flex-1 flex overflow-hidden">
+        <main class="flex-1 px-4 lg:px-6 py-4 lg:py-6 flex flex-col overflow-hidden w-full">
 
-            {{-- ── Konten utama (tabel + filter) ── --}}
-            <div class="flex-1 flex flex-col overflow-hidden w-full">
-
-                {{-- Filter --}}
-                <div class="px-4 sm:px-6 pt-5 pb-2">
+            {{-- Filter --}}
+            <div class="pb-2">
                     <form method="GET" action="{{ route('admin_helpdesk.tiket.riwayat') }}" id="filterFormRiwayat"
                           class="bg-white rounded-2xl border border-gray-100 px-4 sm:px-5 py-4 mb-3 sm:mb-5 shadow-sm">
                         <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Filter &amp; Pencarian</p>
@@ -184,22 +189,90 @@
 
                 {{-- Flash Messages --}}
                 @if(session('success'))
-                <div class="mx-4 sm:mx-6 mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl flex items-center gap-2">
+                <div class="mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl flex items-center gap-2">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     {{ session('success') }}
                 </div>
                 @endif
                 @if(session('error'))
-                <div class="mx-4 sm:mx-6 mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2">
+                <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2">
                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     {{ session('error') }}
                 </div>
                 @endif
 
                 {{-- Tabel --}}
-                <div class="flex-1 overflow-auto px-4 sm:px-6 pb-6">
+                <div class="flex-1 overflow-auto pb-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
-                        <div class="overflow-x-auto flex-1">
+                    <div class="overflow-x-auto flex-1 w-full">
+
+                        {{-- Mobile Cards --}}
+                        <div class="sm:hidden divide-y divide-gray-100">
+                            @forelse($tikets as $tiket)
+                            @php
+                                $statusAkhirM  = $tiket->latestStatus?->status_tiket;
+                                $kategoriNamaM = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
+                                $teknisiM      = $tiket->teknisiUtama?->timTeknis;
+                                $allTeknisiM   = [];
+                                foreach ($tiket->tiketTeknisi as $tt) {
+                                    $allTeknisiM[] = [
+                                        'nama'     => $tt->timTeknis?->nama_lengkap ?? '—',
+                                        'peran'    => $tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping',
+                                        'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                    ];
+                                }
+                                $statusStyleM = match($statusAkhirM) {
+                                    'selesai'        => ['bg'=>'#D1FAE5','text'=>'#059669','label'=>'Selesai'],
+                                    'rusak_berat'    => ['bg'=>'#FEE2E2','text'=>'#DC2626','label'=>'Rusak Berat'],
+                                    'dibuka_kembali' => ['bg'=>'#FEF3C7','text'=>'#D97706','label'=>'Dibuka Kembali'],
+                                    'tiket_ditutup'  => ['bg'=>'#DBEAFE','text'=>'#1D4ED8','label'=>'Tiket Ditutup'],
+                                    default          => ['bg'=>'#F3F4F6','text'=>'#6B7280','label'=>ucfirst(str_replace('_',' ',$statusAkhirM ?? '—'))],
+                                };
+                                $tJM = json_encode([
+                                    'id'                    => $tiket->id,
+                                    'subjek_masalah'        => $tiket->subjek_masalah,
+                                    'detail_masalah'        => $tiket->detail_masalah,
+                                    'opd_nama'              => $tiket->opd?->nama_opd ?? '—',
+                                    'kategori_nama'         => $kategoriNamaM,
+                                    'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
+                                    'lokasi'                => $tiket->lokasi ?? '—',
+                                    'foto_bukti'            => $tiket->foto_bukti,
+                                    'rekomendasi_penanganan'=> $tiket->rekomendasi_penanganan,
+                                    'teknisi_nama'          => $teknisiM?->nama_lengkap ?? '—',
+                                    'all_teknisi'           => $allTeknisiM,
+                                    'status_akhir'          => $statusStyleM['label'],
+                                    'status_akhir_bg'       => $statusStyleM['bg'],
+                                    'status_akhir_text'     => $statusStyleM['text'],
+                                    'catatan_status'        => $tiket->latestStatus?->catatan ?? '—',
+                                    'rekomendasi'           => $tiket->latestStatus?->rekomendasi ?? '—',
+                                    'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
+                                    'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
+                                    'selesai_at'            => $tiket->latestStatus?->created_at?->translatedFormat('d M Y H:i') . ' WIB',
+                                    'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
+                                    'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
+                                ]);
+                            @endphp
+                            <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                                 @click="openDetail({{ $tJM }})">
+                                <div class="flex items-start justify-between gap-2 mb-1">
+                                    <span class="font-mono text-xs font-bold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">#{{ Str::upper(substr($tiket->id, -8)) }}</span>
+                                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full shrink-0" style="background:{{ $statusStyleM['bg'] }};color:{{ $statusStyleM['text'] }};">{{ $statusStyleM['label'] }}</span>
+                                </div>
+                                <p class="text-sm font-semibold text-gray-800 mb-0.5 line-clamp-1">{{ $tiket->subjek_masalah }}</p>
+                                <div class="flex items-center justify-between gap-2 mt-1.5">
+                                    <div class="text-xs text-gray-400 min-w-0">
+                                        <span class="line-clamp-1">{{ $tiket->opd?->nama_opd ?? '—' }}</span>
+                                        <span class="text-gray-300 text-[11px]">Selesai: {{ $tiket->latestStatus?->created_at?->translatedFormat('d M Y') ?? '—' }}</span>
+                                    </div>
+                                    <span class="text-[11px] font-medium px-2 py-0.5 rounded border border-gray-200 text-gray-600 bg-gray-50 shrink-0">{{ $kategoriNamaM }}</span>
+                                </div>
+                            </div>
+                            @empty
+                            <div class="px-4 py-10 text-center text-sm text-gray-400">Belum ada riwayat tiket.</div>
+                            @endforelse
+                        </div>
+
+                        <div class="hidden sm:block overflow-x-auto">
                             <table class="w-full text-sm text-left">
                                 <thead>
                                     <tr class="border-b border-gray-100 bg-gray-50/50">
@@ -219,6 +292,17 @@
                                         $statusAkhir  = $tiket->latestStatus?->status_tiket;
                                         $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
                                         $teknisi      = $tiket->teknisiUtama?->timTeknis;
+
+                                        // Kumpulkan semua teknisi (utama + pendamping)
+                                        $allTeknisi = [];
+                                        foreach ($tiket->tiketTeknisi as $tt) {
+                                            $allTeknisi[] = [
+                                                'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                                'peran' => $tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping',
+                                                'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                            ];
+                                        }
+
                                         $statusStyle  = match($statusAkhir) {
                                             'selesai'          => ['bg'=>'#D1FAE5','text'=>'#059669','border'=>'#A7F3D0','label'=>'Selesai'],
                                             'rusak_berat'      => ['bg'=>'#FEE2E2','text'=>'#DC2626','border'=>'#FECACA','label'=>'Rusak Berat'],
@@ -237,6 +321,7 @@
                                             'foto_bukti'            => $tiket->foto_bukti,
                                             'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                             'teknisi_nama'          => $teknisi?->nama_lengkap ?? '—',
+                                            'all_teknisi'           => $allTeknisi,
                                             'status_akhir'          => $statusStyle['label'],
                                             'status_akhir_bg'       => $statusStyle['bg'],
                                             'status_akhir_text'     => $statusStyle['text'],
@@ -418,6 +503,36 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- Section: Tim Teknisi yang Bertugas --}}
+                    <template x-if="selectedTiket?.all_teknisi && selectedTiket?.all_teknisi?.length > 0">
+                        <div>
+                            <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3 pb-2 border-b border-gray-100">Tim Teknisi yang Bertugas</h4>
+                            <div class="space-y-2.5">
+                                <template x-for="(tek, idx) in selectedTiket.all_teknisi" :key="idx">
+                                    <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                        <div class="flex-1">
+                                            <p class="text-xs font-semibold text-gray-900" x-text="tek.nama"></p>
+                                            <div class="flex items-center gap-1.5 mt-1">
+                                                <template x-if="tek.is_utama">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                        Utama
+                                                    </span>
+                                                </template>
+                                                <template x-if="!tek.is_utama">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                                                        Pendamping
+                                                    </span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
 
                     {{-- Section 2: Catatan Penanganan --}}
                     <div>

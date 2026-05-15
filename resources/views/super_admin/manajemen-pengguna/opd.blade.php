@@ -135,7 +135,7 @@
         {{-- ── Top Bar ── --}}
         <header class="bg-white border-b border-gray-100 px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-30">
             {{-- Left: Tabs --}}
-            <div class="flex items-center gap-0 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0" style="scrollbar-width:none;">
+            <div class="flex items-center gap-0 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 pl-10 sm:pl-0" style="scrollbar-width:none;">
                 <a href="{{ route('super_admin.pengguna.opd') }}"
                    class="px-4 sm:px-6 py-2 sm:py-4 text-sm font-semibold border-b-2 transition-colors border-[#01458E] text-[#01458E] whitespace-nowrap">
                     Data OPD
@@ -294,7 +294,6 @@
                             </tr>
                         </tbody>
                     </table>
-                </div>
                 </div>
 
                 {{-- Pagination UI (Hanya tampil jika ada data) --}}

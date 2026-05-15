@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="utf-8">
@@ -29,102 +29,110 @@
             </div>
         </header>
 
-        <main class="flex-1 flex overflow-hidden">
+        <main class="flex-1 px-4 lg:px-6 py-4 lg:py-6 flex flex-col overflow-hidden w-full">
 
-            {{-- ── Konten Utama ── --}}
-            <div class="flex-1 flex flex-col overflow-hidden">
-
-                {{-- Filter --}}
-                <div class="px-6 pt-5 pb-2">
+            {{-- ── Filter & Search ── --}}
+            <div class="pb-2">
                 <form method="GET" action="{{ route('tim_teknis.antrean') }}" id="filterFormAntrean"
-                      class="bg-white rounded-2xl border border-gray-100 px-5 py-4 mb-5">
+                      class="bg-white rounded-2xl border border-gray-100 px-4 sm:px-5 py-4 mb-3 sm:mb-5 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Filter &amp; Pencarian</p>
-                    <div class="flex flex-wrap gap-2 items-center">
-                        <div class="flex-1 min-w-0 relative">
-                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none"
+                    <div class="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-2 items-center">
+                        <div class="w-full sm:flex-1 sm:min-w-[200px] relative">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
                                  fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
                             </svg>
                             <input type="text" name="search" value="{{ request('search') }}"
                                    placeholder="Cari tiket..."
                                    oninput="clearTimeout(window._stAntrean); window._stAntrean = setTimeout(() => document.getElementById('filterFormAntrean').submit(), 500)"
-                                   class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-700 bg-[#F0F4F8] focus:outline-none focus:ring-2 focus:ring-blue-200">
+                                   class="w-full pl-9 pr-3 py-2.5 sm:py-2 rounded-xl border border-gray-200 text-sm text-gray-700 bg-[#F0F4F8] focus:outline-none focus:ring-2 focus:ring-blue-200">
                         </div>
                         <a href="{{ route('tim_teknis.antrean', request()->only('search')) }}"
-                           class="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 shrink-0 transition-colors">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                           class="flex justify-center sm:justify-start items-center gap-1.5 px-4 py-2.5 sm:py-2 rounded-xl text-sm font-semibold text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 w-full sm:w-auto transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
                             Reset
                         </a>
                     </div>
                 </form>
-                </div>
+            </div>
 
-                {{-- Flash --}}
-                @if(session('success'))
-                <div class="mx-6 mt-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl flex items-center gap-2">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    {{ session('success') }}
-                </div>
-                @endif
-                @if(session('error'))
-                <div class="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    {{ session('error') }}
-                </div>
-                @endif
+            {{-- Flash --}}
+            @if(session('success'))
+            <div class="mb-4 px-4 py-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl flex items-center gap-2 shadow-sm">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ session('success') }}
+            </div>
+            @endif
+            @if(session('error'))
+            <div class="mb-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2 shadow-sm">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ session('error') }}
+            </div>
+            @endif
 
-                {{-- Tabel --}}
-                <div class="flex-1 overflow-auto px-6 py-4">
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            {{-- Tabel --}}
+            <div class="flex-1 overflow-auto pb-6">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col h-full">
 
                         {{-- Sub-tabs Peran --}}
-                        <div class="flex flex-wrap items-center justify-between px-5 pt-4 pb-0 border-b border-gray-100 gap-x-2">
-                            <div class="flex items-center gap-0 overflow-x-auto">
+                        <div class="flex items-center justify-between px-4 sm:px-5 pt-3 sm:pt-4 pb-0 border-b border-gray-100 gap-x-2 overflow-x-auto hide-scrollbar">
+                            <div class="flex items-center gap-0 shrink-0 min-w-max">
                                 @php $activePeran = request('peran', ''); @endphp
                                 <a href="{{ route('tim_teknis.antrean', request()->only('search')) }}"
-                                   class="px-5 pb-4 text-sm transition-colors
+                                   class="px-4 sm:px-5 pb-3 sm:pb-4 text-[13px] sm:text-sm transition-colors
                                           {{ $activePeran === ''
                                               ? 'border-b-2 border-[#01458E] text-[#01458E] font-semibold'
                                               : 'border-b-2 border-transparent text-gray-400 hover:text-gray-600' }}">
                                     Semua
-                                    <span class="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-blue-50 text-[#01458E] font-semibold">
+                                    <span class="ml-1 sm:ml-1.5 text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full bg-blue-50 text-[#01458E] font-semibold border border-blue-100">
                                         {{ $countAll }}
                                     </span>
                                 </a>
                                 <a href="{{ route('tim_teknis.antrean', [...request()->only('search'), 'peran' => 'teknisi_utama']) }}"
-                                   class="px-5 pb-4 text-sm transition-colors
+                                   class="px-4 sm:px-5 pb-3 sm:pb-4 text-[13px] sm:text-sm transition-colors
                                           {{ $activePeran === 'teknisi_utama'
                                               ? 'border-b-2 border-[#01458E] text-[#01458E] font-semibold'
                                               : 'border-b-2 border-transparent text-gray-400 hover:text-gray-600' }}">
                                     Teknisi Utama
-                                    <span class="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-blue-50 text-[#01458E] font-semibold">
+                                    <span class="ml-1 sm:ml-1.5 text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full bg-blue-50 text-[#01458E] font-semibold border border-blue-100">
                                         {{ $countUtama }}
                                     </span>
                                 </a>
                                 <a href="{{ route('tim_teknis.antrean', [...request()->only('search'), 'peran' => 'teknisi_pendamping']) }}"
-                                   class="px-5 pb-4 text-sm transition-colors
+                                   class="px-4 sm:px-5 pb-3 sm:pb-4 text-[13px] sm:text-sm transition-colors
                                           {{ $activePeran === 'teknisi_pendamping'
                                               ? 'border-b-2 border-[#01458E] text-[#01458E] font-semibold'
                                               : 'border-b-2 border-transparent text-gray-400 hover:text-gray-600' }}">
                                     Pendamping
-                                    <span class="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-blue-50 text-[#01458E] font-semibold">
+                                    <span class="ml-1 sm:ml-1.5 text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded-full bg-blue-50 text-[#01458E] font-semibold border border-blue-100">
                                         {{ $countPendamping }}
                                     </span>
                                 </a>
                             </div>
-                            <p class="text-sm font-bold text-gray-900 pb-4 hidden sm:block">
+                            <p class="text-sm font-bold text-gray-900 pb-4 hidden lg:block whitespace-nowrap">
                                 {{ $activePeran === 'teknisi_utama' ? 'Tiket sebagai Teknisi Utama' : ($activePeran === 'teknisi_pendamping' ? 'Tiket sebagai Pendamping' : 'Semua Tiket Aktif') }}
                             </p>
                         </div>
 
                         {{-- Mobile card list --}}
-                        <div class="md:hidden divide-y divide-gray-100">
+                        <div class="sm:hidden divide-y divide-gray-100">
                             @forelse($tikets as $tiket)
                             @php
                                 $isUtama = $tiket->my_peran === 'teknisi_utama';
                                 $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
+
+                                // PENAMBAHAN: Loop teknisi yang bertugas (Mobile)
+                                $allTeknisi = [];
+                                foreach ($tiket->tiketTeknisi ?? [] as $tt) {
+                                    $allTeknisi[] = [
+                                        'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                        'peran' => $tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping',
+                                        'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                    ];
+                                }
+
                                 $tiketJson = json_encode([
                                     'id' => $tiket->id, 'subjek_masalah' => $tiket->subjek_masalah,
                                     'detail_masalah' => $tiket->detail_masalah, 'opd_nama' => $tiket->opd?->nama_opd ?? '—',
@@ -138,6 +146,9 @@
                                     'created_at_jam' => $tiket->created_at?->format('H:i') . ' WIB',
                                     'unread_count' => $tiket->unread_count, 'chat_url' => route('tim_teknis.tiket.chat', $tiket->id),
                                     'is_utama' => $isUtama, 'peran_label' => $isUtama ? 'Teknisi Utama' : 'Pendamping',
+                                    'all_teknisi' => $allTeknisi, // PENAMBAHAN: Lempar data ke JSON (Mobile)
+                                    'is_telat' => $tiket->is_telat ?? false,
+                                    'hari_telat' => $tiket->hari_telat ?? 0,
                                     'is_dibuka_kembali' => $tiket->latestStatus?->status_tiket === 'dibuka_kembali',
                                     'pernah_dibuka_kembali' => $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->isNotEmpty(),
                                     'pernah_dibuka_kembali_opd' => $tiket->pernah_dibuka_kembali_opd ?? false,
@@ -168,8 +179,14 @@
                                     <span>•</span>
                                     <span>{{ $tiket->created_at?->translatedFormat('d M Y') }}</span>
                                 </div>
+                                @if($tiket->is_telat)
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-red-600 px-2 py-0.5 rounded-full mb-2">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    Melewati SLA (Telat {{ $tiket->hari_telat }} Hari)
+                                </span>
+                                @endif
                                 @if($tiket->unread_count > 0)
-                                <span class="inline-flex items-center gap-1 text-xs font-bold text-white bg-red-500 px-2 py-0.5 rounded-full mb-2">
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-red-500 px-2 py-0.5 rounded-full mb-2">
                                     <span class="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"></span>
                                     {{ $tiket->unread_count }} belum dibaca
                                 </span>
@@ -202,18 +219,17 @@
                         </div>
 
                         {{-- Desktop table --}}
-                        <div class="hidden md:block overflow-x-auto">
-                        <table class="w-full text-sm">
+                        <div class="hidden sm:block overflow-x-auto w-full pb-4">
+                        <table class="w-full text-sm text-left">
                             <thead>
-                                <tr class="border-b border-gray-100 bg-gray-50">
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ID Tiket</th>
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Subjek Masalah</th>
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">OPD</th>
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Kategori</th>
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Peran</th>
-                                    {{-- <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Pesan</th> --}}
-                                    <th class="px-5 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Ditugaskan</th>
-                                    <th class="px-5 py-3.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Aksi</th>
+                                <tr class="border-b border-gray-100 bg-gray-50/50">
+                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">ID Tiket</th>
+                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Subjek Masalah</th>
+                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">OPD</th>
+                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Kategori</th>
+                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Peran</th>
+                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Ditugaskan</th>
+                                    <th class="px-5 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-50">
@@ -222,6 +238,17 @@
                                     $isUtama = $tiket->my_peran === 'teknisi_utama';
                                     $kategoriNama = $tiket->kategori?->nama_kategori
                                         ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
+
+                                    // PENAMBAHAN: Loop teknisi yang bertugas (Desktop)
+                                    $allTeknisi = [];
+                                    foreach ($tiket->tiketTeknisi ?? [] as $tt) {
+                                        $allTeknisi[] = [
+                                            'nama' => $tt->timTeknis?->nama_lengkap ?? '—',
+                                            'peran' => $tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping',
+                                            'is_utama' => $tt->peran_teknisi === 'teknisi_utama',
+                                        ];
+                                    }
+
                                     $tiketJson = json_encode([
                                         'id'                    => $tiket->id,
                                         'subjek_masalah'        => $tiket->subjek_masalah,
@@ -241,6 +268,9 @@
                                         'chat_url'                  => route('tim_teknis.tiket.chat', $tiket->id),
                                         'is_utama'                  => $isUtama,
                                         'peran_label'               => $isUtama ? 'Teknisi Utama' : 'Pendamping',
+                                        'all_teknisi'               => $allTeknisi, // PENAMBAHAN: Lempar data ke JSON (Desktop)
+                                        'is_telat'                  => $tiket->is_telat ?? false,
+                                        'hari_telat'                => $tiket->hari_telat ?? 0,
                                         'is_dibuka_kembali'         => $tiket->latestStatus?->status_tiket === 'dibuka_kembali',
                                         'pernah_dibuka_kembali'     => $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->isNotEmpty(),
                                         'pernah_dibuka_kembali_opd' => $tiket->pernah_dibuka_kembali_opd ?? false,
@@ -254,30 +284,38 @@
                                 @endphp
                                 <tr class="hover:bg-gray-50 cursor-pointer transition-colors"
                                     @click="openDetail({{ $tiketJson }})">
-                                    <td class="px-5 py-4">
-                                        <span class="font-mono text-xs font-semibold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded">
+                                    <td class="px-5 py-4 whitespace-nowrap">
+                                        <span class="font-mono text-xs font-semibold text-[#01458E] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                                             #{{ Str::upper(substr($tiket->id, -8)) }}
                                         </span>
                                     </td>
-                                    <td class="px-5 py-4 max-w-xs">
-                                        <p class="font-semibold text-gray-800 truncate">{{ $tiket->subjek_masalah }}</p>
-                                        <p class="text-xs text-gray-400 truncate mt-0.5">{{ Str::limit($tiket->detail_masalah, 50) }}</p>
-                                        @if($tiket->pernah_dibuka_kembali_opd ?? false)
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded mt-1" style="background:#FEE2E2;color:#991B1B;">
-                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                            Dibuka Kembali
-                                        </span>
-                                        @endif
+                                    <td class="px-5 py-4 min-w-[250px] max-w-sm">
+                                        <p class="font-semibold text-gray-800 line-clamp-1">{{ $tiket->subjek_masalah }}</p>
+                                        <p class="text-xs text-gray-400 line-clamp-1 mt-0.5">{{ Str::limit($tiket->detail_masalah, 55) }}</p>
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            @if($tiket->pernah_dibuka_kembali_opd ?? false)
+                                            <span class="inline-flex items-center gap-1 text-xs font-semibold px-1.5 py-0.5 rounded" style="background:#FEE2E2;color:#991B1B;">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                                Dibuka Kembali
+                                            </span>
+                                            @endif
+                                            @if($tiket->is_telat)
+                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-white bg-red-600 px-1.5 py-0.5 rounded">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                Telat {{ $tiket->hari_telat }} Hari
+                                            </span>
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td class="px-5 py-4 text-gray-600 font-medium text-xs">
-                                        {{ Str::limit($tiket->opd?->nama_opd ?? '—', 22) }}
+                                    <td class="px-5 py-4 text-gray-600 font-medium text-xs whitespace-nowrap">
+                                        {{ Str::limit($tiket->opd?->nama_opd ?? '—', 30) }}
                                     </td>
-                                    <td class="px-5 py-4">
-                                        <span class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 text-gray-600 bg-gray-50 whitespace-nowrap">
+                                    <td class="px-5 py-4 whitespace-nowrap">
+                                        <span class="text-[11px] font-medium px-2.5 py-1 rounded-md border border-gray-200 text-gray-600 bg-gray-50 whitespace-nowrap">
                                             {{ Str::limit($kategoriNama, 20) }}
                                         </span>
                                     </td>
-                                    <td class="px-5 py-4">
+                                    <td class="px-5 py-4 whitespace-nowrap">
                                         @if($isUtama)
                                         <span class="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full"
                                               style="background:#EEF3F9;color:#01458E;">
@@ -296,29 +334,13 @@
                                         </span>
                                         @endif
                                     </td>
-                                    {{-- <td class="px-5 py-4">
-                                        @if($tiket->unread_count > 0)
-                                        <span class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-red-500 px-2.5 py-1 rounded-full">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-white/70 animate-pulse"></span>
-                                            {{ $tiket->unread_count }} belum dibaca
-                                        </span>
-                                        @else
-                                        <span class="inline-flex items-center gap-1 text-xs text-gray-400 font-medium">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                                            </svg>
-                                            Terbaca
-                                        </span>
-                                        @endif
-                                    </td> --}}
-                                    <td class="px-5 py-4 text-gray-500 text-xs">
+                                    <td class="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">
                                         <p class="font-medium">{{ $tiket->created_at?->translatedFormat('d M Y') }}</p>
                                         <p class="text-gray-400">{{ $tiket->created_at?->format('H:i') }} WIB</p>
                                     </td>
-                                    <td class="px-5 py-4" @click.stop>
+                                    <td class="px-5 py-4 whitespace-nowrap" @click.stop>
                                         <div class="flex items-center justify-center gap-1.5">
                                             @if($isUtama)
-                                            {{-- Chat — hanya teknisi utama --}}
                                             <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
                                                title="Chat dengan OPD"
                                                class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
@@ -327,7 +349,6 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
                                                 </svg>
                                             </a>
-                                            {{-- Selesai — hanya teknisi utama --}}
                                             <button type="button"
                                                     @click.stop="setTiket({{ $tiketJson }}); showModal = 'konfirmasi'"
                                                     title="Tandai Selesai / Gagal"
@@ -337,7 +358,6 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                                                 </svg>
                                             </button>
-                                            {{-- Kembalikan — hanya teknisi utama, dan hanya jika belum pernah dibuka kembali --}}
                                             @if(!$tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->isNotEmpty())
                                             <button type="button"
                                                     @click.stop="setTiket({{ $tiketJson }}); showModal = 'kembalikan'"
@@ -350,9 +370,7 @@
                                             </button>
                                             @endif
                                             @else
-                                            {{-- Pendamping: lihat chat (hanya lihat) + lihat detail --}}
                                             <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
-                                               @click.stop
                                                title="Lihat Chat (Hanya Lihat)"
                                                class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
                                                style="background:#F3F4F6;color:#6B7280;">
@@ -360,16 +378,6 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
                                                 </svg>
                                             </a>
-                                            <button type="button"
-                                                    @click.stop="openDetail({{ $tiketJson }})"
-                                                    title="Lihat Detail"
-                                                    class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
-                                                    style="background:#F3F4F6;color:#6B7280;">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 016 0z"/>
-                                                </svg>
-                                            </button>
                                             @endif
                                         </div>
                                     </td>
@@ -390,11 +398,10 @@
                                 </tr>
                                 @endforelse
                             </tbody>
-                        </table>
-                        </div>
+                            </table>
+                            </div>
                         </div>
                     </div>
-                </div>
 
             {{-- ── Overlay Drawer ── --}}
             <div x-show="selectedTiket && showDrawer"
@@ -426,7 +433,6 @@
                     <div>
                         <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
                             <p style="font-size:14px;font-weight:700;color:#111827;">Detail Tiket</p>
-                            {{-- Badge peran --}}
                             <template x-if="selectedTiket?.is_utama">
                                 <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#EEF3F9;color:#01458E;">
                                     <svg width="10" height="10" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
@@ -468,9 +474,22 @@
                             <span style="font-size:12px;font-weight:700;color:#01458E;font-family:'Courier New',monospace;" x-text="'#' + selectedTiket?.id"></span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
-                            <span style="font-size:12px;color:#9ca3af;white-space:nowrap;">Peran Saya</span>
-                            <span style="font-size:12px;font-weight:700;" :style="selectedTiket?.is_utama ? 'color:#01458E' : 'color:#6B7280'" x-text="selectedTiket?.peran_label ?? '—'"></span>
+                        <span style="font-size:12px;color:#9ca3af;white-space:nowrap;margin-top:2px;">Peran Saya</span>
+                        <div>
+                            <template x-if="selectedTiket?.is_utama">
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                    Teknisi Utama
+                                </span>
+                            </template>
+                            <template x-if="!selectedTiket?.is_utama">
+                                <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-200 text-gray-700 border border-gray-300">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                                    Pendamping
+                                </span>
+                            </template>
                         </div>
+                    </div>
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
                             <span style="font-size:12px;color:#9ca3af;white-space:nowrap;">Rekomendasi</span>
                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold"
@@ -497,6 +516,36 @@
                             <span style="font-size:12px;font-weight:600;color:#111827;text-align:right;max-width:240px;" x-text="selectedTiket?.lokasi || '—'"></span>
                         </div>
                     </div>
+
+                    {{-- PENAMBAHAN UI: Tim Teknisi yang Bertugas --}}
+                    <template x-if="selectedTiket?.all_teknisi && selectedTiket?.all_teknisi?.length > 0">
+                        <div style="margin-bottom:20px;">
+                            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f3f4f6;">Tim Teknisi yang Bertugas</div>
+                            <div class="space-y-2.5">
+                                <template x-for="(tek, idx) in selectedTiket.all_teknisi" :key="idx">
+                                    <div class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                                        <div class="flex-1">
+                                            <p class="text-xs font-semibold text-gray-900" x-text="tek.nama"></p>
+                                            <div class="flex items-center gap-1.5 mt-1">
+                                                <template x-if="tek.is_utama">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                                                        <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                                        Utama
+                                                    </span>
+                                                </template>
+                                                <template x-if="!tek.is_utama">
+                                                    <span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/></svg>
+                                                        Pendamping
+                                                    </span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
 
                     {{-- Section: SOP Internal --}}
                     <template x-if="selectedTiket?.sop_judul">

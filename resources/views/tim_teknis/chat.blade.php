@@ -207,6 +207,7 @@
                     {{-- Tab state --}}
                     activeTab: 'teknis',
                     canSend: {{ $canSend ? 'true' : 'false' }},
+                    chatIsActive: {{ json_encode($chatIsActive) }},
 
                     {{-- Teknis room --}}
                     messages: {{ json_encode($messages) }},
@@ -354,7 +355,7 @@
 
                         {{-- Banner hanya-lihat untuk pendamping --}}
                         @if(!$canSend)
-                        <div class="mx-4 mt-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5 shrink-0"
+                        <div class="mx-4 mt-3 mb-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5 shrink-0"
                              style="background:#F0F9FF;border:1px solid #BAE6FD;">
                             <svg class="w-4 h-4 shrink-0" style="color:#0284C7;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"/>
@@ -433,55 +434,64 @@
                             <p class="text-[11px] text-gray-400 mt-1" x-text="fileName"></p>
                         </div>
 
-                        {{-- Input Bar (hanya teknisi utama) --}}
-                        <div class="px-4 py-3 border-t border-gray-100 bg-white shrink-0">
-                            <div class="flex items-end gap-2 border border-gray-200 rounded-2xl px-3 py-2 bg-white
-                                        focus-within:border-[#01458E] focus-within:ring-2 focus-within:ring-[#01458E]/10 transition-all duration-150">
-                                <label class="shrink-0 self-end mb-0.5 cursor-pointer p-1.5 rounded-xl text-gray-400
-                                              hover:text-[#01458E] hover:bg-blue-50 transition-colors">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                              d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
-                                    </svg>
-                                    <input type="file" x-ref="fileInput"
-                                           accept="image/jpg,image/jpeg,image/png"
-                                           class="sr-only"
-                                           @change="handleFile($event)">
-                                </label>
-                                <textarea x-model="newMessage"
-                                          @keydown.enter="handleEnter($event)"
-                                          placeholder="Tulis komunikasi atau instruksi perbaikan..."
-                                          rows="1"
-                                          class="flex-1 bg-transparent text-sm text-gray-800 resize-none border-0 outline-none ring-0 shadow-none
-                                                 focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none
-                                                 placeholder-gray-400 max-h-32 py-1.5"
-                                          style="line-height:1.5;"></textarea>
-                                <button @click="send()"
-                                        :disabled="sending || (!newMessage.trim() && !selectedFile)"
-                                        class="shrink-0 self-end mb-0.5 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150"
-                                        :class="(sending || (!newMessage.trim() && !selectedFile))
-                                            ? 'cursor-not-allowed'
-                                            : 'hover:opacity-90 active:scale-95'"
-                                        :style="(!newMessage.trim() && !selectedFile)
-                                            ? 'background:#E5E7EB;'
-                                            : 'background:#01458E;'">
-                                    <svg x-show="!sending" class="w-4 h-4 text-white" fill="none" stroke="currentColor"
-                                         stroke-width="2.5" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                              d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
-                                    </svg>
-                                    <svg x-show="sending" class="w-4 h-4 text-white animate-spin"
-                                         fill="none" viewBox="0 0 24 24" style="display:none;">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                        <path class="opacity-75" fill="currentColor"
-                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                    </svg>
-                                </button>
+                        {{-- Input Bar (hanya teknisi utama dan chat aktif) --}}
+                        <template x-if="!chatIsActive">
+                            <div class="px-4 py-4 border-t border-gray-100 bg-gray-50 shrink-0 text-center">
+                                <p class="text-sm font-semibold text-gray-600 mb-1">Chat Tidak Aktif</p>
+                                <p class="text-xs text-gray-500">Riwayat percakapan tidak dapat diubah. Sesi perbaikan teknis telah berakhir.</p>
                             </div>
-                            <p class="text-[10px] text-gray-400 text-center mt-1.5">
-                                Enter untuk kirim &bull; Shift+Enter untuk baris baru
-                            </p>
-                        </div>
+                        </template>
+
+                        <template x-if="chatIsActive">
+                            <div class="px-4 py-3 border-t border-gray-100 bg-white shrink-0">
+                                <div class="flex items-end gap-2 border border-gray-200 rounded-2xl px-3 py-2 bg-white
+                                            focus-within:border-[#01458E] focus-within:ring-2 focus-within:ring-[#01458E]/10 transition-all duration-150">
+                                    <label class="shrink-0 self-end mb-0.5 cursor-pointer p-1.5 rounded-xl text-gray-400
+                                                  hover:text-[#01458E] hover:bg-blue-50 transition-colors">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+                                        </svg>
+                                        <input type="file" x-ref="fileInput"
+                                               accept="image/jpg,image/jpeg,image/png"
+                                               class="sr-only"
+                                               @change="handleFile($event)">
+                                    </label>
+                                    <textarea x-model="newMessage"
+                                              @keydown.enter="handleEnter($event)"
+                                              placeholder="Tulis komunikasi atau instruksi perbaikan..."
+                                              rows="1"
+                                              class="flex-1 bg-transparent text-sm text-gray-800 resize-none border-0 outline-none ring-0 shadow-none
+                                                     focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none
+                                                     placeholder-gray-400 max-h-32 py-1.5"
+                                              style="line-height:1.5;"></textarea>
+                                    <button @click="send()"
+                                            :disabled="sending || (!newMessage.trim() && !selectedFile)"
+                                            class="shrink-0 self-end mb-0.5 w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-150"
+                                            :class="(sending || (!newMessage.trim() && !selectedFile))
+                                                ? 'cursor-not-allowed'
+                                                : 'hover:opacity-90 active:scale-95'"
+                                            :style="(!newMessage.trim() && !selectedFile)
+                                                ? 'background:#E5E7EB;'
+                                                : 'background:#01458E;'">
+                                        <svg x-show="!sending" class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                             stroke-width="2.5" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                  d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                                        </svg>
+                                        <svg x-show="sending" class="w-4 h-4 text-white animate-spin"
+                                             fill="none" viewBox="0 0 24 24" style="display:none;">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                            <path class="opacity-75" fill="currentColor"
+                                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-gray-400 text-center mt-1.5">
+                                    Enter untuk kirim &bull; Shift+Enter untuk baris baru
+                                </p>
+                            </div>
+                        </template>
                         @endif
 
                     </div>
@@ -495,7 +505,7 @@
                     <div class="flex flex-col flex-1 overflow-hidden">
 
                         {{-- Banner riwayat --}}
-                        <div class="mx-4 mt-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5 shrink-0"
+                        <div class="mx-4 mt-3 mb-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5 shrink-0"
                              style="background:#FFFBEB;border:1px solid #FDE68A;">
                             <svg class="w-4 h-4 shrink-0" style="color:#D97706;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>

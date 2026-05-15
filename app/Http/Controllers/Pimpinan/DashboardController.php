@@ -276,7 +276,7 @@ class DashboardController extends Controller
         })->sortByDesc('ditangani')->values();
 
         // ── 6. Beban kerja Tim Teknis ──────────────────────────────────
-        $workloadTeknis = TimTeknis::with(['user', 'bidang', 'tiketTeknisi'])->get()->map(function ($t) use ($dateFrom, $dateTo) {
+        $workloadTeknis = TimTeknis::with(['user', 'bidang', 'tiketTeknisi.tiket.statusTiket'])->get()->map(function ($t) use ($dateFrom, $dateTo) {
             $filteredTugas = $t->tiketTeknisi->filter(fn($tt) =>
                 \Carbon\Carbon::parse($tt->created_at)->between(
                     \Carbon\Carbon::parse($dateFrom),
@@ -287,6 +287,36 @@ class DashboardController extends Controller
             $selesai   = $filteredTugas->where('status_tugas', 'selesai')->count();
             $aktif     = $filteredTugas->where('status_tugas', 'aktif')->count();
             $rawBidangT = (string) ($t->bidang?->nama_bidang ?? '');
+
+            // Hitung tepat waktu & telat berdasarkan SLA bidang
+            $batasHari = $t->bidang?->batas_hari_pengerjaan;
+            $tepatWaktu = 0;
+            $telat = 0;
+
+            if ($batasHari) {
+                $selesaiTugas = $filteredTugas->where('status_tugas', 'selesai');
+                foreach ($selesaiTugas as $tt) {
+                    $waktuDitugaskan = $tt->waktu_ditugaskan;
+                    if (!$waktuDitugaskan) continue;
+
+                    $statusSelesai = $tt->tiket?->statusTiket
+                        ?->whereIn('status_tiket', ['selesai', 'rusak_berat', 'tiket_ditutup'])
+                        ->sortByDesc('created_at')
+                        ->first();
+
+                    if (!$statusSelesai || !$statusSelesai->created_at) continue;
+
+                    $deadline = \Carbon\Carbon::parse($waktuDitugaskan)->addDays($batasHari);
+                    if (\Carbon\Carbon::parse($statusSelesai->created_at)->gt($deadline)) {
+                        $telat++;
+                    } else {
+                        $tepatWaktu++;
+                    }
+                }
+            } else {
+                $tepatWaktu = $selesai;
+            }
+
             return [
                 'nama'          => $t->nama_lengkap,
                 'bidang'        => $rawBidangT ?: '—',
@@ -294,7 +324,9 @@ class DashboardController extends Controller
                 'total_tugas'   => $total,
                 'tugas_aktif'   => $aktif,
                 'tugas_selesai' => $selesai,
-                'beban'         => $aktif,   // workload = tugas aktif saat ini
+                'tepat_waktu'   => $tepatWaktu,
+                'telat'         => $telat,
+                'beban'         => $aktif,
             ];
         })->sortByDesc('tugas_aktif')->values();
 
@@ -353,8 +385,9 @@ class DashboardController extends Controller
 
         // Tambahkan relasi tiketTeknisi untuk mendapatkan semua teknisi yang ditugaskan
         $tikets = Tiket::with([
-            'opd', 'kategori', 'kb.kategori', 'latestStatus', 'admin',
-            'tiketTeknisi.timTeknis' // Relasi ke semua teknisi via TiketTeknisi
+            'opd', 'kategori', 'kb.kategori', 'latestStatus', 'admin', 'bidang',
+            'tiketTeknisi.timTeknis.bidang', // Relasi ke semua teknisi via TiketTeknisi
+            'statusTiket',
         ])
             ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
             ->orderByDesc('created_at')
@@ -367,7 +400,7 @@ class DashboardController extends Controller
         $writer = new Writer();
         $writer->openToFile($tempPath);
 
-        // Header Row: Tanpa kolom Dieskalasi, dengan kolom Tim Teknis
+        // Header Row
         $writer->addRow(new Row([
             new StringCell('No'),
             new StringCell('ID Tiket'),
@@ -376,9 +409,11 @@ class DashboardController extends Controller
             new StringCell('Waktu Dibuat'),
             new StringCell('Waktu Diselesaikan'),
             new StringCell('Durasi Penyelesaian (Jam)'),
+            new StringCell('Batas SLA (Hari)'),
+            new StringCell('Status Ketepatan'),
             new StringCell('Status Akhir'),
             new StringCell('Ditangani Oleh (Admin)'),
-            new StringCell('Tim Teknis'), // Kolom Teknisi menggantikan Dieskalasi
+            new StringCell('Tim Teknis'),
             new StringCell('Skor Kepuasan (/5)'),
             new StringCell('Asal Instansi (OPD)'),
         ]));
@@ -405,6 +440,34 @@ class DashboardController extends Controller
 
             $kategori = $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—');
 
+            // SLA: Batas hari dari bidang tiket
+            $batasHariBidang = $tiket->bidang?->batas_hari_pengerjaan;
+            $batasSlaLabel = $batasHariBidang ? (string)$batasHariBidang : '—';
+
+            // Hitung status ketepatan per tiket (berdasarkan teknisi utama)
+            $statusKetepatan = '—';
+            if ($batasHariBidang && in_array($statusAkhir, $statusSelesai)) {
+                $teknisiUtama = $tiket->tiketTeknisi->where('peran_teknisi', 'teknisi_utama')->first();
+                if ($teknisiUtama && $teknisiUtama->waktu_ditugaskan) {
+                    $deadline = \Carbon\Carbon::parse($teknisiUtama->waktu_ditugaskan)->addDays($batasHariBidang);
+                    $statusSelesaiRecord = $tiket->statusTiket
+                        ->whereIn('status_tiket', ['selesai', 'rusak_berat', 'tiket_ditutup'])
+                        ->sortByDesc('created_at')
+                        ->first();
+                    if ($statusSelesaiRecord && $statusSelesaiRecord->created_at) {
+                        $waktuPenyelesaian = \Carbon\Carbon::parse($statusSelesaiRecord->created_at);
+                        if ($waktuPenyelesaian->gt($deadline)) {
+                            $selisihHari = (int) $deadline->diffInDays($waktuPenyelesaian);
+                            $statusKetepatan = "Telat ({$selisihHari} hari)";
+                        } else {
+                            $statusKetepatan = 'Tepat Waktu';
+                        }
+                    }
+                }
+            } elseif (!$batasHariBidang && in_array($statusAkhir, $statusSelesai)) {
+                $statusKetepatan = 'Tidak Ada Batas';
+            }
+
             // Cek status eskalasi
             $isEskalasiBool = ($tiket->rekomendasi_penanganan === 'eskalasi' || $statusAkhir === 'perbaikan_teknis' || (in_array($statusAkhir, ['selesai', 'rusak_berat']) && $tiket->rekomendasi_penanganan === 'eskalasi'));
 
@@ -429,9 +492,11 @@ class DashboardController extends Controller
                     new StringCell($waktuMasuk ? $waktuMasuk->format('d/m/Y H:i') : '—'),
                     new StringCell($waktuSelesai ? $waktuSelesai->format('d/m/Y H:i') : '—'),
                     new StringCell($durasiJam),
+                    new StringCell($batasSlaLabel),
+                    new StringCell($statusKetepatan),
                     new StringCell($labelStatus),
                     new StringCell($tiket->admin?->nama_lengkap ?? '—'),
-                    new StringCell('—'), // Tidak ada teknisi
+                    new StringCell('—'),
                     new StringCell((string)($tiket->penilaian ?? 'Belum Dinilai')),
                     new StringCell($tiket->opd?->nama_opd ?? '—'),
                 ]));
@@ -447,9 +512,11 @@ class DashboardController extends Controller
                         new StringCell($waktuMasuk ? $waktuMasuk->format('d/m/Y H:i') : '—'),
                         new StringCell($waktuSelesai ? $waktuSelesai->format('d/m/Y H:i') : '—'),
                         new StringCell($durasiJam),
+                        new StringCell($batasSlaLabel),
+                        new StringCell($statusKetepatan),
                         new StringCell($labelStatus),
                         new StringCell($tiket->admin?->nama_lengkap ?? '—'),
-                        new StringCell($teknisi), // Teknisi untuk baris ini
+                        new StringCell($teknisi),
                         new StringCell((string)($tiket->penilaian ?? 'Belum Dinilai')),
                         new StringCell($tiket->opd?->nama_opd ?? '—'),
                     ]));

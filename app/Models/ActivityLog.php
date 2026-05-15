@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 /**
- * @property int $id
+ * @property string $id
  * @property string|null $user_id
  * @property string $role_pelaku
  * @property string $jenis_aktivitas
@@ -21,9 +22,12 @@ use Illuminate\Database\Eloquent\Model;
 class ActivityLog extends Model
 {
     protected $table = 'activity_log';
-    public $timestamps = false;
+    public $incrementing = false;
+    protected $keyType = 'string';
+    public $timestamps = true;
 
     protected $fillable = [
+        'id',
         'user_id',
         'role_pelaku',
         'jenis_aktivitas',
@@ -36,6 +40,17 @@ class ActivityLog extends Model
         'data_before',
         'data_after',
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (! $model->id) {
+                $model->id = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $casts = [
         'waktu_eksekusi' => 'datetime',

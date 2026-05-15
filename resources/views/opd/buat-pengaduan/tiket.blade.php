@@ -164,6 +164,65 @@
             <form method="POST" action="{{ route('opd.diagnosis.tiket.store') }}" enctype="multipart/form-data"
                 x-data="{
                     photos: [],
+                    isCameraOpen: false,
+                    mediaStream: null,
+
+                    // Fungsi untuk inisiasi webcam
+                    async openCamera() {
+                        if (this.photos.length >= 5) {
+                            alert('Maksimal 5 foto yang dapat diunggah.');
+                            return;
+                        }
+
+                        try {
+                            this.isCameraOpen = true;
+                            this.mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                            this.$refs.videoElement.srcObject = this.mediaStream;
+                        } catch (error) {
+                            alert('Gagal mengakses kamera. Pastikan Anda memberikan izin akses.');
+                            this.closeCamera();
+                        }
+                    },
+
+                    // Fungsi untuk mengambil jepretan dari webcam
+                    takeSnapshot() {
+                        if (this.photos.length >= 5) {
+                            alert('Batas maksimal 5 foto tercapai!');
+                            this.closeCamera();
+                            return;
+                        }
+
+                        const video = this.$refs.videoElement;
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+
+                        const context = canvas.getContext('2d');
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        // Ubah gambar di canvas menjadi file gambar
+                        canvas.toBlob((blob) => {
+                            const fileName = 'kamera-' + Date.now() + '.jpg';
+                            const file = new File([blob], fileName, { type: 'image/jpeg' });
+
+                            // Masukkan ke logika upload Anda yang sudah ada
+                            this.addFiles([file]);
+
+                            // Tutup kamera jika sudah mencapai 5 foto
+                            if(this.photos.length >= 5) {
+                                this.closeCamera();
+                            }
+                        }, 'image/jpeg');
+                    },
+
+                    // Fungsi untuk mematikan webcam
+                    closeCamera() {
+                        this.isCameraOpen = false;
+                        if (this.mediaStream) {
+                            this.mediaStream.getTracks().forEach(track => track.stop());
+                            this.mediaStream = null;
+                        }
+                    },
                     addFiles(files) {
                         for (const file of files) {
                             if (this.photos.length >= 5) { alert('Maksimal 5 foto yang dapat diunggah.'); break; }
@@ -266,17 +325,18 @@
                                        @change="addFiles($event.target.files); $event.target.value = ''">
                             </label>
 
-                            {{-- Ambil foto dengan kamera --}}
-                            <label :class="photos.length >= 5 ? 'opacity-40 pointer-events-none' : 'hover:border-[#01458E] cursor-pointer'"
-                                   class="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl transition-colors w-full sm:w-auto">
+                            {{-- Ambil foto dengan kamera via WebRTC --}}
+                            <button type="button"
+                                    @click="openCamera()"
+                                    :class="photos.length >= 5 ? 'opacity-40 pointer-events-none' : 'hover:border-[#01458E] cursor-pointer'"
+                                    class="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl transition-colors w-full sm:w-auto">
                                 <svg class="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <!-- SVG Kamera -->
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
                                 </svg>
                                 <span class="text-sm font-semibold text-gray-700">Ambil Foto</span>
-                                <input type="file" accept="image/jpeg,image/png,image/jpg" capture="environment" class="sr-only"
-                                       @change="addFiles($event.target.files); $event.target.value = ''">
-                            </label>
+                            </button>
                         </div>
 
                         {{-- Penghitung foto --}}
@@ -354,7 +414,40 @@
                         Kirim Tiket
                     </button>
                 </div>
+                {{-- Modal WebCam (Akan muncul jika isCameraOpen = true) --}}
+                <div x-show="isCameraOpen"
+                    style="display: none;"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <div class="bg-white rounded-2xl p-4 w-full max-w-lg shadow-2xl flex flex-col items-center">
+                        <div class="w-full flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-gray-800">Ambil Foto</h3>
+                            <button type="button" @click="closeCamera()" class="text-gray-400 hover:text-red-500">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
 
+                        {{-- Area Video Webcam --}}
+                        <div class="w-full bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center relative">
+                            <video x-ref="videoElement" autoplay playsinline class="w-full h-full object-cover"></video>
+                        </div>
+
+                        {{-- Tombol Jepret --}}
+                        <div class="mt-6 flex gap-3 w-full">
+                            <button type="button" @click="closeCamera()" class="flex-1 py-2.5 rounded-xl border border-gray-300 font-semibold text-gray-700 hover:bg-gray-50">
+                                Batal
+                            </button>
+                            <button type="button" @click="takeSnapshot()" class="flex-1 py-2.5 rounded-xl bg-[#01458E] text-white font-semibold shadow-md hover:bg-blue-800">
+                                Jepret Foto!
+                            </button>
+                        </div>
+
+                        <p class="text-xs text-gray-500 mt-3 text-center">
+                            Foto yang diambil otomatis masuk ke antrean. Klik "Jepret Foto!" lagi untuk foto tambahan (Maks 5).
+                        </p>
+                    </div>
+                </div>
             </form>
         </div>
 

@@ -49,6 +49,42 @@ class DashboardController extends Controller
                     ->count(),
             ];
 
+            // ── Hitung tepat waktu & telat berdasarkan SLA bidang ──
+            $batasHari = $teknis->bidang?->batas_hari_pengerjaan;
+            $stats['tepat_waktu'] = 0;
+            $stats['telat'] = 0;
+
+            if ($batasHari) {
+                $selesaiTugas = TiketTeknisi::with(['tiket.statusTiket'])
+                    ->where('teknis_id', $teknis->id)
+                    ->where('status_tugas', 'selesai')
+                    ->whereHas('tiket', $notDibukaKembali)
+                    ->get();
+
+                foreach ($selesaiTugas as $tt) {
+                    $waktuDitugaskan = $tt->waktu_ditugaskan;
+                    if (!$waktuDitugaskan) continue;
+
+                    // Cari status selesai terakhir
+                    $statusSelesai = $tt->tiket->statusTiket
+                        ->whereIn('status_tiket', ['selesai', 'rusak_berat', 'tiket_ditutup'])
+                        ->sortByDesc('created_at')
+                        ->first();
+
+                    if (!$statusSelesai || !$statusSelesai->created_at) continue;
+
+                    $deadline = \Carbon\Carbon::parse($waktuDitugaskan)->addDays($batasHari);
+                    if (\Carbon\Carbon::parse($statusSelesai->created_at)->gt($deadline)) {
+                        $stats['telat']++;
+                    } else {
+                        $stats['tepat_waktu']++;
+                    }
+                }
+            } else {
+                // Tidak ada batas → semua dianggap tepat waktu
+                $stats['tepat_waktu'] = $stats['total_selesai'];
+            }
+
             // 5 tugas aktif terbaru
             $tiketAktif = TiketTeknisi::with(['tiket.opd', 'tiket.kategori', 'tiket.latestStatus'])
                 ->where('teknis_id', $teknis->id)

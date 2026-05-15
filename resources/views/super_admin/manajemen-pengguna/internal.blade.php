@@ -33,7 +33,6 @@
             'nama_lengkap'   => old('nama_lengkap', ''),
             'email'          => old('email', ''),
             'bidang_id'      => old('bidang_id', ''),
-            'status_teknisi' => old('status_teknisi', ''),
         ];
 
         // Admin Helpdesk modal state
@@ -78,7 +77,6 @@
                     'email'          => $tt->user?->email ?? '',
                     'bidang_id'      => $tt->bidang_id ?? '',
                     'bidang_label'   => $tt->bidang?->nama_bidang ?? '',
-                    'status_teknisi' => $tt->status_teknisi ?? '',
                     'last_login'     => $tt->user_id ? ActivityLogController::getLastLoginFormatted($tt->user_id) : null,
                 ])->values();
 
@@ -203,7 +201,7 @@
         <header class="bg-white border-b border-gray-100 px-4 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-30">
 
             {{-- Tabs OPD / Internal --}}
-            <div class="flex items-center gap-0 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0" style="scrollbar-width:none;">
+            <div class="flex items-center gap-0 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 pl-10 sm:pl-0" style="scrollbar-width:none;">
                 <a href="{{ route('super_admin.pengguna.opd') }}"
                    class="px-4 sm:px-6 py-2 sm:py-4 text-sm font-medium border-b-2 border-transparent text-gray-400 hover:text-gray-600 transition-colors whitespace-nowrap">
                     Data OPD
@@ -328,12 +326,6 @@
                         <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors">
                             <div class="flex items-start justify-between gap-2 mb-0.5">
                                 <p class="text-sm font-semibold text-gray-900" x-text="row.nama_lengkap || '-'"></p>
-                                <span x-show="row.status_teknisi === 'online'" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-600 shrink-0">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span> Online
-                                </span>
-                                <span x-show="row.status_teknisi === 'offline'" class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 shrink-0">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span> Offline
-                                </span>
                             </div>
                             <p class="text-xs text-gray-500 mb-1" x-text="row.email || '-'"></p>
                             <p class="text-xs text-gray-400 mb-2"><span x-text="row.bidang_label || '-'"></span></p>
@@ -358,14 +350,13 @@
 
                 {{-- ── TABEL TIM TEKNIS ── --}}
                 <div x-show="tab === 'tim_teknis'" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
-                    <table class="w-full min-w-[900px]">
+                    <table class="w-full min-w-[800px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
                                 <th class="px-4 sm:px-7 py-3.5 text-left text-xs font-bold text-gray-700 w-14">No</th>
                                 <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-700">Nama Lengkap</th>
                                 <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-700">Email</th>
                                 <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-700">Bidang</th>
-                                <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-700">Status</th>
                                 <th class="px-4 py-3.5 text-left text-xs font-bold text-gray-700">Terakhir Login</th>
                                 <th class="px-4 sm:px-7 py-3.5 text-center text-xs font-bold text-gray-700">Aksi</th>
                             </tr>
@@ -377,15 +368,6 @@
                                     <td class="px-4 py-4 text-sm font-medium text-gray-900" x-text="row.nama_lengkap || '-'"></td>
                                     <td class="px-4 py-4 text-sm text-gray-600" x-text="row.email || '-'"></td>
                                     <td class="px-4 py-4 text-sm text-gray-600" x-text="row.bidang_label || '-'"></td>
-                                    <td class="px-4 py-4">
-                                        <span x-show="row.status_teknisi === 'online'" class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span> Online
-                                        </span>
-                                        <span x-show="row.status_teknisi === 'offline'" class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-50 text-red-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span> Offline
-                                        </span>
-                                        <span x-show="!row.status_teknisi" class="text-gray-300 text-sm">—</span>
-                                    </td>
                                     <td class="px-4 py-4 text-sm text-gray-500">
                                         <span x-show="row.last_login" x-text="row.last_login"></span>
                                         <span x-show="!row.last_login" class="text-gray-300">—</span>
@@ -403,11 +385,11 @@
                                 </tr>
                             </template>
                             <tr x-show="filteredTT.length === 0">
-                                <td colspan="7" class="px-4 sm:px-7 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</td>
+                                <td colspan="6" class="px-4 sm:px-7 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</td>
                             </tr>
                             <template x-if="filteredTT.length > 0 && paginatedTT.length < 10">
                                 <template x-for="i in (10 - paginatedTT.length)" :key="'skt-' + i">
-                                    <tr class="border-b border-gray-50"><td colspan="7" class="px-4 sm:px-7 py-5"><div class="h-4 rounded-full bg-[#EEF3F9]"></div></td></tr>
+                                    <tr class="border-b border-gray-50"><td colspan="6" class="px-4 sm:px-7 py-5"><div class="h-4 rounded-full bg-[#EEF3F9]"></div></td></tr>
                                 </template>
                             </template>
                         </tbody>
@@ -655,13 +637,6 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div>
-                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">Status Teknisi</label>
-                                <select name="status_teknisi" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
-                                    <option value="online"  {{ old('status_teknisi', 'online') === 'online'  ? 'selected' : '' }}>Online</option>
-                                    <option value="offline" {{ old('status_teknisi', 'online') === 'offline' ? 'selected' : '' }}>Offline</option>
-                                </select>
-                            </div>
                         </div>
                     </form>
                 </div>
@@ -730,14 +705,6 @@
                                     @foreach($bidangs as $b)
                                     <option value="{{ $b->id }}">{{ $b->nama_bidang }}</option>
                                     @endforeach
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">Status Teknisi</label>
-                                <select name="status_teknisi" x-model="editTT.status_teknisi" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
-                                    <option value="">— Pilih Status —</option>
-                                    <option value="online">Online</option>
-                                    <option value="offline">Offline</option>
                                 </select>
                             </div>
                         </div>
@@ -911,7 +878,7 @@
                                 <input type="text" name="nama_lengkap" x-model="editAH.nama_lengkap" placeholder="Nama lengkap admin helpdesk..." class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] placeholder-gray-300 transition-colors">
                             </div>
                             <div>
-                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">Bidang</label>
+                                <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">Bidang <span class="text-red-400">*</span></label>
                                 <select name="bidang_id" x-model="editAH.bidang_id" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] text-gray-600 bg-white transition-colors">
                                     <option value="">— Pilih Bidang —</option>
                                     @foreach($bidangs as $b)

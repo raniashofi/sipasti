@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TiketTeknisi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -30,10 +29,7 @@ class UserProfileController extends Controller
             case 'tim_teknis':
                 $profil = \App\Models\TimTeknis::with('bidang')
                     ->where('user_id', $user->id)->first();
-                $tiketAktifCount = $profil
-                    ? TiketTeknisi::where('teknis_id', $profil->id)->where('status_tugas', 'aktif')->count()
-                    : 0;
-                return view('tim_teknis.profil', compact('user', 'profil', 'tiketAktifCount'));
+                return view('tim_teknis.profil', compact('user', 'profil'));
 
             case 'pimpinan':
                 $profil = \App\Models\Pimpinan::where('user_id', $user->id)->first();
@@ -42,36 +38,6 @@ class UserProfileController extends Controller
             default:
                 abort(403);
         }
-    }
-
-    /**
-     * Ubah status ketersediaan tim teknis (online / offline).
-     */
-    public function updateStatus(Request $request)
-    {
-        $request->validate([
-            'status_teknisi' => ['required', 'in:online,offline'],
-        ]);
-
-        $user   = $request->user();
-        $profil = \App\Models\TimTeknis::where('user_id', $user->id)->firstOrFail();
-
-        if ($request->status_teknisi === 'offline') {
-            $tiketAktif = TiketTeknisi::where('teknis_id', $profil->id)
-                ->where('status_tugas', 'aktif')
-                ->count();
-
-            if ($tiketAktif > 0) {
-                return back()->withErrors([
-                    'status_teknisi' => "Anda masih memiliki {$tiketAktif} tiket aktif. Selesaikan atau kembalikan tiket terlebih dahulu sebelum mengubah status ke Offline.",
-                ]);
-            }
-        }
-
-        $profil->update(['status_teknisi' => $request->status_teknisi]);
-
-        $label = $request->status_teknisi === 'online' ? 'Online' : 'Offline';
-        return back()->with('success', "Status berhasil diubah menjadi {$label}.");
     }
 
     /**

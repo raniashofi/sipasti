@@ -156,7 +156,7 @@
     </div>
     @endif
 
-    {{-- ── FAQ ── --}}
+    <!-- {{-- ── FAQ ── --}}
     <div class="mb-8" x-data="{ open: null }">
         <h2 class="text-base font-bold text-gray-800 mb-4">Pertanyaan Umum (FAQ)</h2>
         <div class="space-y-2">
@@ -192,7 +192,7 @@
             </div>
             @endforeach
         </div>
-    </div>
+    </div> -->
 
     {{-- ── CTA Buat Pengaduan ── --}}
     <div class="rounded-2xl px-8 py-7 flex flex-col sm:flex-row items-center justify-between gap-4"

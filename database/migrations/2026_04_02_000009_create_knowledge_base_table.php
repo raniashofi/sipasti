@@ -9,12 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knowledge_base', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('kategori_artikel_id')->nullable();
-            $table->string('bidang_id')->nullable();
+            $table->uuid('id')->primary();
+            $table->uuid('kategori_artikel_id')->nullable();
+            $table->uuid('bidang_id')->nullable();
             $table->string('nama_artikel_sop');
             $table->text('deskripsi_singkat')->nullable();
-            $table->text('isi_konten')->nullable();
+            $table->longText('isi_konten')->nullable()->comment('LONGTEXT untuk support base64-encoded images');
             $table->string('header_image')->nullable();
             $table->string('lampiran_file')->nullable();
             $table->enum('status_publikasi', ['draft', 'published'])->default('draft');

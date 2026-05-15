@@ -65,7 +65,12 @@ class PengaduanSayaController extends Controller
                       ])
                       ->findOrFail($id);
 
-        return view('opd.pengaduan-saya.detail', compact('tiket'));
+        // ✅ Check if ticket has ever been reopened (dibuka_kembali in history)
+        $sudahPernahDibukakembali = $tiket->statusTiket
+            ->where('status_tiket', 'dibuka_kembali')
+            ->isNotEmpty();
+
+        return view('opd.pengaduan-saya.detail', compact('tiket', 'sudahPernahDibukakembali'));
     }
 
     public function chat(string $id)

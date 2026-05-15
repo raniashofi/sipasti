@@ -14,10 +14,10 @@ Route::prefix('admin-helpdesk')->name('admin_helpdesk.')->middleware(['auth', 'r
     // Manajemen Tiket — Menunggu Verifikasi
     Route::prefix('tiket')->name('tiket.')->group(function () {
         Route::get('/menunggu-verif',           [ManajemenTiketController::class, 'menungguVerif'])->name('menunggu');
-        Route::get('/menunggu-verif/export-csv',[ManajemenTiketController::class, 'exportCsv'])->name('menunggu.export');
         Route::get('/panduan-remote',           [ManajemenTiketController::class, 'panduan'])->name('panduan');
         Route::get('/distribusi',               [ManajemenTiketController::class, 'distribusi'])->name('distribusi');
         Route::get('/riwayat',                  [ManajemenTiketController::class, 'riwayat'])->name('riwayat');
+        Route::get('/riwayat/export-csv',       [ManajemenTiketController::class, 'exportCsv'])->name('riwayat.export');
         Route::post('/{id}/terima',             [ManajemenTiketController::class, 'terimaProses'])->name('terima');
         Route::post('/{id}/revisi',             [ManajemenTiketController::class, 'revisi'])->name('revisi');
         Route::post('/{id}/transfer',           [ManajemenTiketController::class, 'transfer'])->name('transfer');

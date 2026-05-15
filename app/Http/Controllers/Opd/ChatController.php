@@ -62,7 +62,22 @@ class ChatController extends Controller
 
         $bukaKembaliStatus = $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->last();
 
-        return view('opd.pengaduan-saya.chat', compact('tiket', 'room', 'messages', 'type', 'bukaKembaliStatus'));
+        // Tentukan apakah chat masih aktif atau sudah menjadi riwayat (history)
+        $allStatuses    = $tiket->statusTiket;
+        $latest         = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus  = $latest?->status_tiket ?? 'verifikasi_admin';
+        $statusList     = $allStatuses->pluck('status_tiket')->toArray();
+
+        // Admin chat aktif hanya jika status saat ini adalah 'panduan_remote'
+        $adminChatActive = $currentStatus === 'panduan_remote';
+
+        // Teknis chat aktif jika status adalah 'perbaikan_teknis' atau 'dibuka_kembali'
+        $teknisChatActive = $currentStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
+
+        // Tentukan apakah chat saat ini aktif atau tidak berdasarkan tipe
+        $chatIsActive = $type === 'admin' ? $adminChatActive : $teknisChatActive;
+
+        return view('opd.pengaduan-saya.chat', compact('tiket', 'room', 'messages', 'type', 'bukaKembaliStatus', 'chatIsActive'));
     }
 
     /**
@@ -72,11 +87,33 @@ class ChatController extends Controller
     {
         $user  = Auth::user();
         $opd   = $user->opd;
-        $tiket = Tiket::where('opd_id', $opd->id)->findOrFail($tiketId);
+        $tiket = Tiket::with('statusTiket')->where('opd_id', $opd->id)->findOrFail($tiketId);
 
         $type = in_array($request->input('type'), ['admin', 'teknis'])
             ? $request->input('type')
             : 'admin';
+
+        // Periksa apakah chat masih aktif
+        $allStatuses    = $tiket->statusTiket;
+        $latest         = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus  = $latest?->status_tiket ?? 'verifikasi_admin';
+
+        // Admin chat aktif hanya jika status saat ini adalah 'panduan_remote'
+        $adminChatActive = $currentStatus === 'panduan_remote';
+
+        // Teknis chat aktif jika status adalah 'perbaikan_teknis' atau 'dibuka_kembali'
+        $teknisChatActive = $currentStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
+
+        // Tentukan apakah chat saat ini aktif atau tidak berdasarkan tipe
+        $chatIsActive = $type === 'admin' ? $adminChatActive : $teknisChatActive;
+
+        // Jika chat sudah menjadi riwayat (tidak aktif), tolak permintaan
+        if (!$chatIsActive) {
+            return response()->json([
+                'error' => 'Chat ini sudah menjadi riwayat dan tidak dapat menerima pesan baru.',
+                'message' => 'Chat history - no new messages allowed'
+            ], 403);
+        }
 
         $room = ChatRoom::where('tiket_id', $tiket->id)
                         ->where('nama_roomchat', $type)

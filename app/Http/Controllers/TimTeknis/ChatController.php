@@ -14,6 +14,7 @@ use App\Models\TimTeknis;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -65,11 +66,15 @@ class ChatController extends Controller
         );
 
         // Tambahkan teknisi (utama & pendamping) ke room agar bisa subscribe channel
-        $roomUser = ChatRoomUser::firstOrCreate(
+        ChatRoomUser::firstOrCreate(
             ['room_id' => $room->id, 'user_id' => Auth::id()],
-            ['role_di_room' => 'tim_teknis']
+            ['role_di_room' => 'tim_teknis', 'last_read_at' => now()]
         );
-        $roomUser->update(['last_read_at' => now()]);
+        // Update last_read_at setiap kali mengakses
+        DB::table('chat_room_users')
+            ->where('room_id', $room->id)
+            ->where('user_id', Auth::id())
+            ->update(['last_read_at' => now()]);
 
         // Tambahkan OPD ke room jika belum
         $opdUserId = $tiket->opd?->user_id;
@@ -88,11 +93,16 @@ class ChatController extends Controller
 
         $bukaKembaliStatus = $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->last();
 
+        // Tentukan apakah chat masih aktif (status harus 'perbaikan_teknis' atau 'dibuka_kembali')
+        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
+        $chatIsActive = $currentStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
+
         return view('tim_teknis.chat', compact(
             'tiket', 'room', 'messages',
             'adminRoom', 'adminMessages',
             'teknis', 'bukaKembaliStatus',
-            'myPeran', 'canSend'
+            'myPeran', 'canSend', 'chatIsActive'
         ));
     }
 
@@ -124,11 +134,24 @@ class ChatController extends Controller
     {
         $teknis = $this->teknisProfile();
 
-        $tiket = Tiket::whereHas('tiketTeknisi', fn($q) => $q
+        $tiket = Tiket::with('statusTiket')->whereHas('tiketTeknisi', fn($q) => $q
             ->where('teknis_id', $teknis?->id)
             ->where('status_tugas', 'aktif')
             ->where('peran_teknisi', 'teknisi_utama'))
             ->findOrFail($tiketId);
+
+        // Periksa apakah chat masih aktif (status harus 'perbaikan_teknis' atau 'dibuka_kembali')
+        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
+        $chatIsActive = $currentStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
+
+        // Jika chat sudah menjadi riwayat (tidak aktif), tolak permintaan
+        if (!$chatIsActive) {
+            return response()->json([
+                'error' => 'Chat ini sudah menjadi riwayat dan tidak dapat menerima pesan baru.',
+                'message' => 'Chat history - no new messages allowed'
+            ], 403);
+        }
 
         $room = ChatRoom::where('tiket_id', $tiket->id)
             ->where('nama_roomchat', 'teknis')

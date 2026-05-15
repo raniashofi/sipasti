@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('lampiran_artikel', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->string('knowledge_base_id');
+            $table->uuid('id')->primary();
+            $table->uuid('knowledge_base_id');
             $table->string('nama_file');
             $table->string('path_file');
             $table->string('tipe_file');

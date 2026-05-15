@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('activity_log', function (Blueprint $table) {
-            $table->id();
-            $table->string('user_id')->nullable();
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->nullable();
             $table->enum('role_pelaku', ['opd', 'pimpinan', 'super_admin', 'admin_helpdesk', 'tim_teknis']);
             $table->enum('jenis_aktivitas', ['login', 'logout', 'create', 'update', 'delete', 'escalate', 'approve', 'reject']);
             $table->string('detail_tindakan')->nullable();
@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('id_record')->nullable();
             $table->json('data_before')->nullable();
             $table->json('data_after')->nullable();
+            $table->timestamps();
 
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });

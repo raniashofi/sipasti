@@ -42,7 +42,6 @@ class ManajemenPenggunaController extends Controller
             'parent_id'      => 'nullable|integer',
             'is_bagian'      => 'nullable|in:Y,N',
             'bidang_id'      => 'nullable|exists:bidang,id',
-            'status_teknisi' => 'nullable|in:online,offline',
         ], [
             'kode_opd.required' => 'Kode OPD wajib diisi.',
             'kode_opd.unique'   => 'Kode OPD sudah digunakan.',
@@ -76,7 +75,6 @@ class ManajemenPenggunaController extends Controller
             'parent_id'      => $request->parent_id ?: null,
             'is_bagian'      => $request->is_bagian ?: null,
             'bidang_id'      => $request->bidang_id ?: null,
-            'status_teknisi' => $request->status_teknisi ?: null,
         ]);
 
         // Log aktivitas
@@ -107,7 +105,6 @@ class ManajemenPenggunaController extends Controller
             'parent_id'      => 'nullable|integer',
             'is_bagian'      => 'nullable|in:Y,N',
             'bidang_id'      => 'nullable|exists:bidang,id',
-            'status_teknisi' => 'nullable|in:online,offline',
         ];
 
         if ($request->filled('password')) {
@@ -136,7 +133,6 @@ class ManajemenPenggunaController extends Controller
             'parent_id'      => $request->parent_id ?: null,
             'is_bagian'      => $request->is_bagian ?: null,
             'bidang_id'      => $request->bidang_id ?: null,
-            'status_teknisi' => $request->status_teknisi ?: null,
         ]);
 
         if ($opd->user) {
@@ -220,7 +216,6 @@ class ManajemenPenggunaController extends Controller
             'email'          => 'required|email|unique:users,email',
             'password'       => 'required|string|min:6',
             'bidang_id'      => 'required|exists:bidang,id',
-            'status_teknisi' => 'nullable|in:online,offline',
         ], [
             'nama_lengkap.required' => 'Nama lengkap wajib diisi.',
             'email.required'        => 'Email wajib diisi.',
@@ -251,7 +246,6 @@ class ManajemenPenggunaController extends Controller
             'user_id'        => $userId,
             'nama_lengkap'   => $request->nama_lengkap,
             'bidang_id'      => $request->bidang_id ?: null,
-            'status_teknisi' => $request->status_teknisi ?: 'online',
         ]);
 
         // Log aktivitas
@@ -278,7 +272,6 @@ class ManajemenPenggunaController extends Controller
             'nama_lengkap'   => 'required|string|max:255',
             'email'          => 'required|email|unique:users,email,' . $tt->user_id,
             'bidang_id'      => 'nullable|exists:bidang,id',
-            'status_teknisi' => 'nullable|in:online,offline',
         ];
         if ($request->filled('password')) {
             $rules['password'] = 'string|min:6';
@@ -320,7 +313,6 @@ class ManajemenPenggunaController extends Controller
         $tt->update([
             'nama_lengkap'   => $request->nama_lengkap,
             'bidang_id'      => $newBidangId,
-            'status_teknisi' => $request->status_teknisi ?: null,
         ]);
 
         if ($tt->user) {

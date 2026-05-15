@@ -9,9 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('knowledge_base_tag', function (Blueprint $table) {
-            $table->string('knowledge_base_id');
-            $table->string('tag_id');
-            $table->timestamps();
+            $table->uuid('knowledge_base_id');
+            $table->uuid('tag_id');
 
             $table->primary(['knowledge_base_id', 'tag_id']);
 

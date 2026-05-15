@@ -81,17 +81,17 @@
         </nav>
 
         {{-- Notification Bell --}}
-        <div class="shrink-0 px-3 pb-2">
+        {{-- <div class="shrink-0 px-3 pb-2">
             <x-notification-bell layout="sidebar" />
-        </div>
+        </div> --}}
 
         {{-- Peran badge --}}
-        <div class="shrink-0 px-5 py-2">
+        {{-- <div class="shrink-0 px-5 py-2">
             <div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#EEF3F9]">
                 <span class="w-2 h-2 rounded-full bg-[#01458E]"></span>
                 <span class="text-xs font-semibold text-[#01458E]">Pimpinan</span>
             </div>
-        </div>
+        </div> --}}
 
         {{-- User + Logout --}}
         <div class="shrink-0 px-5 py-5 border-t border-gray-100">

@@ -29,7 +29,7 @@ class ChatController extends Controller
     {
         $admin = $this->adminProfile();
 
-        $tiket = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus'])
+        $tiket = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus', 'statusTiket'])
             ->where('admin_id', $admin?->id)
             ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'panduan_remote'))
             ->findOrFail($tiketId);
@@ -73,7 +73,12 @@ class ChatController extends Controller
             ])
             ->values();
 
-        return view('admin_helpdesk.chat', compact('tiket', 'room', 'messages', 'admin'));
+        // Tentukan apakah chat masih aktif (status masih 'panduan_remote')
+        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
+        $chatIsActive = $currentStatus === 'panduan_remote';
+
+        return view('admin_helpdesk.chat', compact('tiket', 'room', 'messages', 'admin', 'chatIsActive'));
     }
 
     /**
@@ -83,7 +88,20 @@ class ChatController extends Controller
     {
         $admin = $this->adminProfile();
 
-        $tiket = Tiket::where('admin_id', $admin?->id)->findOrFail($tiketId);
+        $tiket = Tiket::with('statusTiket')->where('admin_id', $admin?->id)->findOrFail($tiketId);
+
+        // Periksa apakah chat masih aktif (status harus 'panduan_remote')
+        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
+        $chatIsActive = $currentStatus === 'panduan_remote';
+
+        // Jika chat sudah menjadi riwayat (tidak aktif), tolak permintaan
+        if (!$chatIsActive) {
+            return response()->json([
+                'error' => 'Chat ini sudah menjadi riwayat dan tidak dapat menerima pesan baru.',
+                'message' => 'Chat history - no new messages allowed'
+            ], 403);
+        }
 
         $room = ChatRoom::where('tiket_id', $tiket->id)
                         ->where('nama_roomchat', 'admin')
