@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Buat Tiket — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -166,6 +168,18 @@
                     photos: [],
                     isCameraOpen: false,
                     mediaStream: null,
+                    showToast: false,
+                    toastMessage: '',
+                    toastType: 'error',
+
+                    showErrorToast(message) {
+                        this.toastMessage = message;
+                        this.toastType = 'error';
+                        this.showToast = true;
+                        setTimeout(() => {
+                            this.showToast = false;
+                        }, 5000);
+                    },
 
                     // Fungsi untuk inisiasi webcam
                     async openCamera() {
@@ -225,8 +239,8 @@
                     },
                     addFiles(files) {
                         for (const file of files) {
-                            if (this.photos.length >= 5) { alert('Maksimal 5 foto yang dapat diunggah.'); break; }
-                            if (file.size > 5 * 1024 * 1024) { alert('File \'' + file.name + '\' melebihi batas 5 MB, dilewati.'); continue; }
+                            if (this.photos.length >= 5) { this.showErrorToast('Maksimal 5 foto yang dapat diunggah.'); break; }
+                            if (file.size > 5 * 1024 * 1024) { this.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.'); continue; }
                             this.photos.push({ file, name: file.name, preview: URL.createObjectURL(file) });
                         }
                         this.rebuildInput();
@@ -242,16 +256,78 @@
                         this.$refs.mainInput.files = dt.files;
                     }
                 }" class="px-4 py-5 sm:px-7 sm:py-6">
-                @csrf
+                {{-- Toast Notification --}}
+                <div x-show="showToast"
+                     x-cloak
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-y--4"
+                     x-transition:enter-end="opacity-100 translate-y-0"
+                     x-transition:leave="transition ease-in duration-200"
+                     x-transition:leave-start="opacity-100 translate-y-0"
+                     x-transition:leave-end="opacity-0 translate-y--4"
+                     class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+                     style="display: none;">
+                    <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                         class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                        <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                             class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'" class="text-sm font-medium" x-text="toastMessage"></p>
+                        </div>
+                        <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                                @csrf
                 <input type="hidden" name="kategori_id"              value="{{ $kategoriId }}">
                 <input type="hidden" name="kategori_nama"            value="{{ $kategoriNama }}">
                 <input type="hidden" name="kategori_deskripsi"       value="{{ $kategoriDeskripsi ?? '' }}">
-                <input type="hidden" name="kb_id"                    value="{{ $kbId ?? '' }}">
-                <input type="hidden" name="sop_internal_id"          value="{{ $sopInternalId ?? '' }}">
-                <input type="hidden" name="bidang_id"                value="{{ $bidangId ?? '' }}">
+                <input type="hidden" name="node_diagnosis_id"        value="{{ $nodeDiagnosisId ?? '' }}">
                 <input type="hidden" name="rekomendasi_penanganan"   value="{{ $rekomendasi ?? '' }}">
+                @if(session('duplicate_tiket_warning'))
+                    <input type="hidden" name="force_submit_duplicate" value="{{ session('duplicate_tiket_warning.id') }}">
+                @endif
 
                 <div class="space-y-5">
+                    @error('node_diagnosis_id')
+                    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                        {{ $message }}
+                    </div>
+                    @enderror
+
+                    @if(session('duplicate_tiket_warning'))
+                        @php $duplikat = session('duplicate_tiket_warning'); @endphp
+                        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                </svg>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-bold text-amber-900">Tiket serupa masih aktif</p>
+                                    <p class="text-xs text-amber-800 leading-relaxed mt-1">
+                                        Sistem menemukan tiket serupa: <span class="font-semibold">#{{ $duplikat['id'] }}</span>
+                                        tentang "{{ $duplikat['subjek'] }}". Periksa tiket tersebut jika masalahnya sama,
+                                        atau kirim lagi jika ini memang pengaduan yang berbeda.
+                                    </p>
+                                    <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                                        <a href="{{ $duplikat['url'] }}"
+                                           class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-white border border-amber-200 text-xs font-bold text-amber-800 hover:bg-amber-100">
+                                            Lihat Tiket Lama
+                                        </a>
+                                        <button type="submit"
+                                                class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 text-xs font-bold text-white hover:bg-amber-700">
+                                            Tetap Kirim Tiket Baru
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     {{-- Subjek --}}
                     <div>
@@ -416,6 +492,7 @@
                 </div>
                 {{-- Modal WebCam (Akan muncul jika isCameraOpen = true) --}}
                 <div x-show="isCameraOpen"
+                    x-cloak
                     style="display: none;"
                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                     <div class="bg-white rounded-2xl p-4 w-full max-w-lg shadow-2xl flex flex-col items-center">

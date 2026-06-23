@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,17 +12,16 @@ use Illuminate\Database\Eloquent\Model;
  */
 class KategoriSistem extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'kategori_sistem';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = false;
+    protected string $idPrefix = 'KTS';
 
-    protected $fillable = ['id', 'bidang_id', 'nama_kategori', 'deskripsi', 'icon'];
+    protected $fillable = ['id', 'nama_kategori', 'deskripsi', 'icon'];
 
-    public function bidang()
-    {
-        return $this->belongsTo(Bidang::class, 'bidang_id');
-    }
 
     public function nodes()
     {

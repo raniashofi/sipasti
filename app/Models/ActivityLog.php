@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 
 /**
  * @property string $id
@@ -21,10 +21,13 @@ use Illuminate\Support\Str;
  */
 class ActivityLog extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'activity_log';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = true;
+    protected string $idPrefix = 'LOG';
 
     protected $fillable = [
         'id',
@@ -41,25 +44,44 @@ class ActivityLog extends Model
         'data_after',
     ];
 
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($model) {
-            if (! $model->id) {
-                $model->id = (string) Str::uuid();
-            }
-        });
-    }
-
     protected $casts = [
         'waktu_eksekusi' => 'datetime',
         'data_before'    => 'array',
         'data_after'     => 'array',
     ];
 
+    public function getJenisAktivitasAttribute($value)
+    {
+        $detail = $this->attributes['detail_tindakan'] ?? '';
+
+        if ($value === 'reject' && $this->isLogRusakBeratLama($detail)) {
+            return 'approve';
+        }
+
+        return $value;
+    }
+
+    public function getDetailTindakanAttribute($value)
+    {
+        if ($this->isLogRusakBeratLama($value)) {
+            return str_ireplace(
+                'gagal diperbaiki (rusak berat)',
+                'selesai dianalisis: aset rusak berat dan memerlukan pengadaan/pergantian',
+                $value
+            );
+        }
+
+        return $value;
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    private function isLogRusakBeratLama($detail): bool
+    {
+        return is_string($detail)
+            && str_contains(strtolower($detail), 'gagal diperbaiki (rusak berat)');
     }
 }

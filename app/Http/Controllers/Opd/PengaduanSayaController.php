@@ -11,11 +11,16 @@ use App\Notifications\StatusTiketNotification;
 use App\Notifications\TiketMasukNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PengaduanSayaController extends Controller
 {
+    private const RATEABLE_STATUSES = ['selesai', 'rusak_berat', 'tiket_ditutup'];
+    private const REOPENABLE_STATUS = 'selesai';
+    private const EDITABLE_STATUS = 'perlu_revisi';
+
     public function index(Request $request)
     {
         $opd = Auth::user()->opd;
@@ -24,7 +29,7 @@ class PengaduanSayaController extends Controller
         }
 
         $query = Tiket::where('opd_id', $opd->id)
-            ->with('latestStatus')
+            ->with(['latestStatus', 'chatRooms'])
             ->orderByDesc('created_at');
 
         // Filter status — "selesai" mencakup tiket_ditutup karena keduanya ditampilkan sama ke OPD
@@ -47,6 +52,7 @@ class PengaduanSayaController extends Controller
         }
 
         $tikets = $query->paginate(10)->withQueryString();
+        $this->attachUnreadChatCounts($tikets->getCollection(), Auth::id());
 
         return view('opd.pengaduan-saya.index', compact('tikets'));
     }
@@ -61,6 +67,8 @@ class PengaduanSayaController extends Controller
                       ->with([
                           'kb',
                           'latestStatus',
+                          'chatRooms',
+                          'buktiFoto',
                           'statusTiket' => fn($q) => $q->orderBy('created_at', 'asc'),
                       ])
                       ->findOrFail($id);
@@ -70,13 +78,50 @@ class PengaduanSayaController extends Controller
             ->where('status_tiket', 'dibuka_kembali')
             ->isNotEmpty();
 
+        $this->attachUnreadChatCounts(collect([$tiket]), Auth::id());
+
         return view('opd.pengaduan-saya.detail', compact('tiket', 'sudahPernahDibukakembali'));
+    }
+
+    private function attachUnreadChatCounts($tikets, string $userId): void
+    {
+        $roomIds = $tikets
+            ->flatMap(fn($tiket) => $tiket->chatRooms ?? collect())
+            ->whereIn('nama_roomchat', ['admin', 'teknis'])
+            ->pluck('id')
+            ->values();
+
+        $unreadMap = collect();
+        if ($roomIds->isNotEmpty()) {
+            $unreadMap = DB::table('chat_messages as m')
+                ->select('m.room_id', DB::raw('COUNT(*) as count'))
+                ->whereIn('m.room_id', $roomIds)
+                ->where('m.sender_id', '!=', $userId)
+                ->whereRaw("m.created_at > COALESCE(
+                    (SELECT cru.last_read_at FROM chat_room_users cru
+                     WHERE cru.room_id = m.room_id AND cru.user_id = ?),
+                    '1970-01-01 00:00:00'
+                )", [$userId])
+                ->groupBy('m.room_id')
+                ->pluck('count', 'room_id');
+        }
+
+        $tikets->each(function ($tiket) use ($unreadMap) {
+            $adminRoom = ($tiket->chatRooms ?? collect())->firstWhere('nama_roomchat', 'admin');
+            $teknisRoom = ($tiket->chatRooms ?? collect())->firstWhere('nama_roomchat', 'teknis');
+
+            $tiket->admin_room_id = $adminRoom?->id;
+            $tiket->teknis_room_id = $teknisRoom?->id;
+            $tiket->admin_unread_count = $adminRoom ? (int) ($unreadMap->get($adminRoom->id, 0)) : 0;
+            $tiket->teknis_unread_count = $teknisRoom ? (int) ($unreadMap->get($teknisRoom->id, 0)) : 0;
+            $tiket->unread_count = $tiket->admin_unread_count + $tiket->teknis_unread_count;
+        });
     }
 
     public function chat(string $id)
     {
         $opd   = Auth::user()->opd;
-        $tiket = Tiket::where('opd_id', $opd->id)->findOrFail($id);
+        $tiket = Tiket::with('buktiFoto')->where('opd_id', $opd->id)->findOrFail($id);
 
         return view('opd.pengaduan-saya.chat', compact('tiket'));
     }
@@ -88,10 +133,10 @@ class PengaduanSayaController extends Controller
     {
         $opd   = Auth::user()->opd;
         $tiket = Tiket::where('opd_id', $opd->id)
-                      ->with('latestStatus')
+                      ->with(['latestStatus', 'buktiFoto'])
                       ->findOrFail($id);
 
-        if (!in_array($tiket->latestStatus?->status_tiket, ['selesai', 'rusak_berat', 'tiket_ditutup'])) {
+        if (!in_array($tiket->latestStatus?->status_tiket, $this->rateableStatuses(), true)) {
             return back()->with('error', 'Tiket tidak dalam status yang dapat dinilai.');
         }
 
@@ -106,7 +151,6 @@ class PengaduanSayaController extends Controller
         // Kasus 3: OPD konfirm → tutup tiket (jika belum tiket_ditutup)
         if ($tiket->latestStatus?->status_tiket !== 'tiket_ditutup') {
             StatusTiket::create([
-                'id'           => 'STS-' . strtoupper(Str::random(10)),
                 'tiket_id'     => $tiket->id,
                 'status_tiket' => 'tiket_ditutup',
                 'catatan'      => 'Tiket dikonfirmasi selesai oleh OPD.',
@@ -120,6 +164,8 @@ class PengaduanSayaController extends Controller
 
     /**
      * OPD membuka kembali tiket yang sudah selesai karena masalah belum teratasi.
+     * - SLA akan direset dari waktu pembukaan ulang ini
+     * - Max 3x pembukaan total: 1x pengajuan awal + 2x pembukaan ulang
      * - Jika diselesaikan oleh Admin Helpdesk → kembali ke panduan_remote
      * - Jika diselesaikan oleh Tim Teknis     → kembali ke dibuka_kembali
      */
@@ -130,23 +176,23 @@ class PengaduanSayaController extends Controller
                       ->with(['latestStatus', 'statusTiket'])
                       ->findOrFail($id);
 
-        if ($tiket->latestStatus?->status_tiket !== 'selesai') {
+        if ($tiket->latestStatus?->status_tiket !== $this->reopenableStatus()) {
             return back()->with('error', 'Tiket tidak dalam status selesai.');
         }
 
-        // Cek berapa kali tiket sudah selesai (batasan: max 3 kali selesai)
-        $jumlahSelesai = $tiket->statusTiket->where('status_tiket', 'selesai')->count();
-        $maxSelesai    = 3;
-
-        if ($jumlahSelesai >= $maxSelesai) {
-            return back()->with('error', 'Tiket ini sudah diselesaikan sebanyak ' . $maxSelesai . ' kali dan tidak dapat dibuka kembali lagi.');
+        // Cek apakah masih bisa dibuka kembali (max 3x: 1 awal + 2 ulang)
+        if (!$tiket->canBeReopened()) {
+            return back()->with('error', 'Tiket ini sudah mencapai batas maksimal pembukaan (' .
+                              $tiket->reopened_count . 'x). Silakan buat tiket baru untuk melaporkan masalah.');
         }
 
         $latestSelesai = $tiket->statusTiket->where('status_tiket', 'selesai')->sortByDesc('created_at')->first();
 
         $request->validate([
             'alasan'     => 'required|string|max:1000',
-            'file_bukti' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            'file_bukti' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+        ], [
+            'file_bukti.max' => 'Gambar yang diupload terlalu besar. Maksimal 5 MB.',
         ]);
 
         $filePath = null;
@@ -154,15 +200,21 @@ class PengaduanSayaController extends Controller
             $filePath = $request->file('file_bukti')->store('tiket/bukti', 'public');
         }
 
+        // Mark tiket sebagai dibuka kembali (increment reopened_count & set last_reopened_at)
+        try {
+            $tiket->markAsReopened();
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
         $resolvedByAdmin = str_starts_with($latestSelesai?->catatan ?? '', '[Diselesaikan oleh Admin Helpdesk]');
 
         if ($resolvedByAdmin) {
             // Kembalikan ke Admin Helpdesk (panduan remote)
             StatusTiket::create([
-                'id'           => 'STS-' . strtoupper(Str::random(10)),
                 'tiket_id'     => $tiket->id,
                 'status_tiket' => 'panduan_remote',
-                'catatan'      => '[Dibuka Kembali oleh OPD] ' . $request->input('alasan'),
+                'catatan'      => '[Dibuka Kembali oleh OPD - Pembukaan Ulang ke-' . $tiket->reopened_count . '] ' . $request->input('alasan'),
                 'file_bukti'   => $filePath,
                 'created_at'   => now(),
             ]);
@@ -176,23 +228,41 @@ class PengaduanSayaController extends Controller
             ));
 
             return redirect()->route('opd.tiket.show', $id)
-                ->with('success', 'Tiket telah dibuka kembali. Admin Helpdesk akan segera menangani kendala yang Anda laporkan.');
+                ->with('success', 'Tiket telah dibuka kembali (Pembukaan Ulang ke-' . $tiket->reopened_count . '). Admin Helpdesk akan segera menangani kendala yang Anda laporkan. SLA akan dihitung ulang dari sekarang.');
         }
 
         // Kembalikan ke Tim Teknis
         StatusTiket::create([
-            'id'           => 'STS-' . strtoupper(Str::random(10)),
             'tiket_id'     => $tiket->id,
             'status_tiket' => 'dibuka_kembali',
-            'catatan'      => $request->input('alasan'),
+            'catatan'      => '[Pembukaan Ulang ke-' . $tiket->reopened_count . '] ' . $request->input('alasan'),
             'file_bukti'   => $filePath,
             'created_at'   => now(),
         ]);
 
-        // Aktifkan kembali penugasan Tim Teknis agar tiket muncul di antrean mereka
-        TiketTeknisi::where('tiket_id', $tiket->id)
+        // Reaktifkan baris pivot lama karena tiket_id + teknis_id adalah primary key gabungan.
+        $penugasanSelesai = TiketTeknisi::where('tiket_id', $tiket->id)
             ->where('status_tugas', 'selesai')
-            ->update(['status_tugas' => 'aktif']);
+            ->get()
+            ->unique(fn($row) => $row->teknis_id . '|' . $row->peran_teknisi);
+
+        foreach ($penugasanSelesai as $penugasan) {
+            $sudahAktif = TiketTeknisi::where('tiket_id', $tiket->id)
+                ->where('teknis_id', $penugasan->teknis_id)
+                ->where('status_tugas', 'aktif')
+                ->exists();
+
+            if (! $sudahAktif) {
+                TiketTeknisi::where('tiket_id', $tiket->id)
+                    ->where('teknis_id', $penugasan->teknis_id)
+                    ->update([
+                        'peran_teknisi'       => $penugasan->peran_teknisi,
+                        'waktu_ditugaskan'    => now(),
+                        'status_tugas'        => 'aktif',
+                        'alasan_dikembalikan' => null,
+                    ]);
+            }
+        }
 
         // Notifikasi ke semua Tim Teknis yang pernah ditugaskan di tiket ini
         $teknisiIds = TiketTeknisi::where('tiket_id', $tiket->id)->pluck('teknis_id');
@@ -200,12 +270,12 @@ class PengaduanSayaController extends Controller
             ->each(fn ($t) => $t->user?->notify(new StatusTiketNotification(
                 kodeTiket  : $tiket->id,
                 status     : 'sedang_ditangani',
-                keterangan : 'OPD melaporkan masalah belum terselesaikan dan membuka kembali tiket ini.',
+                keterangan : 'OPD membuka tiket kembali (Pembukaan Ulang ke-' . $tiket->reopened_count . '). SLA akan dihitung ulang dari sekarang.',
                 url        : route('tim_teknis.antrean'),
             )));
 
         return redirect()->route('opd.tiket.show', $id)
-            ->with('success', 'Tiket telah dibuka kembali. Tim Teknis akan segera menangani kendala yang Anda laporkan.');
+            ->with('success', 'Tiket telah dibuka kembali (Pembukaan Ulang ke-' . $tiket->reopened_count . '). SLA akan dihitung ulang dari sekarang. Tim Teknis akan segera menangani kendala Anda.');
     }
 
     /**
@@ -215,10 +285,10 @@ class PengaduanSayaController extends Controller
     {
         $opd   = Auth::user()->opd;
         $tiket = Tiket::where('opd_id', $opd->id)
-                      ->with('latestStatus')
+                      ->with(['latestStatus', 'buktiFoto'])
                       ->findOrFail($id);
 
-        if ($tiket->latestStatus?->status_tiket !== 'perlu_revisi') {
+        if ($tiket->latestStatus?->status_tiket !== $this->editableStatus()) {
             return redirect()->route('opd.tiket.show', $id)
                 ->with('error', 'Tiket hanya dapat diedit saat berstatus Perlu Revisi.');
         }
@@ -236,7 +306,7 @@ class PengaduanSayaController extends Controller
                       ->with('latestStatus')
                       ->findOrFail($id);
 
-        if ($tiket->latestStatus?->status_tiket !== 'perlu_revisi') {
+        if ($tiket->latestStatus?->status_tiket !== $this->editableStatus()) {
             return redirect()->route('opd.tiket.show', $id)
                 ->with('error', 'Tiket hanya dapat diedit saat berstatus Perlu Revisi.');
         }
@@ -246,17 +316,26 @@ class PengaduanSayaController extends Controller
             'detail_masalah' => 'required|string',
             'foto_bukti'     => 'nullable|array|max:5',
             'foto_bukti.*'   => 'image|mimes:jpg,jpeg,png|max:5120',
+        ], [
+            'foto_bukti.*.max' => 'Gambar yang diupload terlalu besar. Maksimal 5 MB.',
         ]);
 
         // Hapus semua foto lama jika ada foto baru yang diunggah
-        $fotoPaths = $tiket->foto_bukti ?? [];
         if ($request->hasFile('foto_bukti')) {
-            foreach ($fotoPaths as $lama) {
-                Storage::disk('public')->delete($lama);
+            // Hapus file lama dari storage
+            $fotoBuktiLama = $tiket->buktiFoto()->get();
+            foreach ($fotoBuktiLama as $foto) {
+                Storage::disk('public')->delete($foto->foto_path);
+                $foto->delete();
             }
-            $fotoPaths = [];
+
+            // Simpan foto baru
             foreach ($request->file('foto_bukti') as $foto) {
-                $fotoPaths[] = $foto->store('tiket/foto', 'public');
+                $fotoPath = $foto->store('tiket/foto', 'public');
+                \App\Models\TiketBuktiFoto::create([
+                    'tiket_id'  => $tiket->id,
+                    'foto_path' => $fotoPath,
+                ]);
             }
         }
 
@@ -265,12 +344,10 @@ class PengaduanSayaController extends Controller
             'detail_masalah'        => $request->input('detail_masalah'),
             'spesifikasi_perangkat' => $request->input('spesifikasi_perangkat'),
             'lokasi'                => $request->input('lokasi'),
-            'foto_bukti'            => $fotoPaths ?: null,
         ]);
 
         // Kembalikan status ke verifikasi_admin setelah revisi
         StatusTiket::create([
-            'id'           => 'STS-' . strtoupper(Str::random(10)),
             'tiket_id'     => $tiket->id,
             'status_tiket' => 'verifikasi_admin',
             'catatan'      => 'Tiket telah direvisi oleh OPD dan dikembalikan untuk verifikasi ulang.',
@@ -279,5 +356,20 @@ class PengaduanSayaController extends Controller
 
         return redirect()->route('opd.tiket.show', $id)
             ->with('success', 'Tiket berhasil diperbarui dan dikirim kembali untuk verifikasi.');
+    }
+
+    protected function rateableStatuses(): array
+    {
+        return self::RATEABLE_STATUSES;
+    }
+
+    protected function reopenableStatus(): string
+    {
+        return self::REOPENABLE_STATUS;
+    }
+
+    protected function editableStatus(): string
+    {
+        return self::EDITABLE_STATUS;
     }
 }

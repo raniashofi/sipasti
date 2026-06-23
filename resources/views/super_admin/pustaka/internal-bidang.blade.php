@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     @php $namaDisplay = ucwords(str_replace('_', ' ', $bidang->nama_bidang)); @endphp
     <title>{{ $namaDisplay }} — Pustaka Internal</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -46,7 +48,10 @@
                 headerImage: @json($a->header_image ? asset('storage/' . $a->header_image) : null),
                 desc: @json($a->deskripsi_singkat),
                 content: @json($a->isi_konten),
-                lampiran: @json($a->lampiran_file ? basename($a->lampiran_file) : null),
+                lampirans: @json($a->lampirans->sortBy('urutan')->map(fn($lampiran) => [
+                    'nama_file' => $lampiran->nama_file,
+                    'url' => asset('storage/' . $lampiran->path_file),
+                ])->values()),
                 tags: @json($a->tags->pluck('nama_tag')->toArray())
             },
             @endforeach
@@ -455,15 +460,19 @@
                     <div id="previewContent" class="prose prose-sm sm:prose-base max-w-none mb-8 text-gray-700"></div>
 
                     {{-- Lampiran File --}}
-                    <div x-show="preview.lampiran" class="border-t border-gray-100 pt-6 mt-auto">
+                    <div x-show="preview.lampirans && preview.lampirans.length" class="border-t border-gray-100 pt-6 mt-auto">
                         <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">Lampiran File</p>
-                        <div class="inline-flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl max-w-full">
+                        <div class="flex flex-wrap gap-2">
+                        <template x-for="lampiran in preview.lampirans" :key="lampiran.url">
+                        <a :href="lampiran.url" target="_blank" class="inline-flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl max-w-full hover:border-[#01458E]">
                             <div class="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
                                 <svg class="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
                                 </svg>
                             </div>
-                            <span class="text-sm font-medium text-gray-700 truncate" x-text="preview.lampiran"></span>
+                            <span class="text-sm font-medium text-gray-700 truncate" x-text="lampiran.nama_file"></span>
+                        </a>
+                        </template>
                         </div>
                     </div>
                 </div>
@@ -472,11 +481,19 @@
 
         {{-- ── MODAL KONFIRMASI HAPUS ── --}}
         <div x-show="showHapus"
-             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
-             x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
-             class="fixed inset-0 z-50 flex items-center justify-center p-4" x-cloak>
-            <div class="absolute inset-0 bg-black/45 backdrop-filter backdrop-blur-sm" @click="showHapus = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-8 text-center" @click.stop>
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             @click.self="showHapus = false"
+             class="fixed inset-0 bg-black/45 backdrop-filter backdrop-blur-sm z-50 flex items-center justify-center p-4" x-cloak>
+            <div x-show="showHapus"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+                 class="relative z-10 bg-white rounded-3xl shadow-2xl shadow-black/20 w-full max-w-sm mx-4 p-8 text-center"
+                 @click.stop>
                 <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 flex items-center justify-center">
                     <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>

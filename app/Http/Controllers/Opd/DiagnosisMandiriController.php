@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Opd;
 use App\Http\Controllers\Controller;
 use App\Models\AdminHelpdesk;
 use App\Models\KategoriSistem;
-use App\Models\KnowledgeBase;
 use App\Models\NodeDiagnosis;
 use App\Models\StatusTiket;
 use App\Models\Tiket;
@@ -13,19 +12,22 @@ use App\Notifications\TiketMasukNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class DiagnosisMandiriController extends Controller
 {
+    private const DUPLICATE_SIMILARITY_THRESHOLD = 65;
+    private const CONFIRMATION_WINDOW_DAYS = 7;
+
     public function index()
     {
         $kategori = KategoriSistem::whereHas('nodes')
             ->whereDoesntHave('nodes', function ($q) {
                 $q->where('tipe_node', 'solusi')
                   ->where(function ($q2) {
-                      $q2->whereNull('kb_id')
-                         ->orWhereNull('sop_internal_id')
-                         ->orWhereNull('bidang_id');
+                      $q2->whereNull('bidang_id')
+                         ->orWhereNull('artikel_opd_id')
+                         ->orWhereNull('sop_internal_id');
                   });
             })
             ->get();
@@ -40,12 +42,8 @@ class DiagnosisMandiriController extends Controller
         $allNodes = NodeDiagnosis::where('kategori_id', $kategoriId)->get();
 
         if ($allNodes->isEmpty()) {
-            return redirect()->route('opd.diagnosis.tiket', [
-                'kategori_id'        => $kategoriId,
-                'kategori_nama'      => $kategori->nama_kategori,
-                'kategori_deskripsi' => $kategori->deskripsi ?? '',
-                'diagnosa'           => '',
-            ])->with('info', 'Belum ada alur diagnosis untuk kategori ini. Silakan buat tiket langsung.');
+            return redirect()->route('opd.diagnosis.index')
+                ->with('error', 'Belum ada alur diagnosis untuk kategori ini. Tiket hanya dapat dibuat setelah memilih solusi diagnosis.');
         }
 
         $referencedIds = $allNodes
@@ -60,12 +58,8 @@ class DiagnosisMandiriController extends Controller
             ->first();
 
         if (!$rootNode) {
-            return redirect()->route('opd.diagnosis.tiket', [
-                'kategori_id'        => $kategoriId,
-                'kategori_nama'      => $kategori->nama_kategori,
-                'kategori_deskripsi' => $kategori->deskripsi ?? '',
-                'diagnosa'           => '',
-            ]);
+            return redirect()->route('opd.diagnosis.index')
+                ->with('error', 'Alur diagnosis kategori ini belum memiliki pertanyaan awal. Tiket belum dapat dibuat.');
         }
 
         return redirect()->to(
@@ -90,10 +84,11 @@ class DiagnosisMandiriController extends Controller
         $qNum              = (int) $request->query('q', 1);
 
         if ($node->tipe_node === 'solusi') {
-            $kb = $node->kb_id ? KnowledgeBase::find($node->kb_id) : null;
+            $kb = $node->artikelOpd;
+            $sopInternal = $node->sopInternal;
             $bidangId = $node->bidang_id ?? '';
             return view('opd.buat-pengaduan.solusi', compact(
-                'node', 'kb', 'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'diagnosa', 'bidangId'
+                'node', 'kb', 'sopInternal', 'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'diagnosa', 'bidangId'
             ));
         }
 
@@ -126,8 +121,21 @@ class DiagnosisMandiriController extends Controller
         $request->validate([
             'subjek_masalah'  => 'required|string|max:255',
             'detail_masalah'  => 'required|string',
+            'node_diagnosis_id' => [
+                'required',
+                Rule::exists('node_diagnosis', 'id')->where(function ($query) {
+                    $query->where('tipe_node', 'solusi')
+                        ->whereNotNull('bidang_id')
+                        ->whereNotNull('artikel_opd_id')
+                        ->whereNotNull('sop_internal_id');
+                }),
+            ],
             'foto_bukti'      => 'nullable|array|max:5',
             'foto_bukti.*'    => 'image|mimes:jpg,jpeg,png|max:5120',
+        ], [
+            'node_diagnosis_id.required' => 'Tiket hanya dapat dibuat setelah Anda memilih solusi diagnosis.',
+            'node_diagnosis_id.exists'   => 'Solusi diagnosis tidak valid atau belum lengkap.',
+            'foto_bukti.*.max'           => 'Gambar yang diupload terlalu besar. Maksimal 5 MB.',
         ]);
 
         $opd = Auth::user()->opd;
@@ -135,7 +143,19 @@ class DiagnosisMandiriController extends Controller
             abort(403, 'Data OPD tidak ditemukan.');
         }
 
-        $tiketId   = 'TKT-' . strtoupper(Str::random(10));
+        $duplicateTiket = $this->findSimilarActiveTiket($opd->id, $request);
+        if ($duplicateTiket && $request->input('force_submit_duplicate') !== $duplicateTiket->id) {
+            return back()
+                ->withInput($request->except('foto_bukti'))
+                ->with('duplicate_tiket_warning', [
+                    'id'         => $duplicateTiket->id,
+                    'subjek'     => $duplicateTiket->subjek_masalah,
+                    'status'     => $duplicateTiket->latestStatus?->status_tiket,
+                    'created_at' => $duplicateTiket->created_at?->translatedFormat('d M Y H:i'),
+                    'url'        => route('opd.tiket.show', $duplicateTiket->id),
+                ]);
+        }
+
         $fotoPaths = [];
 
         if ($request->hasFile('foto_bukti')) {
@@ -150,22 +170,24 @@ class DiagnosisMandiriController extends Controller
         }
 
         $tiket = Tiket::create([
-            'id'                      => $tiketId,
             'opd_id'                  => $opd->id,
-            'kb_id'                   => $request->input('kb_id') ?: null,
-            'sop_internal_id'         => $request->input('sop_internal_id') ?: null,
-            'bidang_id'               => $request->input('bidang_id') ?: null,
+            'node_diagnosis_id'       => $request->input('node_diagnosis_id'),
             'rekomendasi_penanganan'  => $rekomendasi,
-            'kategori_id'             => $request->input('kategori_id') ?: null,
             'subjek_masalah'          => $request->input('subjek_masalah'),
             'detail_masalah'          => $request->input('detail_masalah'),
             'spesifikasi_perangkat'   => $request->input('spesifikasi_perangkat'),
             'lokasi'                  => $request->input('lokasi'),
-            'foto_bukti'              => $fotoPaths ?: null,
         ]);
 
+        // Simpan foto ke tabel tiket_bukti_foto
+        foreach ($fotoPaths as $fotoPath) {
+            \App\Models\TiketBuktiFoto::create([
+                'tiket_id'  => $tiket->id,
+                'foto_path' => $fotoPath,
+            ]);
+        }
+
         StatusTiket::create([
-            'id'           => 'STS-' . strtoupper(Str::random(10)),
             'tiket_id'     => $tiket->id,
             'status_tiket' => 'verifikasi_admin',
             'created_at'   => now(),
@@ -173,7 +195,7 @@ class DiagnosisMandiriController extends Controller
 
         // Notifikasi ke Admin Helpdesk sesuai bidang dari node solusi
         $adminQuery = AdminHelpdesk::with('user');
-        $bidangId = $request->input('bidang_id');
+        $bidangId = NodeDiagnosis::find($request->input('node_diagnosis_id'))?->bidang_id;
         if ($bidangId) {
             $adminQuery->where('bidang_id', $bidangId);
         }
@@ -184,7 +206,7 @@ class DiagnosisMandiriController extends Controller
         });
 
         return redirect()->route('opd.tiket.index')
-                         ->with('success', 'Tiket #' . $tiketId . ' berhasil dikirim! Admin Helpdesk akan memverifikasi pengaduan Anda.');
+                         ->with('success', 'Tiket #' . $tiket->id . ' berhasil dikirim! Admin Helpdesk akan memverifikasi pengaduan Anda.');
     }
 
     public function showTiket(Request $request)
@@ -192,17 +214,174 @@ class DiagnosisMandiriController extends Controller
         $kategoriId        = $request->query('kategori_id', '');
         $kategoriNama      = $request->query('kategori_nama', '');
         $kategoriDeskripsi = $request->query('kategori_deskripsi', '');
-        $kbId              = $request->query('kb_id', '');
-        $sopInternalId     = $request->query('sop_internal_id', '');
-        $bidangId          = $request->query('bidang_id', '');
+        $nodeDiagnosisId   = $request->query('node_diagnosis_id', '');
         $rekomendasi       = $request->query('rekomendasi_penanganan', 'admin');
+
+        $solutionNode = $this->findValidTicketSolutionNode($nodeDiagnosisId);
+        if (!$solutionNode) {
+            return redirect()->route('opd.diagnosis.index')
+                ->with('error', 'Silakan selesaikan diagnosis dan pilih solusi sebelum membuat tiket.');
+        }
 
         if (!in_array($rekomendasi, ['admin', 'eskalasi'])) {
             $rekomendasi = 'admin';
         }
 
         return view('opd.buat-pengaduan.tiket', compact(
-            'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'kbId', 'sopInternalId', 'bidangId', 'rekomendasi'
+            'kategoriId', 'kategoriNama', 'kategoriDeskripsi', 'nodeDiagnosisId', 'rekomendasi'
         ));
+    }
+
+    protected function findValidTicketSolutionNode(?string $nodeDiagnosisId): ?NodeDiagnosis
+    {
+        if (!$nodeDiagnosisId) {
+            return null;
+        }
+
+        return NodeDiagnosis::where('id', $nodeDiagnosisId)
+            ->where('tipe_node', 'solusi')
+            ->whereNotNull('bidang_id')
+            ->whereNotNull('artikel_opd_id')
+            ->whereNotNull('sop_internal_id')
+            ->first();
+    }
+
+    protected function findSimilarActiveTiket(string $opdId, Request $request): ?Tiket
+    {
+        $candidateText = $this->duplicateComparableText(
+            $request->input('subjek_masalah', ''),
+            $request->input('detail_masalah', ''),
+            $request->input('spesifikasi_perangkat', ''),
+            $request->input('lokasi', '')
+        );
+
+        if ($candidateText === '') {
+            return null;
+        }
+
+        $nodeDiagnosisId = $request->input('node_diagnosis_id') ?: null;
+        $batasKonfirmasi = now()->subDays(self::CONFIRMATION_WINDOW_DAYS);
+
+        return $this->recentComparableTickets($opdId, $nodeDiagnosisId, $batasKonfirmasi)
+            ->first(function (Tiket $tiket) use ($candidateText) {
+                $existingText = $this->duplicateComparableText(
+                    $tiket->subjek_masalah,
+                    $tiket->detail_masalah,
+                    $tiket->spesifikasi_perangkat ?? '',
+                    $tiket->lokasi ?? ''
+                );
+
+                return $this->textSimilarity($candidateText, $existingText) >= self::DUPLICATE_SIMILARITY_THRESHOLD;
+            });
+    }
+
+    protected function recentComparableTickets(string $opdId, ?string $nodeDiagnosisId, $batasKonfirmasi)
+    {
+        $query = Tiket::where('opd_id', $opdId)
+            ->with('latestStatus')
+            ->whereHas('latestStatus', function ($q) use ($batasKonfirmasi) {
+                $q->where('status_tiket', '!=', 'tiket_ditutup')
+                    ->where(function ($q2) use ($batasKonfirmasi) {
+                        $q2->whereNotIn('status_tiket', ['selesai', 'rusak_berat'])
+                           ->orWhere('created_at', '>', $batasKonfirmasi);
+                    });
+            })
+            ->latest()
+            ->limit(30);
+
+        if ($nodeDiagnosisId) {
+            $query->where('node_diagnosis_id', $nodeDiagnosisId);
+        }
+
+        return $query->get();
+    }
+
+    protected function duplicateComparableText(?string $subject, ?string $detail, ?string $specification, ?string $location): string
+    {
+        $text = strtolower(trim(
+            ($subject ?? '') . ' ' .
+            ($detail ?? '') . ' ' .
+            ($specification ?? '') . ' ' .
+            ($location ?? '')
+        ));
+
+        $phraseMap = [
+            'no internet access' => 'internet putus',
+            'no internet'        => 'internet putus',
+            'mati total'         => 'putus',
+            'tanda silang merah' => 'silang merah',
+            'sudut kanan bawah'  => 'layar bawah',
+            'layar bawah'        => 'layar bawah',
+            'lantai'             => 'lantai',
+            'lt.'                => 'lantai',
+            'lt '                => 'lantai ',
+        ];
+
+        $text = str_replace(array_keys($phraseMap), array_values($phraseMap), $text);
+        $text = preg_replace('/[^a-z0-9\s]/', ' ', $text) ?? '';
+
+        $stopWords = [
+            'yang', 'dan', 'atau', 'di', 'ke', 'dari', 'untuk', 'pada', 'dengan',
+            'saya', 'kami', 'ini', 'itu', 'ada', 'tidak', 'bisa', 'dapat', 'sudah',
+            'belum', 'karena', 'agar', 'mohon', 'tolong', 'sejak', 'pagi', 'tadi',
+            'wib', 'pukul', 'jam', 'nya', 'juga', 'sangat', 'segera',
+        ];
+
+        $wordMap = [
+            'jaringan'      => 'internet',
+            'koneksi'       => 'internet',
+            'terputus'      => 'putus',
+            'tersambung'    => 'sambung',
+            'terhubung'     => 'sambung',
+            'connect'       => 'sambung',
+            'connected'     => 'sambung',
+            'colok'         => 'pasang',
+            'pasang'        => 'pasang',
+            'cabut'         => 'cabut',
+            'ditarik'       => 'cabut',
+            'dicabut'       => 'cabut',
+            'dipasang'      => 'pasang',
+            'icon'          => 'indikator',
+            'ikon'          => 'indikator',
+            'menunjukkan'   => 'muncul',
+            'muncul'        => 'muncul',
+            'perubahan'     => 'ubah',
+            'diperbaiki'    => 'tangani',
+            'ditangani'     => 'tangani',
+            'menghambat'    => 'ganggu',
+            'mengganggu'    => 'ganggu',
+            'rekapitulasi'  => 'rekap',
+            'rekap'         => 'rekap',
+            'bidang'        => 'bidang',
+            'government'    => 'egovernment',
+            'e'             => 'egovernment',
+            'lt'            => 'lantai',
+            'no'            => 'nomor',
+        ];
+
+        return collect(preg_split('/\s+/', $text) ?: [])
+            ->map(fn($word) => $wordMap[$word] ?? $word)
+            ->filter(fn($word) => (strlen($word) > 2 || is_numeric($word)) && !in_array($word, $stopWords, true))
+            ->values()
+            ->implode(' ');
+    }
+
+    protected function textSimilarity(string $left, string $right): float
+    {
+        if ($left === '' || $right === '') {
+            return 0;
+        }
+
+        similar_text($left, $right, $characterSimilarity);
+
+        $leftTokens = array_values(array_unique(explode(' ', $left)));
+        $rightTokens = array_values(array_unique(explode(' ', $right)));
+        $intersection = count(array_intersect($leftTokens, $rightTokens));
+        $union = max(count(array_unique(array_merge($leftTokens, $rightTokens))), 1);
+        $jaccardSimilarity = ($intersection / $union) * 100;
+        $diceSimilarity = (2 * $intersection / max(count($leftTokens) + count($rightTokens), 1)) * 100;
+        $containmentSimilarity = ($intersection / max(min(count($leftTokens), count($rightTokens)), 1)) * 100;
+
+        return max($characterSimilarity, $jaccardSimilarity, $diceSimilarity, $containmentSimilarity);
     }
 }

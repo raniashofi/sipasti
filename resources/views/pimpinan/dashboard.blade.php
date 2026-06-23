@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard Pimpinan — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -416,6 +418,72 @@
             {{-- ══════════════════════════════════════════════════════════
                  SECTION 4 — Distribusi per Bidang
             ══════════════════════════════════════════════════════════ --}}
+            {{-- Tren kerusakan aset berdasarkan kategori konfigurasi sistem --}}
+            @if($kategoriDamageTrend->isNotEmpty())
+            <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 lg:gap-6 fade-up delay-2">
+                <div class="xl:col-span-3 bg-white rounded-2xl p-5 lg:p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between mb-6 gap-4">
+                        <div>
+                            <h2 class="text-base font-bold text-gray-800">Tren Kerusakan Aset per Kategori</h2>
+                            <p class="text-xs text-gray-400 mt-1">Kategori mengikuti konfigurasi sistem pada alur diagnosis</p>
+                        </div>
+                        @if($damageTrendHighlight)
+                        <div class="px-3 py-2 rounded-xl bg-red-50 text-red-700 shrink-0">
+                            <p class="text-[10px] font-bold uppercase tracking-wide">Tertinggi</p>
+                            <p class="text-xs font-semibold max-w-[180px] truncate">{{ $damageTrendHighlight['nama'] }}</p>
+                        </div>
+                        @endif
+                    </div>
+
+                    <div class="w-full overflow-x-auto thin-scroll">
+                        <div class="min-w-[560px]">
+                            <canvas id="damageCategoryChart" height="210"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="xl:col-span-2 bg-white rounded-2xl p-5 lg:p-7 shadow-sm border border-gray-100">
+                    <div class="flex items-center gap-3 mb-5">
+                        <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:#FEF2F2;">
+                            <svg class="w-4 h-4 text-[#DC2626]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-gray-800">Identifikasi Tren</h2>
+                            <p class="text-xs text-gray-400">Top 5 kategori dalam periode ini</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        @foreach($kategoriDamageTrend as $kategori)
+                        @php
+                            $trendClass = $kategori['trend'] === 'Naik'
+                                ? 'bg-red-50 text-red-600'
+                                : ($kategori['trend'] === 'Turun' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500');
+                            $trendSymbol = $kategori['trend'] === 'Naik' ? '+' : '';
+                        @endphp
+                        <div class="flex items-center justify-between gap-3 border-b border-gray-50 pb-3 last:border-0 last:pb-0">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:{{ $kategori['color'] }};"></span>
+                                    <p class="text-sm font-semibold text-gray-800 truncate">{{ $kategori['nama'] }}</p>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1">{{ number_format($kategori['total']) }} tiket kerusakan</p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="inline-block text-xs font-bold px-2.5 py-1 rounded-full {{ $trendClass }}">
+                                    {{ $kategori['trend'] }}
+                                </span>
+                                <p class="text-[11px] text-gray-400 mt-1">{{ $trendSymbol }}{{ $kategori['change'] }}</p>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+
             @if($tiketPerBidang->count() > 0)
             <div class="fade-up delay-2">
                 <div class="flex items-center gap-3 mb-4">
@@ -747,6 +815,76 @@
                     ctx.restore();
                 },
             }],
+        });
+    })();
+
+    // Chart 3: Tren kerusakan aset per kategori konfigurasi sistem
+    (function() {
+        const chartEl = document.getElementById('damageCategoryChart');
+        if (!chartEl) return;
+
+        const labels = @json($damageTrendLabels);
+        const categories = @json($damageTrendDatasets);
+
+        if (!categories.length) return;
+
+        new Chart(chartEl, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: categories.map(category => ({
+                    label: category.label,
+                    data: category.data,
+                    borderColor: category.color,
+                    backgroundColor: `${category.color}14`,
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    pointBackgroundColor: category.color,
+                    fill: false,
+                    tension: 0.35,
+                })),
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            font: { family: 'Inter', size: 11 },
+                            color: '#4B5563',
+                        },
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(17,24,39,0.9)',
+                        padding: 12,
+                        cornerRadius: 8,
+                        titleFont: { family: 'Inter', size: 12 },
+                        bodyFont: { family: 'Inter', size: 13, weight: 'bold' },
+                        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} tiket` },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: 'Inter', size: 11 }, color: '#9CA3AF' },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#F3F4F6' },
+                        ticks: {
+                            font: { family: 'Inter', size: 11 },
+                            color: '#9CA3AF',
+                            stepSize: 1,
+                            callback: v => Number.isInteger(v) ? v : '',
+                        },
+                    },
+                },
+            },
         });
     })();
     </script>

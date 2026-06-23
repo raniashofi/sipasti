@@ -18,11 +18,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             BidangSeeder::class,
             UserSeeder::class,
+            SuperAdminDataSeeder::class,
             OpdSeeder::class,
             TimTeknisSeeder::class,
             AdminHelpdeskSeeder::class,
             PimpinanSeeder::class,
-            TiketSeeder::class,
         ]);
     }
 }

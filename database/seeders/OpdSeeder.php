@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\IdGenerator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -75,16 +76,21 @@ class OpdSeeder extends Seeder
             ['kode_opd' => '4.01.0.00.0.00.01.0011', 'nama_opd' => 'BAGIAN ADMINISTRASI PEMBANGUNAN',  'kdunit' => null, 'parent_id' => 'OPD-SETDA', 'is_bagian' => 'Y', 'slug' => 'bag-adm-pembangunan'],
         ];
 
+        $idsBySlug = [];
+        foreach ($data as $item) {
+            $idsBySlug[$item['slug']] = IdGenerator::make('OPD');
+        }
+
         $rows = [];
         foreach ($data as $item) {
             $slug = $item['slug'];
             $rows[] = [
-                'id'             => 'OPD-' . strtoupper($slug),
-                'user_id'        => 'USR-OPD-' . strtoupper($slug),
+                'id'             => $idsBySlug[$slug],
+                'user_id'        => DB::table('users')->where('email', $slug . '@padang.go.id')->value('id'),
                 'kode_opd'       => $item['kode_opd'],
                 'nama_opd'       => $item['nama_opd'],
                 'kdunit'         => $item['kdunit'],
-                'parent_id'      => $item['parent_id'],
+                'parent_id'      => $item['parent_id'] === 'OPD-SETDA' ? $idsBySlug['setda'] : $item['parent_id'],
                 'is_bagian'      => $item['is_bagian'],
             ];
         }

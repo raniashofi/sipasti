@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,18 +12,23 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Tag extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'tag';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = true;
+    protected string $idPrefix = 'TAG';
 
     protected $fillable = ['id', 'nama_tag', 'slug'];
 
-    /**
-     * Relationship: Knowledge Base Articles (Many-to-Many)
-     */
     public function articles()
     {
-        return $this->belongsToMany(KnowledgeBase::class, 'knowledge_base_tag');
+        return $this->belongsToMany(ArtikelOpd::class, 'artikel_opd_tag', 'tag_id', 'artikel_opd_id');
+    }
+
+    public function internalArticles()
+    {
+        return $this->belongsToMany(SopInternal::class, 'sop_internal_tag', 'tag_id', 'sop_internal_id');
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Support\IdGenerator;
+
 use Illuminate\Notifications\Notification;
 
 /**
@@ -17,7 +19,9 @@ class TiketTransferNotification extends Notification
         public readonly string $namaOpd,
         public readonly string $instruksi,
         public readonly string $url,
-    ) {}
+    ) {
+        $this->id = IdGenerator::make('NTF');
+    }
 
     /**
      * Kirim melalui: database (tersimpan) + broadcast (Reverb real-time).

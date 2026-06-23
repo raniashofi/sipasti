@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Chat Panduan Remote — Admin Helpdesk</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -42,6 +44,7 @@
     $myUserId     = Auth::id();
     $myName       = $admin?->nama_lengkap ?? 'Admin Helpdesk';
     $opdNama      = $tiket->opd?->nama_opd ?? 'OPD';
+    $sidebarActive = $chatIsActive ? 'panduan' : 'riwayat';
     $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
 @endphp
 
@@ -56,7 +59,7 @@
 
         <div class="flex items-center gap-2 sm:gap-4 w-full min-w-0">
             {{-- Back button --}}
-            <a href="{{ route('admin_helpdesk.tiket.panduan') }}"
+            <a href="{{ $chatIsActive ? route('admin_helpdesk.tiket.panduan') : route('admin_helpdesk.tiket.riwayat') }}"
                class="p-1.5 sm:p-2 rounded-xl text-gray-400 hover:text-[#01458E] hover:bg-blue-50 transition-colors shrink-0">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
@@ -78,10 +81,10 @@
         </div>
 
         {{-- Status badge --}}
-        <div class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold text-blue-700 bg-blue-50 shrink-0 border border-blue-100 ml-2">
-            <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-500 animate-pulse"></span>
-            <span class="hidden sm:inline">Sesi Aktif</span>
-            <span class="sm:hidden">Aktif</span>
+        <div class="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-semibold shrink-0 border ml-2 {{ $chatIsActive ? 'text-blue-700 bg-blue-50 border-blue-100' : 'text-gray-600 bg-gray-100 border-gray-200' }}">
+            <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full {{ $chatIsActive ? 'bg-blue-500 animate-pulse' : 'bg-gray-400' }}"></span>
+            <span class="hidden sm:inline">{{ $chatIsActive ? 'Sesi Aktif' : 'Riwayat Chat' }}</span>
+            <span class="sm:hidden">{{ $chatIsActive ? 'Aktif' : 'Riwayat' }}</span>
         </div>
     </header>
 
@@ -90,7 +93,7 @@
 
         {{-- Breadcrumb --}}
         <div class="hidden sm:flex items-center gap-2 text-xs text-gray-400 shrink-0">
-            <a href="{{ route('admin_helpdesk.tiket.panduan') }}" class="hover:text-[#01458E] transition-colors">Panduan Remote</a>
+            <a href="{{ $chatIsActive ? route('admin_helpdesk.tiket.panduan') : route('admin_helpdesk.tiket.riwayat') }}" class="hover:text-[#01458E] transition-colors">{{ $chatIsActive ? 'Panduan Remote' : 'Riwayat Tiket' }}</a>
             <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
             </svg>
@@ -160,14 +163,14 @@
                     </div>
                     @endif
 
-                    @php $fotosAhc = is_array($tiket->foto_bukti) ? array_values(array_filter($tiket->foto_bukti)) : []; @endphp
+                    @php $fotosAhc = $tiket->buktiFoto()->orderBy('created_at')->get(); @endphp
                     @if(count($fotosAhc) > 0)
                     <div>
                         <label class="field-label">Foto Bukti</label>
                         <div class="grid grid-cols-2 gap-2.5 mt-2">
-                            @foreach($fotosAhc as $idx => $foto)
-                            <div class="relative aspect-square cursor-pointer group" @click="window.open('{{ Storage::url($foto) }}', '_blank')">
-                                <img src="{{ Storage::url($foto) }}" alt="Foto Bukti {{ $idx+1 }}"
+                            @foreach($fotosAhc as $idx => $buktiFoto)
+                            <div class="relative aspect-square cursor-pointer group" @click="window.open('{{ Storage::url($buktiFoto->foto_path) }}', '_blank')">
+                                <img src="{{ Storage::url($buktiFoto->foto_path) }}" alt="Foto Bukti {{ $idx+1 }}"
                                      class="w-full h-full object-cover rounded-xl border border-gray-200 group-hover:opacity-90 transition-opacity">
                                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
                                     <span class="text-white text-[10px] font-bold">Lihat</span>
@@ -199,9 +202,21 @@
 
                         window.Echo.private('chat.' + this.roomId)
                             .listen('.NewChatMessage', (e) => {
-                                this.messages.push(e);
+                                this.addMessage(e);
                                 this.$nextTick(() => this.scrollBottom());
                             });
+                    },
+
+                    addMessage(message) {
+                        if (!message?.id) return;
+                        const existingIndex = this.messages.findIndex((msg) => msg.id === message.id);
+
+                        if (existingIndex >= 0) {
+                            this.messages.splice(existingIndex, 1, message);
+                            return;
+                        }
+
+                        this.messages.push(message);
                     },
 
                     scrollBottom() {
@@ -212,6 +227,11 @@
                     handleFile(event) {
                         const file = event.target.files[0];
                         if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                            event.target.value = '';
+                            return;
+                        }
                         this.selectedFile = file;
                         this.fileName = file.name;
                         const reader = new FileReader();
@@ -241,7 +261,7 @@
                                 '{{ route('admin_helpdesk.tiket.chat.send', $tiket->id) }}',
                                 fd
                             );
-                            this.messages.push(res.data);
+                            this.addMessage(res.data);
                             this.newMessage = '';
                             this.clearFile();
                             this.$nextTick(() => this.scrollBottom());
@@ -270,10 +290,6 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-sm sm:text-base font-bold text-gray-900 truncate">{{ $opdNama }}</p>
-                            <div class="flex items-center gap-1.5 mt-0.5">
-                                <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                <p class="text-[10px] sm:text-xs text-green-600 font-medium">Online</p>
-                            </div>
                         </div>
                     </div>
                 </div>

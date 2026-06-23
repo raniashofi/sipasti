@@ -3,14 +3,15 @@
 namespace Tests\Helpers;
 
 use App\Models\AdminHelpdesk;
+use App\Models\ArtikelOpd;
 use App\Models\Bidang;
 use App\Models\KategoriArtikel;
 use App\Models\KategoriSistem;
-use App\Models\KnowledgeBase;
 use App\Models\NodeDiagnosis;
 use App\Models\Opd;
 use App\Models\Pimpinan;
 use App\Models\StatusTiket;
+use App\Models\SopInternal;
 use App\Models\Tiket;
 use App\Models\TiketTeknisi;
 use App\Models\TimTeknis;
@@ -96,23 +97,75 @@ trait CreatesTestModels
         ], $attrs));
     }
 
-    protected function createKnowledgeBase(array $attrs = []): KnowledgeBase
+    protected function createKnowledgeBase(array $attrs = []): ArtikelOpd|SopInternal
     {
-        return KnowledgeBase::create(array_merge([
+        $visibility = $attrs['visibilitas_akses'] ?? 'opd';
+        unset($attrs['visibilitas_akses']);
+
+        $defaults = [
             'id'                => (string) Str::uuid(),
-            'nama_artikel_sop'  => fake()->sentence(),
+            'judul'             => $attrs['nama_artikel_sop'] ?? fake()->sentence(),
             'isi_konten'        => '<p>' . fake()->paragraph() . '</p>',
             'deskripsi_singkat' => fake()->sentence(),
             'status_publikasi'  => 'published',
-            'visibilitas_akses' => 'opd',
             'total_views'       => 0,
+        ];
+        unset($attrs['nama_artikel_sop']);
+
+        if ($visibility === 'internal') {
+            return SopInternal::create(array_merge($defaults, [
+                'bidang_id' => $attrs['bidang_id'] ?? $this->createBidang()->id,
+            ], $attrs));
+        }
+
+        return ArtikelOpd::create(array_merge($defaults, [
+            'kategori_artikel_id' => $attrs['kategori_artikel_id'] ?? $this->createKategoriArtikel()->id,
             'rating'            => 0,
             'rating_count'      => 0,
         ], $attrs));
     }
 
+    protected function createSolutionNode(array $attrs = []): NodeDiagnosis
+    {
+        $attrs = array_filter($attrs, fn($value) => $value !== null);
+
+        $kategoriId = $attrs['kategori_id'] ?? $this->createKategoriSistem()->id;
+        $bidangId = $attrs['bidang_id'] ?? $this->createBidang()->id;
+        $artikelOpdId = $attrs['artikel_opd_id'] ?? $this->createKnowledgeBase()->id;
+        $sopInternalId = $attrs['sop_internal_id'] ?? $this->createKnowledgeBase([
+            'visibilitas_akses' => 'internal',
+            'bidang_id' => $bidangId,
+        ])->id;
+
+        return NodeDiagnosis::create(array_merge([
+            'id'                     => (string) Str::uuid(),
+            'kategori_id'            => $kategoriId,
+            'bidang_id'              => $bidangId,
+            'artikel_opd_id'         => $artikelOpdId,
+            'sop_internal_id'        => $sopInternalId,
+            'tipe_node'              => 'solusi',
+            'judul_solusi'           => fake()->sentence(),
+            'penjelasan_solusi'      => fake()->paragraph(),
+            'rekomendasi_penanganan' => 'admin',
+        ], $attrs));
+    }
+
     protected function createTiket(Opd $opd, array $attrs = []): Tiket
     {
+        if (empty($attrs['node_diagnosis_id'])) {
+            $nodeAttrs = [];
+            if (!empty($attrs['kategori_id'])) {
+                $nodeAttrs['kategori_id'] = $attrs['kategori_id'];
+            }
+            if (!empty($attrs['bidang_id'])) {
+                $nodeAttrs['bidang_id'] = $attrs['bidang_id'];
+            }
+
+            $node = $this->createSolutionNode($nodeAttrs);
+            $attrs['node_diagnosis_id'] = $node->id;
+        }
+        unset($attrs['bidang_id'], $attrs['kategori_id']);
+
         return Tiket::create(array_merge([
             'id'             => 'TKT-' . strtoupper(Str::random(10)),
             'opd_id'         => $opd->id,

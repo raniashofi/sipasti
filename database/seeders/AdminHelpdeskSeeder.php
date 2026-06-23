@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\IdGenerator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -13,46 +14,45 @@ class AdminHelpdeskSeeder extends Seeder
         DB::table('admin_helpdesk')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
+        $bidangEgov = DB::table('bidang')->where('nama_bidang', 'E-Government')->value('id');
+        $bidangInfra = DB::table('bidang')->where('nama_bidang', 'Infrastruktur TI')->value('id');
+        $bidangStatistik = DB::table('bidang')->where('nama_bidang', 'Statistik & Persandian')->value('id');
+
         DB::table('admin_helpdesk')->insert([
-            // Bidang E-Government (BIDANG-001) — 2 akun
             [
-                'id'           => 'HD-EGV-001',
-                'user_id'      => 'USR-HD-EGV-001',
-                'bidang_id'    => 'BIDANG-001',
+                'id'           => IdGenerator::make('USR-HD'),
+                'user_id'      => DB::table('users')->where('email', 'helpdesk.egov1@padang.go.id')->value('id'),
+                'bidang_id'    => $bidangEgov,
                 'nama_lengkap' => 'Admin Helpdesk E-Gov 1',
             ],
             [
-                'id'           => 'HD-EGV-002',
-                'user_id'      => 'USR-HD-EGV-002',
-                'bidang_id'    => 'BIDANG-001',
+                'id'           => IdGenerator::make('USR-HD'),
+                'user_id'      => DB::table('users')->where('email', 'helpdesk.egov2@padang.go.id')->value('id'),
+                'bidang_id'    => $bidangEgov,
                 'nama_lengkap' => 'Admin Helpdesk E-Gov 2',
             ],
-
-            // Bidang Infrastruktur Teknologi Informasi (BIDANG-002) — 2 akun
             [
-                'id'           => 'HD-ITI-001',
-                'user_id'      => 'USR-HD-ITI-001',
-                'bidang_id'    => 'BIDANG-002',
+                'id'           => IdGenerator::make('USR-HD'),
+                'user_id'      => DB::table('users')->where('email', 'helpdesk.infra1@padang.go.id')->value('id'),
+                'bidang_id'    => $bidangInfra,
                 'nama_lengkap' => 'Admin Helpdesk Infrastruktur 1',
             ],
             [
-                'id'           => 'HD-ITI-002',
-                'user_id'      => 'USR-HD-ITI-002',
-                'bidang_id'    => 'BIDANG-002',
+                'id'           => IdGenerator::make('USR-HD'),
+                'user_id'      => DB::table('users')->where('email', 'helpdesk.infra2@padang.go.id')->value('id'),
+                'bidang_id'    => $bidangInfra,
                 'nama_lengkap' => 'Admin Helpdesk Infrastruktur 2',
             ],
-
-            // Bidang Statistik & Persandian (BIDANG-003) — 2 akun
             [
-                'id'           => 'HD-SPS-001',
-                'user_id'      => 'USR-HD-SPS-001',
-                'bidang_id'    => 'BIDANG-003',
+                'id'           => IdGenerator::make('USR-HD'),
+                'user_id'      => DB::table('users')->where('email', 'helpdesk.statistik1@padang.go.id')->value('id'),
+                'bidang_id'    => $bidangStatistik,
                 'nama_lengkap' => 'Admin Helpdesk Statistik 1',
             ],
             [
-                'id'           => 'HD-SPS-002',
-                'user_id'      => 'USR-HD-SPS-002',
-                'bidang_id'    => 'BIDANG-003',
+                'id'           => IdGenerator::make('USR-HD'),
+                'user_id'      => DB::table('users')->where('email', 'helpdesk.statistik2@padang.go.id')->value('id'),
+                'bidang_id'    => $bidangStatistik,
                 'nama_lengkap' => 'Admin Helpdesk Statistik 2',
             ],
         ]);

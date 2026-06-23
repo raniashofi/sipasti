@@ -7,6 +7,8 @@
 
     <title>{{ config('app.name', 'SiPasti') }}</title>
 
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 

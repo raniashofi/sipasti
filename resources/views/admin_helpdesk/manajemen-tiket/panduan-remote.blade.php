@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Panduan Remote — Admin Helpdesk</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -34,6 +36,34 @@
     @include('layouts.sidebarAdminHelpdesk')
 
     <div class="ml-0 lg:ml-64 min-h-screen flex flex-col" x-data="tiketPage()" x-cloak>
+
+        {{-- Toast Notification --}}
+        <div x-show="showToast"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y--4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y--4"
+             class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+             style="display: none;">
+            <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                 class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                     class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="flex-1">
+                    <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'"
+                       class="text-sm font-medium" x-text="toastMessage"></p>
+                </div>
+                <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
 
         {{-- Top bar --}}
         <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-0 z-30">
@@ -103,6 +133,8 @@
                         @forelse($tikets as $tiket)
                         @php
                             $hasChatM     = $tiket->chatRooms->isNotEmpty();
+                            $unreadCountM = (int) ($tiket->unread_count ?? 0);
+                            $chatRoomIdM  = $tiket->chat_room_id ?? null;
                             $kategoriNamaM = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
                             $isDibukaKembaliOpdM = str_starts_with($tiket->latestStatus?->catatan ?? '', '[Dibuka Kembali oleh OPD]');
                             $tJM = json_encode([
@@ -113,11 +145,13 @@
                                 'kategori_nama'         => $kategoriNamaM,
                                 'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                 'lokasi'                => $tiket->lokasi ?? '—',
-                                'foto_bukti'            => $tiket->foto_bukti,
+                                'foto_bukti'            => $tiket->getFotoPaths(),
                                 'rekomendasi_penanganan'=> $tiket->rekomendasi_penanganan,
                                 'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                 'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                 'has_chat'              => $hasChatM,
+                                'unread_count'          => $unreadCountM,
+                                'chat_room_id'          => $chatRoomIdM,
                                 'catatan_status'        => $tiket->latestStatus?->catatan ?? '—',
                                 'is_dibuka_kembali_opd' => $isDibukaKembaliOpdM,
                                 'alasan_buka_kembali'   => $isDibukaKembaliOpdM ? substr($tiket->latestStatus->catatan, strlen('[Dibuka Kembali oleh OPD] ')) : null,
@@ -148,8 +182,13 @@
                                 </div>
                                 <div class="flex gap-1.5 shrink-0" @click.stop>
                                     <a href="{{ route('admin_helpdesk.tiket.chat', $tiket->id) }}"
-                                       class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                       class="relative w-8 h-8 rounded-lg flex items-center justify-center"
+                                       data-chat-room-id="{{ $chatRoomIdM }}" data-chat-unread-button
                                        style="background:#DBEAFE;color:#1D4ED8;">
+                                        @if($unreadCountM > 0)
+                                        <span class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                              style="background:#DC2626;">{{ $unreadCountM > 9 ? '9+' : $unreadCountM }}</span>
+                                        @endif
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                                     </a>
                                     <button @click.stop="setTiket({{ $tJM }}); showModal='selesai'"
@@ -187,6 +226,8 @@
                                 @forelse($tikets as $tiket)
                                 @php
                                     $hasChat      = $tiket->chatRooms->isNotEmpty();
+                                    $unreadCount  = (int) ($tiket->unread_count ?? 0);
+                                    $chatRoomId   = $tiket->chat_room_id ?? null;
                                     $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
                                     $bidangId     = $tiket->bidang_id;
                                     $isDibukaKembaliOpd = str_starts_with($tiket->latestStatus?->catatan ?? '', '[Dibuka Kembali oleh OPD]');
@@ -198,11 +239,13 @@
                                         'kategori_nama'         => $kategoriNama,
                                         'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                         'lokasi'                => $tiket->lokasi ?? '—',
-                                        'foto_bukti'            => $tiket->foto_bukti,
+                                        'foto_bukti'            => $tiket->getFotoPaths(),
                                         'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                         'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                         'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                         'has_chat'              => $hasChat,
+                                        'unread_count'          => $unreadCount,
+                                        'chat_room_id'          => $chatRoomId,
                                         'catatan_status'            => $tiket->latestStatus?->catatan ?? '—',
                                         'is_dibuka_kembali_opd'     => $isDibukaKembaliOpd,
                                         'alasan_buka_kembali'       => $isDibukaKembaliOpd ? substr($tiket->latestStatus->catatan, strlen('[Dibuka Kembali oleh OPD] ')) : null,
@@ -256,15 +299,25 @@
                                         <div class="flex items-center justify-center gap-2">
                                             @if($hasChat)
                                             <a href="{{ route('admin_helpdesk.tiket.chat', $tiket->id) }}" title="Lihat Chat"
-                                               class="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 shadow-sm transition-opacity"
+                                               class="relative inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg text-white hover:opacity-90 shadow-sm transition-opacity"
+                                               data-chat-room-id="{{ $chatRoomId }}" data-chat-unread-button
                                                style="background:#1D4ED8;">
+                                                @if($unreadCount > 0)
+                                                <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                                      style="background:#DC2626;">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
+                                                @endif
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                                                 Chat
                                             </a>
                                             @else
                                             <a href="{{ route('admin_helpdesk.tiket.chat', $tiket->id) }}" title="Mulai Chat Panduan Remote"
-                                               class="inline-flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 shadow-sm"
+                                               class="relative inline-flex items-center justify-center w-8 h-8 rounded-lg transition-all hover:scale-110 shadow-sm"
+                                               data-chat-room-id="{{ $chatRoomId }}" data-chat-unread-button
                                                style="background:#01458E;color:white;">
+                                                @if($unreadCount > 0)
+                                                <span class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                                      style="background:#DC2626;">{{ $unreadCount > 9 ? '9+' : $unreadCount }}</span>
+                                                @endif
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                                             </a>
                                             @endif
@@ -505,8 +558,12 @@
                 <div class="flex flex-col gap-2.5">
                     <template x-if="selectedTiket">
                         <a :href="'/admin-helpdesk/tiket/' + selectedTiket.id + '/chat'"
-                           class="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 hover:shadow-md"
+                           class="relative w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 hover:shadow-md"
                            style="background:#1D4ED8;">
+                            <span x-show="(selectedTiket?.unread_count ?? 0) > 0"
+                                  x-text="selectedTiket.unread_count > 9 ? '9+' : selectedTiket.unread_count"
+                                  class="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                  style="background:#DC2626;"></span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                             Buka Ruang Chat
                         </a>
@@ -1011,6 +1068,11 @@
             sopPreviewContent: '',
             sopPreviewTitle: '',
 
+            // Toast Notification
+            showToast: false,
+            toastMessage: '',
+            toastType: 'error',
+
             // Variabel AlpineJS untuk Bidang (Transfer)
             bidangList: @json($bidangListData),
             bidangId: '',
@@ -1081,13 +1143,21 @@
                 };
                 return map[p] ?? 'background:#F3F4F6;color:#9CA3AF;border: 1px solid #E5E7EB;';
             },
+            showErrorToast(message) {
+                this.toastMessage = message;
+                this.toastType = 'error';
+                this.showToast = true;
+                setTimeout(() => {
+                    this.showToast = false;
+                }, 5000);
+            },
             submitForm(form, url) {
                 if (form === this.$refs.formEskalasi && !this.tekUtamaId) {
-                    alert('Silakan pilih Teknisi Utama terlebih dahulu sebelum melakukan eskalasi.');
+                    this.showErrorToast('Silakan pilih Teknisi Utama terlebih dahulu sebelum melakukan eskalasi.');
                     return;
                 }
                 if (form === this.$refs.formTransfer && !this.bidangId) {
-                    alert('Silakan pilih Bidang Tujuan terlebih dahulu sebelum melakukan transfer.');
+                    this.showErrorToast('Silakan pilih Bidang Tujuan terlebih dahulu sebelum melakukan transfer.');
                     return;
                 }
                 form.action = url;
@@ -1095,6 +1165,10 @@
             },
         };
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        window.initChatUnreadBadges?.(@json(Auth::id()));
+    });
     </script>
 </body>
 </html>

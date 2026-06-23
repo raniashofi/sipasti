@@ -10,6 +10,8 @@
         $isInternal    = $visibilityVal === 'internal';
     @endphp
     <title>{{ $article ? ($isInternal ? 'Edit SOP' : 'Edit Artikel') : ($visibility === 'internal' ? 'Tambah SOP' : 'Tambah Artikel') }} — Super Admin</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/quill@2.0.0/dist/quill.snow.css" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -156,7 +158,13 @@
         $initialTags = $isEdit && $article->tags->count() ? $article->tags->pluck('nama_tag')->values()->toArray() : [];
         $initialNama = old('nama_artikel_sop', $article?->nama_artikel_sop ?? '');
         $initialDesc = old('deskripsi_singkat', $article?->deskripsi_singkat ?? '');
-        $initialFile = $article?->lampiran_file ? basename($article->lampiran_file) : '';
+        $initialLampirans = $isEdit
+            ? $article->lampirans->sortBy('urutan')->map(fn($lampiran) => [
+                'id' => $lampiran->id,
+                'nama_file' => $lampiran->nama_file,
+                'url' => asset('storage/' . $lampiran->path_file),
+            ])->values()->toArray()
+            : [];
     @endphp
 
     <script>
@@ -164,7 +172,7 @@
             tags: {!! json_encode($initialTags) !!},
             namaArtikel: {!! json_encode($initialNama) !!},
             deskripsiSingkat: {!! json_encode($initialDesc) !!},
-            lampiranFileName: {!! json_encode($initialFile) !!}
+            lampirans: {!! json_encode($initialLampirans) !!}
         };
     </script>
 
@@ -178,9 +186,16 @@
             deleteConfirmOpen: false,
             previewModalOpen: false,
             headerPreview: '{{ $article?->header_image ? asset('storage/' . $article->header_image) : '' }}',
-            lampiranFileName: window.kbData.lampiranFileName,
+            lampirans: window.kbData.lampirans,
+            newLampiranFiles: [],
             namaArtikel: window.kbData.namaArtikel,
             deskripsiSingkat: window.kbData.deskripsiSingkat,
+
+            {{-- Toast Notification --}}
+            showToast: false,
+            toastMessage: '',
+            toastType: 'error',
+
             init() {},
             addTag() {
                 const t = this.tagInput.trim().toLowerCase().replace(/\s+/g, '-');
@@ -188,13 +203,36 @@
                 this.tagInput = '';
             },
             removeTag(i) { this.tags.splice(i, 1); },
+            showErrorToast(message) {
+                this.toastMessage = message;
+                this.toastType = 'error';
+                this.showToast = true;
+                setTimeout(() => {
+                    this.showToast = false;
+                }, 5000);
+            },
+
             onHeaderChange(e) {
                 const file = e.target.files[0];
-                if (file) this.headerPreview = URL.createObjectURL(file);
+                if (!file) return;
+                if (file.size > 5 * 1024 * 1024) {
+                    this.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                    e.target.value = '';
+                    this.headerPreview = '';
+                    return;
+                }
+                this.headerPreview = URL.createObjectURL(file);
             },
             onLampiranChange(e) {
-                const file = e.target.files[0];
-                if (file) this.lampiranFileName = file.name;
+                const files = Array.from(e.target.files || []);
+                const tooLarge = files.find(file => file.size > 5 * 1024 * 1024);
+                if (tooLarge) {
+                    this.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                    e.target.value = '';
+                    this.newLampiranFiles = [];
+                    return;
+                }
+                this.newLampiranFiles = files.map(file => file.name);
             },
             openPreviewModal() {
                 this.namaArtikel = document.querySelector('input[name=nama_artikel_sop]').value;
@@ -208,7 +246,36 @@
             },
             get tagsRaw() { return this.tags.join(','); }
         }"
+        @init="window.kbFormComponent = $el.__x.$data; $el.__x.$data.init();"
         x-cloak>
+
+        {{-- Toast Notification --}}
+        <div x-show="showToast"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y--4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y--4"
+             class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+             style="display: none;">
+            <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                 class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                     class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="flex-1">
+                    <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'"
+                       class="text-sm font-medium" x-text="toastMessage"></p>
+                </div>
+                <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
 
         {{-- ── Header & Mobile Actions Wrapper ── --}}
         <div class="sticky top-0 z-30 shrink-0">
@@ -539,34 +606,50 @@
                                     </svg>
                                 </div>
                                 <div class="text-sm font-semibold text-gray-700">Pilih Gambar Header</div>
-                                <div class="text-xs text-gray-400 mt-1">PNG, JPG · Maks. 10MB</div>
+                                <div class="text-xs text-gray-400 mt-1">PNG, JPG · Maks. 5MB</div>
                             </label>
                         </div>
 
                         {{-- Lampiran File --}}
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
                             <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Lampiran File</p>
-                            <div x-show="lampiranFileName" class="mb-3 p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
-                                <div class="flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
-                                    </svg>
-                                    <p class="text-xs font-semibold text-gray-700" x-text="lampiranFileName"></p>
-                                </div>
-                                <button type="button" @click="lampiranFileName = ''; document.querySelector('input[name=lampiran_file]').value = ''"
-                                        class="text-red-600 hover:text-red-700 font-semibold">
-                                    ×
-                                </button>
+                            @if($isEdit && $article->lampirans->count())
+                            <div class="mb-3 space-y-2">
+                                @foreach($article->lampirans->sortBy('urutan') as $lampiran)
+                                <label class="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between gap-3">
+                                    <a href="{{ asset('storage/' . $lampiran->path_file) }}" target="_blank" class="min-w-0 flex items-center gap-2 text-xs font-semibold text-gray-700 hover:text-[#01458E]">
+                                        <svg class="w-5 h-5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
+                                        </svg>
+                                        <span class="truncate">{{ $lampiran->nama_file }}</span>
+                                    </a>
+                                    <span class="shrink-0 flex items-center gap-1.5 text-[11px] font-semibold text-red-600">
+                                        <input type="checkbox" name="remove_lampiran_ids[]" value="{{ $lampiran->id }}" class="rounded border-gray-300 text-red-600 focus:ring-red-500">
+                                        Hapus
+                                    </span>
+                                </label>
+                                @endforeach
+                            </div>
+                            @endif
+                            <div x-show="newLampiranFiles.length" class="mb-3 space-y-2">
+                                <template x-for="fileName in newLampiranFiles" :key="fileName">
+                                    <div class="p-3 bg-blue-50 rounded-xl border border-blue-100 flex items-center gap-2">
+                                        <svg class="w-5 h-5 text-[#01458E] shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
+                                        </svg>
+                                        <p class="text-xs font-semibold text-gray-700 truncate" x-text="fileName"></p>
+                                    </div>
+                                </template>
                             </div>
                             <label class="block border-2 border-dashed border-gray-200 rounded-xl p-6 text-center cursor-pointer upload-zone">
-                                <input type="file" name="lampiran_file" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.png" @change="onLampiranChange" class="file-input">
+                                <input type="file" name="lampiran_files[]" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.png" multiple @change="onLampiranChange" class="file-input">
                                 <div class="mb-2 flex justify-center">
                                     <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                                     </svg>
                                 </div>
                                 <div class="text-sm font-semibold text-gray-700">Upload File Lampiran</div>
-                                <div class="text-xs text-gray-400 mt-1">PDF, DOCX, PNG, JPG · Maks. 10MB</div>
+                                <div class="text-xs text-gray-400 mt-1">Maks. 5 file · PDF, DOC, DOCX, XLS, XLSX, TXT, JPG, PNG · 5MB/file</div>
                             </label>
                         </div>
 
@@ -720,15 +803,27 @@
                     <div id="previewContent" class="prose prose-sm max-w-none mb-6"></div>
 
                     {{-- Lampiran File --}}
-                    <div x-show="lampiranFileName" class="border-t border-gray-200 pt-6">
+                    <div x-show="lampirans.length || newLampiranFiles.length" class="border-t border-gray-200 pt-6">
                         <p class="text-gray-500 text-xs mb-3">Lampiran File:</p>
-                        <a :href="'{{ route("super_admin.pustaka.opd") }}?lampiran=' + lampiranFileName"
-                           class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">
-                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
-                            </svg>
-                            <span x-text="lampiranFileName"></span>
-                        </a>
+                        <div class="flex flex-wrap gap-2">
+                            <template x-for="lampiran in lampirans" :key="lampiran.id">
+                                <a :href="lampiran.url" target="_blank"
+                                   class="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition-colors">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
+                                    </svg>
+                                    <span x-text="lampiran.nama_file"></span>
+                                </a>
+                            </template>
+                            <template x-for="fileName in newLampiranFiles" :key="fileName">
+                                <span class="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-[#01458E] rounded-lg text-sm">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M8 16.5a1 1 0 11-2 0 1 1 0 012 0zM15 7a2 2 0 11-4 0 2 2 0 014 0zM3.293 7.293a1 1 0 011.414 0A5 5 0 0013.414 2H12a1 1 0 110-2h4.586A1.5 1.5 0 0118 1.5v4.586a1 1 0 01-2 0V3.414A5 5 0 007.293 11.707a1 1 0 01-1.414-1.414z"/>
+                                    </svg>
+                                    <span x-text="fileName"></span>
+                                </span>
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -862,6 +957,15 @@
         imageInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                if (window.kbFormComponent) {
+                    window.kbFormComponent.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                } else {
+                    alert('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                }
+                imageInput.value = '';
+                return;
+            }
 
             const formData = new FormData();
             formData.append('image', file);

@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Support\IdGenerator;
+
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -50,11 +52,19 @@ class StatusTiketNotification extends Notification
         public readonly string  $status,
         public readonly string  $keterangan,
         public readonly string  $url,
-    ) {}
+    ) {
+        $this->id = IdGenerator::make('NTF');
+    }
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast', 'mail'];
+        $channels = ['database', 'broadcast'];
+
+        if (($notifiable->role ?? null) === 'opd') {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toMail(object $notifiable): MailMessage

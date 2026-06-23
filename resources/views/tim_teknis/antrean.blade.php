@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Antrean Tugas — Tim Teknis</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -137,7 +139,7 @@
                                     'id' => $tiket->id, 'subjek_masalah' => $tiket->subjek_masalah,
                                     'detail_masalah' => $tiket->detail_masalah, 'opd_nama' => $tiket->opd?->nama_opd ?? '—',
                                     'kategori_nama' => $kategoriNama, 'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
-                                    'lokasi' => $tiket->lokasi ?? '—', 'foto_bukti' => $tiket->foto_bukti,
+                                    'lokasi' => $tiket->lokasi ?? '—', 'foto_bukti' => $tiket->getFotoPaths(),
                                     'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                     'kb_judul' => $tiket->kb?->nama_artikel_sop ?? null,
                                     'sop_judul' => $tiket->sopInternal?->nama_artikel_sop ?? null,
@@ -194,15 +196,29 @@
                                 <div class="flex items-center gap-2 flex-wrap" @click.stop>
                                     @if($isUtama)
                                     <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
-                                       class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
-                                       style="background:#01458E;">Chat</a>
+                                       class="relative inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+                                       data-chat-room-id="{{ $tiket->chat_room_id }}" data-chat-unread-button
+                                       style="background:#01458E;">
+                                        @if($tiket->unread_count > 0)
+                                        <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                              style="background:#DC2626;">{{ $tiket->unread_count > 9 ? '9+' : $tiket->unread_count }}</span>
+                                        @endif
+                                        Chat
+                                    </a>
                                     <button type="button" @click="setTiket({{ $tiketJson }}); showModal = 'konfirmasi'"
                                             class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
                                             style="background:#059669;">Selesai</button>
                                     @else
                                     <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
-                                       class="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg"
-                                       style="background:#F3F4F6;color:#6B7280;">Lihat Chat</a>
+                                       class="relative inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg"
+                                       data-chat-room-id="{{ $tiket->chat_room_id }}" data-chat-unread-button
+                                       style="background:#F3F4F6;color:#6B7280;">
+                                        @if($tiket->unread_count > 0)
+                                        <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                              style="background:#DC2626;">{{ $tiket->unread_count > 9 ? '9+' : $tiket->unread_count }}</span>
+                                        @endif
+                                        Lihat Chat
+                                    </a>
                                     @endif
                                 </div>
                             </div>
@@ -257,7 +273,7 @@
                                         'kategori_nama'         => $kategoriNama,
                                         'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                         'lokasi'                => $tiket->lokasi ?? '—',
-                                        'foto_bukti'            => $tiket->foto_bukti,
+                                        'foto_bukti'            => $tiket->getFotoPaths(),
                                         'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                         'kb_judul'              => $tiket->kb?->nama_artikel_sop ?? null,
                                         'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
@@ -343,15 +359,20 @@
                                             @if($isUtama)
                                             <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
                                                title="Chat dengan OPD"
-                                               class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                                               class="relative w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                                               data-chat-room-id="{{ $tiket->chat_room_id }}" data-chat-unread-button
                                                style="background:#EEF3F9;color:#01458E;">
+                                                @if($tiket->unread_count > 0)
+                                                <span class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                                      style="background:#DC2626;">{{ $tiket->unread_count > 9 ? '9+' : $tiket->unread_count }}</span>
+                                                @endif
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
                                                 </svg>
                                             </a>
                                             <button type="button"
                                                     @click.stop="setTiket({{ $tiketJson }}); showModal = 'konfirmasi'"
-                                                    title="Tandai Selesai / Gagal"
+                                                    title="Tandai Hasil Penanganan"
                                                     class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
                                                     style="background:#D1FAE5;color:#059669;">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -372,8 +393,13 @@
                                             @else
                                             <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
                                                title="Lihat Chat (Hanya Lihat)"
-                                               class="w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                                               class="relative w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                                               data-chat-room-id="{{ $tiket->chat_room_id }}" data-chat-unread-button
                                                style="background:#F3F4F6;color:#6B7280;">
+                                                @if($tiket->unread_count > 0)
+                                                <span class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                                      style="background:#DC2626;">{{ $tiket->unread_count > 9 ? '9+' : $tiket->unread_count }}</span>
+                                                @endif
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
                                                 </svg>
@@ -662,7 +688,10 @@
                     <template x-if="selectedTiket?.is_utama">
                         <div style="display:flex;flex-direction:column;gap:8px;">
                             <a :href="selectedTiket?.chat_url"
-                               style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;background:#EEF3F9;color:#01458E;text-decoration:none;border:1px solid #dbeafe;">
+                               style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;background:#EEF3F9;color:#01458E;text-decoration:none;border:1px solid #dbeafe;">
+                                <span x-show="(selectedTiket?.unread_count ?? 0) > 0"
+                                      x-text="selectedTiket.unread_count > 9 ? '9+' : selectedTiket.unread_count"
+                                      style="position:absolute;top:-8px;right:-8px;min-width:20px;height:20px;padding:0 4px;border-radius:9999px;background:#DC2626;color:white;border:2px solid white;font-size:10px;font-weight:700;line-height:16px;display:flex;align-items:center;justify-content:center;"></span>
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
                                 </svg>
@@ -671,7 +700,7 @@
                             <div style="display:flex;gap:8px;">
                                 <button @click="showModal = 'konfirmasi'"
                                         style="flex:1;padding:9px;border-radius:10px;font-size:12px;font-weight:700;background:#D1FAE5;border:1px solid #6ee7b7;color:#065f46;cursor:pointer;">
-                                    ✓ Selesai / Gagal
+                                    Selesaikan Tiket
                                 </button>
                                 <template x-if="!selectedTiket?.pernah_dibuka_kembali">
                                     <button @click="showModal = 'kembalikan'"
@@ -687,7 +716,10 @@
                     <template x-if="!selectedTiket?.is_utama">
                         <div style="display:flex;flex-direction:column;gap:8px;">
                             <a :href="selectedTiket?.chat_url"
-                               style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;background:#F3F4F6;color:#374151;text-decoration:none;border:1px solid #E5E7EB;">
+                               style="position:relative;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:10px;font-size:13px;font-weight:700;background:#F3F4F6;color:#374151;text-decoration:none;border:1px solid #E5E7EB;">
+                                <span x-show="(selectedTiket?.unread_count ?? 0) > 0"
+                                      x-text="selectedTiket.unread_count > 9 ? '9+' : selectedTiket.unread_count"
+                                      style="position:absolute;top:-8px;right:-8px;min-width:20px;height:20px;padding:0 4px;border-radius:9999px;background:#DC2626;color:white;border:2px solid white;font-size:10px;font-weight:700;line-height:16px;display:flex;align-items:center;justify-content:center;"></span>
                                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155"/>
                                 </svg>
@@ -716,7 +748,7 @@
                  @click="showModal = ''"
                  class="fixed inset-0 bg-black/40 z-[102]"></div>
 
-            {{-- Modal: Konfirmasi Selesai/Gagal --}}
+            {{-- Modal: Konfirmasi Hasil Penanganan --}}
             <div x-show="showModal === 'konfirmasi'"
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 scale-95"
@@ -731,14 +763,14 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-1">Tiket Selesai?</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Pilih Hasil Penanganan</h3>
                     <p class="text-sm font-semibold mb-4" style="color:#01458E;" x-text="'#' + selectedTiket?.id + ' — ' + selectedTiket?.subjek_masalah"></p>
-                    <p class="text-sm text-gray-500 mb-6">Pilih hasil perbaikan tiket ini.</p>
+                    <p class="text-sm text-gray-500 mb-6">Tentukan apakah tiket berhasil diperbaiki atau sudah dianalisis namun tidak dapat diperbaiki.</p>
                     <div class="flex gap-3">
                         <button @click="showModal = 'gagal'"
                                 class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
                                 style="background:#DC2626;">
-                            Tiket Gagal
+                            Tidak Tertangani
                         </button>
                         <button @click="showModal = 'selesai'"
                                 class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
@@ -795,7 +827,7 @@
                 </div>
             </div>
 
-            {{-- Modal: Tiket Gagal (Rusak Berat) --}}
+            {{-- Modal: Tidak Dapat Diperbaiki --}}
             <div x-show="showModal === 'gagal'"
                  x-transition:enter="transition ease-out duration-200"
                  x-transition:enter-start="opacity-0 scale-95"
@@ -810,28 +842,28 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">Tiket Gagal Diperbaiki</h3>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">Tiket Tidak Dapat Diperbaiki</h3>
                     <p class="text-sm font-semibold mb-1 text-center" style="color:#01458E;" x-text="'#' + selectedTiket?.id + ' — ' + selectedTiket?.subjek_masalah"></p>
-                    <p class="text-sm text-gray-500 mb-4 text-center">Tiket tidak dapat diperbaiki karena aset rusak total</p>
+                    <p class="text-sm text-gray-500 mb-4 text-center">Tiket telah selesai dianalisis, namun tidak dapat diperbaiki karena alasan berikut.</p>
                     <form x-ref="formGagal" method="POST" action="#"
                           @submit.prevent="submitForm($refs.formGagal, selectedTiket.url_gagal)">
                         @csrf
                         <div class="mb-3">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Analisis Kerusakan <span class="text-red-500">*</span></label>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Alasan Tidak Dapat Diperbaiki <span class="text-red-500">*</span></label>
                             <textarea name="analisis_kerusakan" rows="2" required
-                                      placeholder="Masukkan catatan..."
+                                      placeholder="Jelaskan alasan teknis tiket/perangkat tidak dapat diperbaiki..."
                                       class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] resize-none"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Spesifikasi Perangkat Rusak</label>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1.5">Spesifikasi Perangkat Terdampak</label>
                             <textarea name="spesifikasi_perangkat_rusak" rows="2"
-                                      placeholder="Masukkan catatan..."
+                                      placeholder="Contoh: tipe perangkat, nomor aset, komponen terdampak..."
                                       class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] resize-none"></textarea>
                         </div>
                         <div class="mb-4">
                             <label class="block text-xs font-semibold text-gray-700 mb-1.5">Rekomendasi Tindak Lanjut <span class="text-red-500">*</span></label>
                             <textarea name="rekomendasi" rows="2" required
-                                      placeholder="Masukkan catatan..."
+                                      placeholder="Contoh: tindak lanjut yang disarankan untuk OPD/admin..."
                                       class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] resize-none"></textarea>
                         </div>
                         <div class="flex gap-3">
@@ -1048,6 +1080,10 @@
             },
         };
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        window.initChatUnreadBadges?.(@json(Auth::id()));
+    });
     </script>
 
 </body>

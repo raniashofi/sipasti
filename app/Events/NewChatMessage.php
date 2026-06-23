@@ -26,8 +26,12 @@ class NewChatMessage implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $room = $this->message->room;
+
         return [
             'id'          => $this->message->id,
+            'room_id'     => $this->message->room_id,
+            'tiket_id'    => $room?->tiket_id,
             'sender_id'   => $this->message->sender_id,
             'konten'      => $this->message->konten,
             'file_url'    => $this->message->file_url

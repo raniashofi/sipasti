@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pustaka Pengetahuan — Super Admin</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>* { font-family: 'Inter', sans-serif; }</style>
@@ -502,10 +504,18 @@
         {{-- ── MODAL: Hapus Bidang ── --}}
         <div x-show="showDeleteBidang"
              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-150"  x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-             class="fixed inset-0 z-50 flex items-center justify-center p-4" style="display:none;">
-            <div class="absolute inset-0 bg-gray-500/40" @click="showDeleteBidang = false"></div>
-            <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 p-6 sm:p-8 text-center" @click.stop>
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             @click.self="showDeleteBidang = false"
+             class="fixed inset-0 bg-black/45 backdrop-filter backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display:none;">
+            <div x-show="showDeleteBidang"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 translate-y-3 scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+                 class="relative z-10 bg-white rounded-3xl shadow-2xl shadow-black/20 w-full max-w-sm mx-4 p-6 sm:p-8 text-center"
+                 @click.stop>
                 <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                     <svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>

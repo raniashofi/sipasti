@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pengaduan Saya — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -237,7 +239,14 @@
                 'dibuka_kembali'    => ['label' => 'Dibuka Kembali',    'cls' => 'badge-perbaikan'],
                 default             => ['label' => 'Menunggu',          'cls' => 'badge-default'],
             };
-            $showChat    = in_array($status, ['panduan_remote', 'perbaikan_teknis']);
+            $showChat    = in_array($status, ['panduan_remote', 'perbaikan_teknis', 'dibuka_kembali']);
+            $chatType    = $status === 'panduan_remote' ? 'admin' : 'teknis';
+            $chatRoomId  = $chatType === 'admin'
+                ? ($tiket->admin_room_id ?? null)
+                : ($tiket->teknis_room_id ?? null);
+            $chatUnread  = $chatType === 'admin'
+                ? (int) ($tiket->admin_unread_count ?? 0)
+                : (int) ($tiket->teknis_unread_count ?? 0);
             $showKonfirm = in_array($status, ['selesai', 'tiket_ditutup']) && $tiket->penilaian === null;
             @endphp
 
@@ -263,7 +272,12 @@
                 {{-- Tombol aksi --}}
                 <div class="flex items-center gap-2 flex-wrap">
                     @if($showChat)
-                    <a href="{{ route('opd.tiket.chat', $tiket->id) }}" class="btn-action btn-chat">
+                    <a href="{{ route('opd.tiket.chat', $tiket->id) }}?type={{ $chatType }}" class="btn-action btn-chat relative"
+                       data-chat-room-id="{{ $chatRoomId }}" data-chat-unread-button>
+                        @if($chatUnread > 0)
+                        <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                              style="background:#DC2626;">{{ $chatUnread > 9 ? '9+' : $chatUnread }}</span>
+                        @endif
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
                         </svg>
@@ -381,7 +395,14 @@
                         default             => ['label' => 'Menunggu',          'cls' => 'badge-default'],
                     };
 
-                    $showChat   = in_array($status, ['panduan_remote', 'perbaikan_teknis']);
+                    $showChat   = in_array($status, ['panduan_remote', 'perbaikan_teknis', 'dibuka_kembali']);
+                    $chatType   = $status === 'panduan_remote' ? 'admin' : 'teknis';
+                    $chatRoomId = $chatType === 'admin'
+                        ? ($tiket->admin_room_id ?? null)
+                        : ($tiket->teknis_room_id ?? null);
+                    $chatUnread = $chatType === 'admin'
+                        ? (int) ($tiket->admin_unread_count ?? 0)
+                        : (int) ($tiket->teknis_unread_count ?? 0);
                     $showKonfirm= in_array($status, ['selesai', 'tiket_ditutup']) && $tiket->penilaian === null;
                     @endphp
 
@@ -423,8 +444,13 @@
                             <div class="flex items-center justify-center gap-2 flex-wrap">
 
                                 @if($showChat)
-                                <a href="{{ route('opd.tiket.chat', $tiket->id) }}"
-                                   class="btn-action btn-chat">
+                                <a href="{{ route('opd.tiket.chat', $tiket->id) }}?type={{ $chatType }}"
+                                   class="btn-action btn-chat relative"
+                                   data-chat-room-id="{{ $chatRoomId }}" data-chat-unread-button>
+                                    @if($chatUnread > 0)
+                                    <span class="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                                          style="background:#DC2626;">{{ $chatUnread > 9 ? '9+' : $chatUnread }}</span>
+                                    @endif
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
                                     </svg>
@@ -548,6 +574,7 @@
 
 {{-- Modal Rating Tutup Tiket --}}
 <div x-data="ratingModal()" x-show="open"
+     x-cloak
      x-transition:enter="transition ease-out duration-200"
      x-transition:enter-start="opacity-0"
      x-transition:enter-end="opacity-100"
@@ -643,6 +670,10 @@ document.addEventListener('alpine:init', () => {
             });
         }
     }));
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.initChatUnreadBadges?.(@json(Auth::id()));
 });
 </script>
 

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Chat Perbaikan Teknis — Tim Teknis</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -43,6 +45,7 @@
     $opdNama      = $tiket->opd?->nama_opd ?? 'OPD';
     $kategoriNama = $tiket->kategori?->nama_kategori ?? $tiket->kb?->kategori?->nama_kategori ?? '—';
     $hasAdminRoom = $adminRoom !== null;
+    $sidebarActive = $chatIsActive ? 'antrean' : 'riwayat';
 @endphp
 
 {{-- ── Sidebar ── --}}
@@ -55,7 +58,7 @@
     <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex items-center gap-4 shrink-0 shadow-sm">
 
         {{-- Back button --}}
-        <a href="{{ route('tim_teknis.antrean') }}"
+        <a href="{{ $chatIsActive ? route('tim_teknis.antrean') : route('tim_teknis.riwayat') }}"
            class="p-2 rounded-xl text-gray-400 hover:text-[#01458E] hover:bg-blue-50 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
@@ -95,10 +98,36 @@
 
     {{-- ── Content Area ── --}}
     <div class="flex-1 overflow-hidden px-3 lg:px-6 py-3 lg:py-5 flex flex-col gap-3 lg:gap-4">
-
+        {{-- Toast Notification --}}
+        <div x-show="showToast"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y--4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y--4"
+             class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+             style="display: none;">
+            <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                 class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                     class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="flex-1">
+                    <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'"
+                       class="text-sm font-medium" x-text="toastMessage"></p>
+                </div>
+                <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
         {{-- Breadcrumb --}}
         <div class="flex items-center gap-2 text-xs text-gray-400 shrink-0">
-            <a href="{{ route('tim_teknis.antrean') }}" class="hover:text-[#01458E] transition-colors">Antrean Tugas</a>
+            <a href="{{ $chatIsActive ? route('tim_teknis.antrean') : route('tim_teknis.riwayat') }}" class="hover:text-[#01458E] transition-colors">{{ $chatIsActive ? 'Antrean Tugas' : 'Riwayat Tugas' }}</a>
             <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
             </svg>
@@ -163,7 +192,7 @@
                     </div>
                     @endif
 
-                    @php $fotosTtc = is_array($tiket->foto_bukti) ? array_values(array_filter($tiket->foto_bukti)) : []; @endphp
+                    @php $fotosTtc = $tiket->getFotoPaths(); @endphp
                     @if(count($fotosTtc) > 0)
                     <div>
                         <label class="field-label">Foto Bukti</label>
@@ -223,12 +252,17 @@
                     adminMessages: {{ json_encode($adminMessages) }},
                     adminRoomId: '{{ $adminRoom?->id ?? '' }}',
 
+                    {{-- Toast Notification --}}
+                    showToast: false,
+                    toastMessage: '',
+                    toastType: 'error',
+
                     init() {
                         this.$nextTick(() => this.scrollBottom());
 
                         window.Echo.private('chat.' + this.roomId)
                             .listen('.NewChatMessage', (e) => {
-                                this.messages.push(e);
+                                this.addMessage(e);
                                 if (this.activeTab === 'teknis') {
                                     this.$nextTick(() => this.scrollBottom());
                                 }
@@ -237,12 +271,36 @@
                         if (this.adminRoomId) {
                             window.Echo.private('chat.' + this.adminRoomId)
                                 .listen('.NewChatMessage', (e) => {
-                                    this.adminMessages.push(e);
+                                    this.addAdminMessage(e);
                                     if (this.activeTab === 'admin') {
                                         this.$nextTick(() => this.scrollAdminBottom());
                                     }
                                 });
                         }
+                    },
+
+                    addMessage(message) {
+                        if (!message?.id) return;
+                        const existingIndex = this.messages.findIndex((msg) => msg.id === message.id);
+
+                        if (existingIndex >= 0) {
+                            this.messages.splice(existingIndex, 1, message);
+                            return;
+                        }
+
+                        this.messages.push(message);
+                    },
+
+                    addAdminMessage(message) {
+                        if (!message?.id) return;
+                        const existingIndex = this.adminMessages.findIndex((msg) => msg.id === message.id);
+
+                        if (existingIndex >= 0) {
+                            this.adminMessages.splice(existingIndex, 1, message);
+                            return;
+                        }
+
+                        this.adminMessages.push(message);
                     },
 
                     switchTab(tab) {
@@ -266,6 +324,11 @@
                     handleFile(event) {
                         const file = event.target.files[0];
                         if (!file) return;
+                        if (file.size > 5 * 1024 * 1024) {
+                            this.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                            event.target.value = '';
+                            return;
+                        }
                         this.selectedFile = file;
                         this.fileName = file.name;
                         const reader = new FileReader();
@@ -278,6 +341,15 @@
                         this.fileName = '';
                         this.previewUrl = null;
                         this.$refs.fileInput.value = '';
+                    },
+
+                    showErrorToast(message) {
+                        this.toastMessage = message;
+                        this.toastType = 'error';
+                        this.showToast = true;
+                        setTimeout(() => {
+                            this.showToast = false;
+                        }, 5000);
                     },
 
                     async send() {
@@ -295,7 +367,7 @@
                                 '{{ route('tim_teknis.tiket.chat.send', $tiket->id) }}',
                                 fd
                             );
-                            this.messages.push(res.data);
+                            this.addMessage(res.data);
                             this.newMessage = '';
                             this.clearFile();
                             this.$nextTick(() => this.scrollBottom());
@@ -353,8 +425,7 @@
                 <template x-if="activeTab === 'teknis'">
                     <div class="flex flex-col flex-1 overflow-hidden">
 
-                        {{-- Banner hanya-lihat untuk pendamping --}}
-                        @if(!$canSend)
+                        @if($chatIsActive && !$canSend)
                         <div class="mx-4 mt-3 mb-3 px-3 py-2.5 rounded-xl flex items-center gap-2.5 shrink-0"
                              style="background:#F0F9FF;border:1px solid #BAE6FD;">
                             <svg class="w-4 h-4 shrink-0" style="color:#0284C7;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -419,6 +490,17 @@
                                 </div>
                             </template>
                         </div>
+
+                        @if(!$chatIsActive)
+                        <div class="px-4 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
+                            <div class="flex items-center justify-center gap-2 py-1.5">
+                                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                                </svg>
+                                <p class="text-[11px] text-gray-400 font-medium">Riwayat ini hanya dapat dilihat, tidak dapat dibalas.</p>
+                            </div>
+                        </div>
+                        @endif
 
                         {{-- Image Preview (hanya untuk teknisi utama) --}}
                         @if($canSend)

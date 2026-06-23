@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Menunggu Verifikasi — Admin Helpdesk</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -34,6 +36,34 @@
     @include('layouts.sidebarAdminHelpdesk')
 
     <div class="ml-0 lg:ml-64 min-h-screen flex flex-col" x-data="tiketPage()" x-cloak>
+
+        {{-- Toast Notification --}}
+        <div x-show="showToast"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y--4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 translate-y--4"
+             class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+             style="display: none;">
+            <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                 class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                     class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <div class="flex-1">
+                    <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'"
+                       class="text-sm font-medium" x-text="toastMessage"></p>
+                </div>
+                <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
 
         {{-- Top bar --}}
         <header class="bg-white border-b border-gray-100 pl-14 pr-4 lg:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-30">
@@ -195,11 +225,13 @@
                                         'kategori_nama'         => $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—'),
                                         'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                         'lokasi'                => $tiket->lokasi ?? '—',
-                                        'foto_bukti'            => $tiket->foto_bukti,
+                                        'foto_bukti'            => $tiket->getFotoPaths(),
                                         'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                         'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                         'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                         'can_terima'            => $tiket->can_terima,
+                                        'can_revisi'            => $tiket->can_revisi ?? true,
+                                        'is_transfer'           => $tiket->is_transfer ?? false,
                                         'alasan_kembalikan'     => null,
                                         'transfer_message'      => $tiket->transfer_message ?? null,
                                         'bidang_id'             => $tiket->bidang_id,
@@ -237,11 +269,20 @@
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                             </div>
                                             @endif
+                                            @if($tiket->is_transfer ?? false)
+                                            <button @click.stop="setTiket({{ $tJ }}); showModal = 'transfer-info'"
+                                                    title="Lihat Pesan Transfer"
+                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
+                                                    style="background:#DBEAFE;color:#2563EB;">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            </button>
+                                            @elseif($tiket->can_revisi ?? true)
                                             <button @click.stop="setTiket({{ $tJ }}); showModal = 'revisi'"
                                                     class="w-8 h-8 rounded-lg flex items-center justify-center"
                                                     style="background:#FEE2E2;color:#DC2626;">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                             </button>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -278,11 +319,13 @@
                                                 'kategori_nama'         => $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—'),
                                                 'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                                 'lokasi'                => $tiket->lokasi ?? '—',
-                                                'foto_bukti'            => $tiket->foto_bukti,
+                                                'foto_bukti'            => $tiket->getFotoPaths(),
                                                 'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                                 'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                                 'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                                 'can_terima'            => $tiket->can_terima,
+                                                'can_revisi'            => $tiket->can_revisi ?? true,
+                                                'is_transfer'           => $tiket->is_transfer ?? false,
                                                 'alasan_kembalikan'     => null,
                                                 'transfer_message'      => $tiket->transfer_message ?? null,
                                                 'bidang_id'             => $tiket->bidang_id,
@@ -349,6 +392,17 @@
                                                         </svg>
                                                     </div>
                                                     @endif
+                                                    @if($tiket->is_transfer ?? false)
+                                                    <button type="button"
+                                                            @click.stop="setTiket({{ $tiketJson }}); showModal = 'transfer-info'"
+                                                            title="Lihat Pesan Transfer"
+                                                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
+                                                            style="background:#DBEAFE;color:#2563EB;">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                    </button>
+                                                    @elseif($tiket->can_revisi ?? true)
                                                     <button type="button"
                                                             @click.stop="setTiket({{ $tiketJson }}); showModal = 'revisi'"
                                                             title="Minta Revisi"
@@ -358,6 +412,7 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                                         </svg>
                                                     </button>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -411,11 +466,13 @@
                                         'kategori_nama'         => $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—'),
                                         'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                         'lokasi'                => $tiket->lokasi ?? '—',
-                                        'foto_bukti'            => $tiket->foto_bukti,
+                                        'foto_bukti'            => $tiket->getFotoPaths(),
                                         'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                         'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                         'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                         'can_terima'            => $tiket->can_terima,
+                                        'can_revisi'            => $tiket->can_revisi ?? false,
+                                        'is_transfer'           => $tiket->is_transfer ?? false,
                                         'alasan_kembalikan'     => $tiket->alasan_kembalikan,
                                         'transfer_message'      => $tiket->transfer_message ?? null,
                                         'bidang_id'             => $tiket->bidang_id,
@@ -455,11 +512,6 @@
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                                             </div>
                                             @endif
-                                            <button @click.stop="setTiket({{ $tJ2 }}); showModal = 'revisi'"
-                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
-                                                    style="background:#FEE2E2;color:#DC2626;">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -496,11 +548,13 @@
                                                 'kategori_nama'         => $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '—'),
                                                 'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                                 'lokasi'                => $tiket->lokasi ?? '—',
-                                                'foto_bukti'            => $tiket->foto_bukti,
+                                                'foto_bukti'            => $tiket->getFotoPaths(),
                                                 'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                                 'created_at_tgl'        => $tiket->created_at?->translatedFormat('d M Y'),
                                                 'created_at_jam'        => $tiket->created_at?->format('H:i:s') . ' WIB',
                                                 'can_terima'            => $tiket->can_terima,
+                                                'can_revisi'            => $tiket->can_revisi ?? false,
+                                                'is_transfer'           => $tiket->is_transfer ?? false,
                                                 'alasan_kembalikan'     => $tiket->alasan_kembalikan,
                                                 'transfer_message'      => $tiket->transfer_message ?? null,
                                                 'bidang_id'             => $tiket->bidang_id,
@@ -571,15 +625,6 @@
                                                         </svg>
                                                     </div>
                                                     @endif
-                                                    <button type="button"
-                                                            @click.stop="setTiket({{ $tiketJson }}); showModal = 'revisi'"
-                                                            title="Minta Revisi"
-                                                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
-                                                            style="background:#FEE2E2;color:#DC2626;">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                                        </svg>
-                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -782,6 +827,14 @@
                 <div class="shrink-0 p-4 sm:p-5 border-t border-gray-100 bg-white space-y-3">
                     <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Aksi Tindakan</h4>
                     <div class="flex flex-col gap-2.5">
+                        <button x-show="selectedTiket?.is_transfer || selectedTiket?.transfer_message"
+                                @click="showModal = 'transfer-info'"
+                                class="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 focus:outline-none transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Lihat Pesan Transfer
+                        </button>
                         <button @click="showModal = 'terima'"
                                 :disabled="!selectedTiket?.can_terima"
                                 :title="!selectedTiket?.can_terima ? 'Bidang tiket tidak sesuai dengan bidang Anda' : ''"
@@ -799,7 +852,8 @@
                                     class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors">
                                 ⇄ Transfer / Eskalasi
                             </button>
-                            <button @click="showModal = 'revisi'"
+                            <button x-show="selectedTiket?.can_revisi"
+                                    @click="showModal = 'revisi'"
                                     class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 focus:outline-none transition-colors">
                                 ↩ Minta Revisi
                             </button>
@@ -895,6 +949,40 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            {{-- Modal: Konteks Transfer --}}
+            <div x-show="showModal === 'transfer-info'"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="fixed inset-0 z-[103] flex items-center justify-center p-4 sm:p-0"
+                 style="display:none;"
+                 @click.self="showModal = ''">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative" @click.stop>
+                    <button @click="showModal = ''" class="absolute top-4 right-4 w-8 h-8 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors focus:outline-none">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                    <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1 text-center">Pesan Transfer Admin Lama</h3>
+                    <p class="text-sm font-semibold mb-5 text-center text-[#01458E] break-words" x-text="'#' + selectedTiket?.id + ' — ' + selectedTiket?.subjek_masalah"></p>
+                    <div class="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3">
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-blue-600 mb-2">Catatan Transfer</p>
+                        <p class="text-sm text-blue-950 leading-relaxed whitespace-pre-wrap break-words" x-text="selectedTiket?.transfer_message || 'Tidak ada pesan transfer khusus dari admin bidang lama.'"></p>
+                    </div>
+                    <button @click="showModal = ''"
+                            class="mt-5 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 focus:outline-none"
+                            style="background:#01458E;">
+                        Mengerti
+                    </button>
                 </div>
             </div>
 
@@ -1332,6 +1420,11 @@
             sopPreviewContent: '',
             sopPreviewTitle: '',
 
+            // Toast Notification
+            showToast: false,
+            toastMessage: '',
+            toastType: 'error',
+
             // Variabel AlpineJS untuk Bidang (Transfer)
             bidangList: @json($bidangListData),
             bidangId: '',
@@ -1412,15 +1505,23 @@
                 };
                 return map[p] ?? 'background:#F3F4F6;color:#9CA3AF;border: 1px solid #E5E7EB;';
             },
+            showErrorToast(message) {
+                this.toastMessage = message;
+                this.toastType = 'error';
+                this.showToast = true;
+                setTimeout(() => {
+                    this.showToast = false;
+                }, 5000);
+            },
             submitForm(form, url) {
                 // Validasi form Transfer
                 if (form === this.$refs.formTransfer && !this.bidangId) {
-                    alert('Silakan pilih Bidang Tujuan terlebih dahulu sebelum melakukan transfer.');
+                    this.showErrorToast('Silakan pilih Bidang Tujuan terlebih dahulu sebelum melakukan transfer.');
                     return;
                 }
                 // Validasi form Eskalasi
                 if (form === this.$refs.formEskalasi && !this.tekUtamaId) {
-                    alert('Silakan pilih Teknisi Utama terlebih dahulu sebelum melakukan eskalasi.');
+                    this.showErrorToast('Silakan pilih Teknisi Utama terlebih dahulu sebelum melakukan eskalasi.');
                     return;
                 }
                 form.action = url;

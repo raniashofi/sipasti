@@ -2,15 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 class ChatRoom extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'chat_room';
     public $incrementing = false;
     protected $keyType = 'string';
+    protected string $idPrefix = 'ROOM';
 
-    protected $fillable = ['id', 'tiket_id', 'nama_roomchat', 'is_active', 'current_admin_id', 'transferred_from_admin_id', 'transferred_from_bidang_id', 'transferred_at'];
+    protected $fillable = ['id', 'tiket_id', 'nama_roomchat', 'is_active', 'transferred_at'];
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -30,21 +34,6 @@ class ChatRoom extends Model
     public function messages()
     {
         return $this->hasMany(ChatMessage::class, 'room_id');
-    }
-
-    public function currentAdmin()
-    {
-        return $this->belongsTo(User::class, 'current_admin_id');
-    }
-
-    public function transferredFromAdmin()
-    {
-        return $this->belongsTo(User::class, 'transferred_from_admin_id');
-    }
-
-    public function transferredFromBidang()
-    {
-        return $this->belongsTo(Bidang::class, 'transferred_from_bidang_id');
     }
 
     // Get active admin (dari pivot, role = admin_helpdesk dan is_active = true)

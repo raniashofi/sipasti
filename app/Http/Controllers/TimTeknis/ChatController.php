@@ -11,18 +11,46 @@ use App\Models\StatusTiket;
 use App\Models\Tiket;
 use App\Models\TiketTeknisi;
 use App\Models\TimTeknis;
+use App\Support\IdGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
     private function teknisProfile(): ?TimTeknis
     {
         return TimTeknis::where('user_id', Auth::id())->first();
+    }
+
+    private function aktifkanUlangPenugasan(string $tiketId, ?string $teknisId): void
+    {
+        if (! $teknisId) {
+            return;
+        }
+
+        if (TiketTeknisi::where('tiket_id', $tiketId)->where('teknis_id', $teknisId)->where('status_tugas', 'aktif')->exists()) {
+            return;
+        }
+
+        $penugasanTerakhir = TiketTeknisi::where('tiket_id', $tiketId)
+            ->where('teknis_id', $teknisId)
+            ->where('status_tugas', 'selesai')
+            ->latest('waktu_ditugaskan')
+            ->first();
+
+        if ($penugasanTerakhir) {
+            TiketTeknisi::where('tiket_id', $tiketId)
+                ->where('teknis_id', $teknisId)
+                ->update([
+                    'peran_teknisi'       => $penugasanTerakhir->peran_teknisi,
+                    'waktu_ditugaskan'    => now(),
+                    'status_tugas'        => 'aktif',
+                    'alasan_dikembalikan' => null,
+                ]);
+        }
     }
 
     /**
@@ -39,36 +67,35 @@ class ChatController extends Controller
             ->orderByDesc('created_at')
             ->value('status_tiket');
         if ($latestStatusTiket === 'dibuka_kembali') {
-            TiketTeknisi::where('tiket_id', $tiketId)
-                ->where('teknis_id', $teknis?->id)
-                ->where('status_tugas', 'selesai')
-                ->update(['status_tugas' => 'aktif']);
+            $this->aktifkanUlangPenugasan($tiketId, $teknis?->id);
         }
 
-        // Izinkan teknisi utama maupun pendamping
+        // Izinkan teknisi utama maupun pendamping, baik sesi aktif maupun riwayat.
         $assignment = TiketTeknisi::where('tiket_id', $tiketId)
             ->where('teknis_id', $teknis?->id)
-            ->where('status_tugas', 'aktif')
+            ->whereIn('status_tugas', ['aktif', 'selesai'])
+            ->orderByRaw("CASE WHEN status_tugas = 'aktif' THEN 0 ELSE 1 END")
+            ->latest('waktu_ditugaskan')
             ->first();
 
         abort_if(!$assignment, 403);
 
         $myPeran = $assignment->peran_teknisi;
-        $canSend = $myPeran === 'teknisi_utama';
 
-        $tiket = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus', 'statusTiket'])
+        $tiket = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus', 'statusTiket', 'buktiFoto'])
             ->findOrFail($tiketId);
+        $roomBidangId = $tiket->bidang_id ?? $teknis?->bidang_id;
 
         // ── Room Teknis ──
         $room = ChatRoom::firstOrCreate(
             ['tiket_id' => $tiket->id, 'nama_roomchat' => 'teknis'],
-            ['id' => 'ROOM-' . strtoupper(Str::random(10))]
+            []
         );
 
         // Tambahkan teknisi (utama & pendamping) ke room agar bisa subscribe channel
         ChatRoomUser::firstOrCreate(
             ['room_id' => $room->id, 'user_id' => Auth::id()],
-            ['role_di_room' => 'tim_teknis', 'last_read_at' => now()]
+            ['role_di_room' => 'tim_teknis', 'bidang_id' => $roomBidangId, 'last_read_at' => now()]
         );
         // Update last_read_at setiap kali mengakses
         DB::table('chat_room_users')
@@ -81,7 +108,7 @@ class ChatController extends Controller
         if ($opdUserId) {
             ChatRoomUser::firstOrCreate(
                 ['room_id' => $room->id, 'user_id' => $opdUserId],
-                ['role_di_room' => 'opd']
+                ['role_di_room' => 'opd', 'bidang_id' => $roomBidangId]
             );
         }
 
@@ -89,6 +116,12 @@ class ChatController extends Controller
 
         // ── Room Admin (riwayat panduan remote, hanya lihat) ──
         $adminRoom     = ChatRoom::where('tiket_id', $tiket->id)->where('nama_roomchat', 'admin')->first();
+        if ($adminRoom) {
+            ChatRoomUser::firstOrCreate(
+                ['room_id' => $adminRoom->id, 'user_id' => Auth::id()],
+                ['role_di_room' => 'tim_teknis', 'bidang_id' => $roomBidangId, 'last_read_at' => now()]
+            );
+        }
         $adminMessages = $adminRoom ? $this->loadMessages($adminRoom->id) : collect();
 
         $bukaKembaliStatus = $tiket->statusTiket->where('status_tiket', 'dibuka_kembali')->last();
@@ -97,6 +130,7 @@ class ChatController extends Controller
         $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
         $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
         $chatIsActive = $currentStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
+        $canSend = $assignment->status_tugas === 'aktif' && $myPeran === 'teknisi_utama' && $chatIsActive;
 
         return view('tim_teknis.chat', compact(
             'tiket', 'room', 'messages',
@@ -159,7 +193,9 @@ class ChatController extends Controller
 
         $request->validate([
             'konten' => 'required_without:file|nullable|string|max:2000',
-            'file'   => 'nullable|file|mimes:jpg,jpeg,png|max:10240',
+            'file'   => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+        ], [
+            'file.max' => 'Gambar yang diupload terlalu besar. Maksimal 5 MB.',
         ]);
 
         $fileUrl    = null;
@@ -171,7 +207,7 @@ class ChatController extends Controller
         }
 
         $message = ChatMessage::create([
-            'id'          => 'MSG-' . strtoupper(Str::random(10)),
+            'id'          => IdGenerator::make('MSG'),
             'room_id'     => $room->id,
             'sender_id'   => Auth::id(),
             'konten'      => $request->input('konten'),

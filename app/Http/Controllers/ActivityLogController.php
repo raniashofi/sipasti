@@ -506,7 +506,6 @@ class ActivityLogController extends Controller
         $writer = new Writer();
         $writer->openToFile($tempPath);
 
-        // Header row
         $writer->addRow(new Row([
             new StringCell('Waktu'),
             new StringCell('User ID'),

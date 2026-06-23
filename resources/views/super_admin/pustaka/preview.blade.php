@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Preview: {{ $article->nama_artikel_sop }} — Super Admin</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>* { font-family: 'Inter', sans-serif; }</style>
@@ -71,18 +73,22 @@
                         <p class="text-gray-400 italic">Konten artikel belum tersedia.</p>
                     @endif
 
-                    @if($article->lampiran_file)
+                    @if($article->lampirans->count())
                         <div class="mt-8 pt-6 border-t border-gray-100">
                             <p class="text-sm font-medium text-gray-700 mb-2">Lampiran</p>
-                            <a href="{{ asset('storage/' . $article->lampiran_file) }}"
+                            <div class="flex flex-wrap gap-2">
+                            @foreach($article->lampirans->sortBy('urutan') as $lampiran)
+                            <a href="{{ asset('storage/' . $lampiran->path_file) }}"
                                target="_blank"
                                class="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                           d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828L18 9.828A4 4 0 1012.172 4L5.586 10.586a6 6 0 108.485 8.485L20 13"/>
                                 </svg>
-                                Unduh Lampiran
+                                {{ $lampiran->nama_file }}
                             </a>
+                            @endforeach
+                            </div>
                         </div>
                     @endif
 

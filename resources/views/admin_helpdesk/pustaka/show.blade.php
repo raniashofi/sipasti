@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $article->nama_artikel_sop }} — Pustaka Solusi</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -132,19 +134,23 @@
                     </div>
                     @endif
 
-                    @if($article->lampiran_file)
+                    @if($article->lampirans->count())
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Unduhan</p>
-                        <a href="{{ asset('storage/' . $article->lampiran_file) }}" target="_blank"
+                        <div class="space-y-2">
+                        @foreach($article->lampirans->sortBy('urutan') as $lampiran)
+                        <a href="{{ asset('storage/' . $lampiran->path_file) }}" target="_blank"
                            class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 hover:border-[#01458E] transition-all group">
                             <div class="w-10 h-10 rounded-lg flex items-center justify-center bg-[#01458E] text-white shrink-0 shadow-sm">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <p class="text-xs font-bold text-gray-800 truncate">{{ basename($article->lampiran_file) }}</p>
+                                <p class="text-xs font-bold text-gray-800 truncate">{{ $lampiran->nama_file }}</p>
                                 <p class="text-[10px] text-gray-500 font-medium">Klik untuk unduh</p>
                             </div>
                         </a>
+                        @endforeach
+                        </div>
                     </div>
                     @endif
 

@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Riwayat Tugas — Tim Teknis</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -97,7 +99,8 @@
                             @forelse($riwayats as $row)
                             @php
                                 $tiket = $row->tiket;
-                                $statusAkhir = $tiket?->latestStatus?->status_tiket ?? '';
+                                $statusAkhirData = $row->completion_status ?? $tiket?->latestStatus;
+                                $statusAkhir = $statusAkhirData?->status_tiket ?? '';
                                 $kategoriNama = $tiket?->kategori?->nama_kategori ?? $tiket?->kb?->kategori?->nama_kategori ?? '—';
 
                                 // Kumpulkan semua teknisi (utama + pendamping)
@@ -115,11 +118,12 @@
                                     'rusak_berat' => ['label' => 'Rusak Berat',         'bg' => '#fef2f2', 'color' => '#dc2626', 'border' => '#fecaca'],
                                     default       => ['label' => 'Dikembalikan',        'bg' => '#fffbeb', 'color' => '#d97706', 'border' => '#fde68a'],
                                 };
+                                $hasChatHistory = ($tiket?->chatRooms ?? collect())->whereIn('nama_roomchat', ['teknis', 'admin'])->isNotEmpty();
                                 $rowJson = json_encode([
                                     'id' => $tiket?->id, 'subjek_masalah' => $tiket?->subjek_masalah,
                                     'detail_masalah' => $tiket?->detail_masalah, 'opd_nama' => $tiket?->opd?->nama_opd ?? '—',
                                     'kategori_nama' => $kategoriNama, 'spesifikasi_perangkat' => $tiket?->spesifikasi_perangkat ?? '—',
-                                    'lokasi' => $tiket?->lokasi ?? '—', 'foto_bukti' => $tiket?->foto_bukti,
+                                    'lokasi' => $tiket?->lokasi ?? '—', 'foto_bukti' => $tiket?->getFotoPaths() ?? [],
                                     'rekomendasi_penanganan' => $tiket?->rekomendasi_penanganan,
                                     'is_utama' => ($row->peran_teknisi === 'teknisi_utama'),
                                     'peran_label' => ($row->peran_teknisi === 'teknisi_utama') ? 'Teknisi Utama' : 'Pendamping',
@@ -128,11 +132,13 @@
                                     'waktu_jam' => ($row->waktu_ditugaskan?->format('H:i') ?? '') . ' WIB',
                                     'status_akhir' => $statusAkhir, 'hasil_label' => $hasilConfig['label'],
                                     'hasil_bg' => $hasilConfig['bg'], 'hasil_color' => $hasilConfig['color'],
-                                    'analisis_kerusakan' => $tiket?->latestStatus?->catatan,
-                                    'spesifikasi_perangkat_rusak' => $tiket?->latestStatus?->spesifikasi_perangkat_rusak,
-                                    'rekomendasi' => $tiket?->latestStatus?->rekomendasi,
+                                    'analisis_kerusakan' => $statusAkhirData?->catatan,
+                                    'spesifikasi_perangkat_rusak' => $statusAkhirData?->spesifikasi_perangkat_rusak,
+                                    'rekomendasi' => $statusAkhirData?->rekomendasi,
                                     'is_telat' => $row->is_telat ?? false,
                                     'hari_telat' => $row->hari_telat ?? 0,
+                                    'has_chat_history' => $hasChatHistory,
+                                    'chat_url' => $hasChatHistory && $tiket ? route('tim_teknis.tiket.chat', $tiket->id) : null,
                                 ]);
                             @endphp
                             <div class="px-4 py-4 hover:bg-gray-50/80 cursor-pointer transition-colors"
@@ -182,6 +188,7 @@
                                         <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">OPD</th>
                                         <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Kategori</th>
                                         <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Hasil Akhir</th>
+                                        <th class="px-5 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                                         <th class="px-5 py-4"></th>
                                     </tr>
                                 </thead>
@@ -189,7 +196,8 @@
                                     @forelse($riwayats as $row)
                                         @php
                                             $tiket = $row->tiket;
-                                            $statusAkhir = $tiket?->latestStatus?->status_tiket ?? '';
+                                            $statusAkhirData = $row->completion_status ?? $tiket?->latestStatus;
+                                            $statusAkhir = $statusAkhirData?->status_tiket ?? '';
                                             $kategoriNama = $tiket?->kategori?->nama_kategori ?? $tiket?->kb?->kategori?->nama_kategori ?? '—';
 
                                             // Kumpulkan semua teknisi (utama + pendamping)
@@ -208,6 +216,7 @@
                                                 default => ['label' => 'Dikembalikan', 'bg' => '#fffbeb', 'color' => '#d97706', 'border' => '#fde68a'],
                                             };
 
+                                            $hasChatHistory = ($tiket?->chatRooms ?? collect())->whereIn('nama_roomchat', ['teknis', 'admin'])->isNotEmpty();
                                             $rowJson = json_encode([
                                                 'id' => $tiket?->id,
                                                 'subjek_masalah' => $tiket?->subjek_masalah,
@@ -216,7 +225,7 @@
                                                 'kategori_nama' => $kategoriNama,
                                                 'spesifikasi_perangkat' => $tiket?->spesifikasi_perangkat ?? '—',
                                                 'lokasi' => $tiket?->lokasi ?? '—',
-                                                'foto_bukti' => $tiket?->foto_bukti,
+                                                'foto_bukti' => $tiket?->getFotoPaths() ?? [],
                                                 'rekomendasi_penanganan' => $tiket?->rekomendasi_penanganan,
                                                 'is_utama' => ($row->peran_teknisi === 'teknisi_utama'),
                                                 'peran_label' => ($row->peran_teknisi === 'teknisi_utama') ? 'Teknisi Utama' : 'Pendamping',
@@ -227,11 +236,13 @@
                                                 'hasil_label' => $hasilConfig['label'],
                                                 'hasil_bg' => $hasilConfig['bg'],
                                                 'hasil_color' => $hasilConfig['color'],
-                                                'analisis_kerusakan' => $tiket?->latestStatus?->catatan,
-                                                'spesifikasi_perangkat_rusak' => $tiket?->latestStatus?->spesifikasi_perangkat_rusak,
-                                                'rekomendasi' => $tiket?->latestStatus?->rekomendasi,
+                                                'analisis_kerusakan' => $statusAkhirData?->catatan,
+                                                'spesifikasi_perangkat_rusak' => $statusAkhirData?->spesifikasi_perangkat_rusak,
+                                                'rekomendasi' => $statusAkhirData?->rekomendasi,
                                                 'is_telat' => $row->is_telat ?? false,
                                                 'hari_telat' => $row->hari_telat ?? 0,
+                                                'has_chat_history' => $hasChatHistory,
+                                                'chat_url' => $hasChatHistory && $tiket ? route('tim_teknis.tiket.chat', $tiket->id) : null,
                                             ]);
                                         @endphp
                                         <tr class="hover:bg-blue-50/50 cursor-pointer transition-colors" @click="openDetail({{ $rowJson }})">
@@ -265,13 +276,25 @@
                                                     </span>
                                                 </div>
                                             </td>
+                                            <td class="px-5 py-4 text-center whitespace-nowrap" @click.stop>
+                                                @if($hasChatHistory && $tiket)
+                                                <a href="{{ route('tim_teknis.tiket.chat', $tiket->id) }}"
+                                                   class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-all shadow-sm focus:outline-none"
+                                                   style="background:#01458E;">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                                    Chat
+                                                </a>
+                                                @else
+                                                <span class="text-[11px] font-semibold text-gray-300">Tidak ada chat</span>
+                                                @endif
+                                            </td>
                                             <td class="px-5 py-4 text-right whitespace-nowrap">
                                                 <span class="text-gray-300 text-base font-bold">›</span>
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-5 py-16 text-center">
+                                            <td colspan="7" class="px-5 py-16 text-center">
                                                 <div class="flex flex-col items-center gap-3 text-gray-400">
                                                     <div class="w-16 h-16 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center">
                                                         <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -484,6 +507,14 @@
 
             {{-- Drawer Footer --}}
             <div class="shrink-0 p-4 sm:p-5 border-t border-gray-100 bg-white">
+                <template x-if="selected?.has_chat_history && selected?.chat_url">
+                    <a :href="selected.chat_url"
+                       class="mb-3 inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+                       style="background:#01458E;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        Lihat Riwayat Chat
+                    </a>
+                </template>
                 <div class="text-center p-3 sm:p-4 bg-gray-50 border border-gray-200 rounded-xl">
                     <p class="text-[13px] text-gray-800 font-bold mb-0.5">Status: Selesai</p>
                     <p class="text-[11px] text-gray-500 font-medium">Tiket penugasan ini sudah masuk ke dalam arsip riwayat Anda.</p>

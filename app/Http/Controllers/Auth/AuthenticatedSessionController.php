@@ -52,7 +52,6 @@ class AuthenticatedSessionController extends Controller
                     )
                     ->each(function (Tiket $tiket) {
                         StatusTiket::create([
-                            'id'           => 'STS-' . strtoupper(Str::random(10)),
                             'tiket_id'     => $tiket->id,
                             'status_tiket' => 'tiket_ditutup',
                             'catatan'      => 'Tiket ditutup otomatis oleh sistem karena tidak dikonfirmasi dalam 7 hari.',

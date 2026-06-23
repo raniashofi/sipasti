@@ -9,8 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('lampiran_artikel', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('knowledge_base_id');
+            $table->string('id', 36)->primary();
+            $table->string('artikel_opd_id', 36)->nullable();
+            $table->string('sop_internal_id', 36)->nullable();
             $table->string('nama_file');
             $table->string('path_file');
             $table->string('tipe_file');
@@ -18,8 +19,10 @@ return new class extends Migration
             $table->unsignedInteger('urutan')->default(0);
             $table->timestamps();
 
-            $table->foreign('knowledge_base_id')->references('id')->on('knowledge_base')->onDelete('cascade');
-            $table->index('knowledge_base_id');
+            $table->foreign('artikel_opd_id')->references('id')->on('artikel_opd')->cascadeOnDelete();
+            $table->foreign('sop_internal_id')->references('id')->on('sop_internal')->cascadeOnDelete();
+            $table->index('artikel_opd_id');
+            $table->index('sop_internal_id');
         });
     }
 

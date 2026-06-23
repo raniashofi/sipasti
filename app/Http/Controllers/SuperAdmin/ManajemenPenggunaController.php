@@ -14,7 +14,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 class ManajemenPenggunaController extends Controller
 {
@@ -39,7 +38,7 @@ class ManajemenPenggunaController extends Controller
             'email'          => 'required|email|unique:users,email',
             'password'       => 'required|string|min:6',
             'kdunit'         => 'nullable|string|max:50',
-            'parent_id'      => 'nullable|integer',
+            'parent_id'      => 'nullable|string|exists:opd,id',
             'is_bagian'      => 'nullable|in:Y,N',
             'bidang_id'      => 'nullable|exists:bidang,id',
         ], [
@@ -56,25 +55,20 @@ class ManajemenPenggunaController extends Controller
             return back()->withErrors($validator)->withInput()->with('open_tambah', true);
         }
 
-        $userId = (string) Str::uuid();
-        $opdId  = (string) Str::uuid();
-
-        User::create([
-            'id'       => $userId,
+        $user = User::create([
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'opd',
         ]);
 
-        Opd::create([
-            'id'             => $opdId,
-            'user_id'        => $userId,
+        $opd = Opd::create([
+            'user_id'        => $user->id,
             'kode_opd'       => $request->kode_opd,
             'nama_opd'       => $request->nama_opd,
             'kdunit'         => $request->kdunit ?: null,
             'parent_id'      => $request->parent_id ?: null,
             'is_bagian'      => $request->is_bagian ?: null,
-            'bidang_id'      => $request->bidang_id ?: null,
+            'bidang_id'      => $request->bidang_id,
         ]);
 
         // Log aktivitas
@@ -82,7 +76,7 @@ class ManajemenPenggunaController extends Controller
             userId: Auth::id(),
             rolePelaku: Auth::user()->role,
             namaTabel: 'opd',
-            idRecord: $opdId,
+            idRecord: $opd->id,
             dataAfter: [
                 'kode_opd' => $request->kode_opd,
                 'nama_opd' => $request->nama_opd,
@@ -102,7 +96,7 @@ class ManajemenPenggunaController extends Controller
             'nama_opd'       => 'required|string|max:255',
             'email'          => 'required|email|unique:users,email,' . $opd->user_id,
             'kdunit'         => 'nullable|string|max:50',
-            'parent_id'      => 'nullable|integer',
+            'parent_id'      => 'nullable|string|exists:opd,id',
             'is_bagian'      => 'nullable|in:Y,N',
             'bidang_id'      => 'nullable|exists:bidang,id',
         ];
@@ -132,7 +126,7 @@ class ManajemenPenggunaController extends Controller
             'kdunit'         => $request->kdunit ?: null,
             'parent_id'      => $request->parent_id ?: null,
             'is_bagian'      => $request->is_bagian ?: null,
-            'bidang_id'      => $request->bidang_id ?: null,
+            'bidang_id'      => $request->bidang_id,
         ]);
 
         if ($opd->user) {
@@ -223,6 +217,7 @@ class ManajemenPenggunaController extends Controller
             'password.required'     => 'Password wajib diisi.',
             'password.min'          => 'Password minimal 6 karakter.',
             'bidang_id.required'    => 'Bidang wajib dipilih.',
+            'bidang_id.required'    => 'Bidang wajib dipilih.',
         ]);
 
         if ($validator->fails()) {
@@ -231,19 +226,14 @@ class ManajemenPenggunaController extends Controller
                 ->with('tab', 'tim_teknis');
         }
 
-        $userId = (string) Str::uuid();
-        $ttId   = (string) Str::uuid();
-
-        User::create([
-            'id'       => $userId,
+        $user = User::create([
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'tim_teknis',
         ]);
 
-        TimTeknis::create([
-            'id'             => $ttId,
-            'user_id'        => $userId,
+        $timTeknis = TimTeknis::create([
+            'user_id'        => $user->id,
             'nama_lengkap'   => $request->nama_lengkap,
             'bidang_id'      => $request->bidang_id ?: null,
         ]);
@@ -253,7 +243,7 @@ class ManajemenPenggunaController extends Controller
             userId: Auth::id(),
             rolePelaku: Auth::user()->role,
             namaTabel: 'tim_teknis',
-            idRecord: $ttId,
+            idRecord: $timTeknis->id,
             dataAfter: [
                 'nama_lengkap' => $request->nama_lengkap,
                 'email' => $request->email,
@@ -271,7 +261,7 @@ class ManajemenPenggunaController extends Controller
         $rules = [
             'nama_lengkap'   => 'required|string|max:255',
             'email'          => 'required|email|unique:users,email,' . $tt->user_id,
-            'bidang_id'      => 'nullable|exists:bidang,id',
+            'bidang_id'      => 'required|exists:bidang,id',
         ];
         if ($request->filled('password')) {
             $rules['password'] = 'string|min:6';
@@ -292,7 +282,7 @@ class ManajemenPenggunaController extends Controller
         }
 
         // Cek apakah bidang berubah
-        $newBidangId = $request->bidang_id ?: null;
+        $newBidangId = $request->bidang_id;
         if ($newBidangId !== $tt->bidang_id) {
             $hasActiveTickets = $tt->tiketTeknisi()
                 ->whereHas('tiket', fn($q) => $q->whereHas('latestStatus', fn($q2) =>
@@ -391,21 +381,16 @@ class ManajemenPenggunaController extends Controller
                 ->with('tab', 'admin_helpdesk');
         }
 
-        $userId = (string) Str::uuid();
-        $ahId   = (string) Str::uuid();
-
-        User::create([
-            'id'       => $userId,
+        $user = User::create([
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'admin_helpdesk',
         ]);
 
-        AdminHelpdesk::create([
-            'id'           => $ahId,
-            'user_id'      => $userId,
+        $adminHelpdesk = AdminHelpdesk::create([
+            'user_id'      => $user->id,
             'nama_lengkap' => $request->nama_lengkap,
-            'bidang_id'    => $request->bidang_id ?: null,
+            'bidang_id'    => $request->bidang_id,
         ]);
 
         // Log aktivitas
@@ -413,7 +398,7 @@ class ManajemenPenggunaController extends Controller
             userId: Auth::id(),
             rolePelaku: Auth::user()->role,
             namaTabel: 'admin_helpdesk',
-            idRecord: $ahId,
+            idRecord: $adminHelpdesk->id,
             dataAfter: [
                 'nama_lengkap' => $request->nama_lengkap,
                 'email' => $request->email,
@@ -431,7 +416,7 @@ class ManajemenPenggunaController extends Controller
         $rules = [
             'nama_lengkap' => 'required|string|max:255',
             'email'        => 'required|email|unique:users,email,' . $ah->user_id,
-            'bidang_id'    => 'nullable|exists:bidang,id',
+            'bidang_id'    => 'required|exists:bidang,id',
         ];
         if ($request->filled('password')) {
             $rules['password'] = 'string|min:6';
@@ -442,6 +427,7 @@ class ManajemenPenggunaController extends Controller
             'email.required'        => 'Email wajib diisi.',
             'email.unique'          => 'Email sudah digunakan.',
             'password.min'          => 'Password minimal 6 karakter.',
+            'bidang_id.required'    => 'Bidang wajib dipilih.',
         ]);
 
         if ($validator->fails()) {
@@ -453,7 +439,7 @@ class ManajemenPenggunaController extends Controller
 
         $ah->update([
             'nama_lengkap' => $request->nama_lengkap,
-            'bidang_id'    => $request->bidang_id ?: null,
+            'bidang_id'    => $request->bidang_id,
         ]);
 
         if ($ah->user) {
@@ -532,19 +518,14 @@ class ManajemenPenggunaController extends Controller
                 ->with('tab', 'pimpinan');
         }
 
-        $userId     = (string) Str::uuid();
-        $pimpinanId = (string) Str::uuid();
-
-        User::create([
-            'id'       => $userId,
+        $user = User::create([
             'email'    => $request->email,
             'password' => Hash::make($request->password),
             'role'     => 'pimpinan',
         ]);
 
-        Pimpinan::create([
-            'id'           => $pimpinanId,
-            'user_id'      => $userId,
+        $pimpinan = Pimpinan::create([
+            'user_id'      => $user->id,
             'nama_lengkap' => $request->nama_lengkap,
         ]);
 
@@ -552,7 +533,7 @@ class ManajemenPenggunaController extends Controller
             userId: Auth::id(),
             rolePelaku: Auth::user()->role,
             namaTabel: 'pimpinan',
-            idRecord: $pimpinanId,
+            idRecord: $pimpinan->id,
             dataAfter: [
                 'nama_lengkap' => $request->nama_lengkap,
                 'email'        => $request->email,

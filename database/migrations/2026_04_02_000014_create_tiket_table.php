@@ -9,18 +9,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tiket', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('opd_id')->nullable();
-            $table->uuid('admin_id')->nullable();
-            $table->uuid('kb_id')->nullable();
-            $table->uuid('sop_internal_id')->nullable();
+            $table->string('id', 36)->primary();
+            $table->string('opd_id', 36);
+            $table->string('admin_id', 36)->nullable();
+            $table->string('node_diagnosis_id', 36);
             $table->enum('rekomendasi_penanganan', ['admin', 'eskalasi'])->nullable();
-            $table->uuid('bidang_id')->nullable();
-            $table->uuid('kategori_id')->nullable();
+            $table->unsignedTinyInteger('reopened_count')->default(1);
+            $table->timestamp('last_reopened_at')->nullable();
             $table->string('subjek_masalah');
             $table->text('detail_masalah');
             $table->string('lokasi')->nullable();
-            $table->json('foto_bukti')->nullable();
             $table->tinyInteger('penilaian')->unsigned()->nullable();
             $table->text('komentar_penutupan')->nullable();
             $table->text('spesifikasi_perangkat')->nullable();
@@ -28,11 +26,8 @@ return new class extends Migration
 
             $table->foreign('opd_id')->references('id')->on('opd')->onDelete('cascade');
             $table->foreign('admin_id')->references('id')->on('admin_helpdesk')->onDelete('set null');
-            $table->foreign('kb_id')->references('id')->on('knowledge_base')->onDelete('set null');
-            $table->foreign('sop_internal_id')->references('id')->on('knowledge_base')->onDelete('set null');
-            $table->foreign('bidang_id')->references('id')->on('bidang')->onDelete('set null');
-            $table->foreign('kategori_id')->references('id')->on('kategori_sistem')->onDelete('set null');
-            $table->index('bidang_id');
+            $table->foreign('node_diagnosis_id')->references('id')->on('node_diagnosis')->restrictOnDelete();
+            $table->index('node_diagnosis_id');
         });
     }
 

@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $article->nama_artikel_sop }} — Pustaka Teknis</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -159,10 +161,12 @@
                     @endif
 
                     {{-- Lampiran File --}}
-                    @if($article->lampiran_file)
+                    @if($article->lampirans->count())
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
                         <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Lampiran File</p>
-                        <a href="{{ asset('storage/' . $article->lampiran_file) }}"
+                        <div class="space-y-2">
+                        @foreach($article->lampirans->sortBy('urutan') as $lampiran)
+                        <a href="{{ asset('storage/' . $lampiran->path_file) }}"
                            target="_blank"
                            class="flex items-center gap-3 p-3 bg-[#F0F4F8] rounded-xl border border-gray-200 hover:border-[#01458E] hover:bg-[#EEF3F9] transition-colors group">
                             <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style="background:#01458E;">
@@ -172,11 +176,13 @@
                             </div>
                             <div class="min-w-0 flex-1">
                                 <p class="text-xs font-semibold text-gray-700 truncate group-hover:text-[#01458E] transition-colors">
-                                    {{ basename($article->lampiran_file) }}
+                                    {{ $lampiran->nama_file }}
                                 </p>
                                 <p class="text-[10px] text-gray-400 mt-0.5">Klik untuk unduh</p>
                             </div>
                         </a>
+                        @endforeach
+                        </div>
                     </div>
                     @endif
 

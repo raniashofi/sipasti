@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('chat_messages', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('room_id');
-            $table->uuid('sender_id');
+            $table->string('id', 36)->primary();
+            $table->string('room_id', 36);
+            $table->string('sender_id', 36);
             $table->text('konten')->nullable();
             $table->string('file_url')->nullable();
             $table->enum('tipe_konten', ['text', 'image', 'file']);

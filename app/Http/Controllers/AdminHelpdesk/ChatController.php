@@ -9,53 +9,155 @@ use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\ChatRoomUser;
 use App\Models\Tiket;
+use App\Support\IdGenerator;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
-    private function adminProfile(): ?AdminHelpdesk
-    {
-        return AdminHelpdesk::with('bidang')->where('user_id', Auth::id())->first();
-    }
-
     /**
      * Tampilkan halaman chat admin dengan OPD untuk tiket panduan_remote.
      */
     public function show(string $tiketId)
     {
-        $admin = $this->adminProfile();
+        $admin = $this->findAdminProfile();
+        $tiket = $this->findTiketForAdmin($tiketId, $admin?->id);
 
-        $tiket = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus', 'statusTiket'])
-            ->where('admin_id', $admin?->id)
-            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'panduan_remote'))
-            ->findOrFail($tiketId);
+        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
+        $chatIsActive = $currentStatus === 'panduan_remote';
+        $roomBidangId = $tiket->bidang_id ?? $admin?->bidang_id;
 
-        // Buat atau temukan room dengan tipe 'admin'
-        $room = ChatRoom::firstOrCreate(
-            ['tiket_id' => $tiket->id, 'nama_roomchat' => 'admin'],
-            ['id' => 'ROOM-' . strtoupper(Str::random(10))]
-        );
+        $room = $chatIsActive
+            ? $this->firstOrCreateRoom($tiket->id, $roomBidangId)
+            : $this->findExistingRoom($tiket->id);
 
-        // Tambahkan admin ke room jika belum
-        ChatRoomUser::firstOrCreate(
-            ['room_id' => $room->id, 'user_id' => Auth::id()],
-            ['role_di_room' => 'admin_helpdesk']
-        );
+        $userId = $this->authenticatedUserId();
+        $this->ensureRoomUser($room->id, $userId, 'admin_helpdesk', $roomBidangId);
+        $this->markRoomAsRead($room->id, $userId);
 
-        // Tambahkan OPD ke room jika belum
         $opdUserId = $tiket->opd?->user_id;
         if ($opdUserId) {
-            ChatRoomUser::firstOrCreate(
-                ['room_id' => $room->id, 'user_id' => $opdUserId],
-                ['role_di_room' => 'opd']
-            );
+            $this->ensureRoomUser($room->id, $opdUserId, 'opd', $roomBidangId);
         }
 
-        $messages = ChatMessage::where('room_id', $room->id)
+        $messages = $this->loadRoomMessages($room->id);
+
+        return $this->renderView('admin_helpdesk.chat', compact('tiket', 'room', 'messages', 'admin', 'chatIsActive'));
+    }
+
+    /**
+     * Kirim pesan (AJAX).
+     */
+    public function send(Request $request, string $tiketId)
+    {
+        $admin = $this->findAdminProfile();
+        $tiket = $this->findTiketForAdmin($tiketId, $admin?->id);
+
+        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
+        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
+        $chatIsActive = $currentStatus === 'panduan_remote';
+
+        if (!$chatIsActive) {
+            return $this->jsonResponse([
+                'error' => 'Chat ini sudah menjadi riwayat dan tidak dapat menerima pesan baru.',
+                'message' => 'Chat history - no new messages allowed'
+            ], 403);
+        }
+
+        $room = $this->findExistingRoom($tiket->id);
+
+        $request->validate([
+            'konten' => 'required_without:file|nullable|string|max:2000',
+            'file'   => 'nullable|file|mimes:jpg,jpeg,png|max:5120',
+        ], [
+            'file.max' => 'Gambar yang diupload terlalu besar. Maksimal 5 MB.',
+        ]);
+
+        $fileUrl    = null;
+        $tipeKonten = 'text';
+
+        if ($request->hasFile('file')) {
+            $fileUrl    = $request->file('file')->store('chat/files', 'public');
+            $tipeKonten = 'image';
+        }
+
+        $message = $this->createMessage([
+            'id'          => IdGenerator::make('MSG'),
+            'room_id'     => $room->id,
+            'sender_id'   => $this->authenticatedUserId(),
+            'konten'      => $request->input('konten'),
+            'file_url'    => $fileUrl,
+            'tipe_konten' => $tipeKonten,
+        ]);
+
+        $senderName = $this->senderName();
+        $this->broadcastMessage($message, $senderName);
+
+        return $this->jsonResponse([
+            'id'          => $message->id,
+            'sender_id'   => $message->sender_id,
+            'konten'      => $message->konten,
+            'file_url'    => $fileUrl ? Storage::url($fileUrl) : null,
+            'tipe_konten' => $message->tipe_konten,
+            'created_at'  => Carbon::parse($message->created_at)->format('H:i'),
+            'sender_name' => $senderName,
+        ]);
+    }
+
+    // ── Protected methods (overridable for unit testing) ─────
+
+    protected function authenticatedUserId(): ?string
+    {
+        return Auth::id();
+    }
+
+    protected function findAdminProfile()
+    {
+        return AdminHelpdesk::with('bidang')->where('user_id', $this->authenticatedUserId())->first();
+    }
+
+    protected function findTiketForAdmin(string $tiketId, ?string $adminId)
+    {
+        return Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus', 'statusTiket', 'buktiFoto'])
+            ->where('admin_id', $adminId)->findOrFail($tiketId);
+    }
+
+    protected function firstOrCreateRoom(string $tiketId, ?string $bidangId)
+    {
+        return ChatRoom::firstOrCreate(
+            ['tiket_id' => $tiketId, 'nama_roomchat' => 'admin'],
+            []
+        );
+    }
+
+    protected function findExistingRoom(string $tiketId)
+    {
+        return ChatRoom::where('tiket_id', $tiketId)->where('nama_roomchat', 'admin')->firstOrFail();
+    }
+
+    protected function ensureRoomUser(string $roomId, string $userId, string $role, ?string $bidangId): void
+    {
+        ChatRoomUser::firstOrCreate(
+            ['room_id' => $roomId, 'user_id' => $userId],
+            ['role_di_room' => $role, 'bidang_id' => $bidangId]
+        );
+    }
+
+    protected function markRoomAsRead(string $roomId, string $userId): void
+    {
+        DB::table('chat_room_users')
+            ->where('room_id', $roomId)
+            ->where('user_id', $userId)
+            ->update(['last_read_at' => now()]);
+    }
+
+    protected function loadRoomMessages(string $roomId)
+    {
+        return ChatMessage::where('room_id', $roomId)
             ->with(['sender.opd', 'sender.adminHelpdesk', 'sender.timTeknis'])
             ->orderBy('created_at', 'asc')
             ->get()
@@ -72,76 +174,30 @@ class ChatController extends Controller
                     ?? 'Pengguna',
             ])
             ->values();
-
-        // Tentukan apakah chat masih aktif (status masih 'panduan_remote')
-        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
-        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
-        $chatIsActive = $currentStatus === 'panduan_remote';
-
-        return view('admin_helpdesk.chat', compact('tiket', 'room', 'messages', 'admin', 'chatIsActive'));
     }
 
-    /**
-     * Kirim pesan (AJAX).
-     */
-    public function send(Request $request, string $tiketId)
+    protected function createMessage(array $attributes)
     {
-        $admin = $this->adminProfile();
+        return ChatMessage::create($attributes);
+    }
 
-        $tiket = Tiket::with('statusTiket')->where('admin_id', $admin?->id)->findOrFail($tiketId);
+    protected function senderName(): string
+    {
+        return Auth::user()->adminHelpdesk?->nama_lengkap ?? Auth::user()->email;
+    }
 
-        // Periksa apakah chat masih aktif (status harus 'panduan_remote')
-        $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
-        $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
-        $chatIsActive = $currentStatus === 'panduan_remote';
-
-        // Jika chat sudah menjadi riwayat (tidak aktif), tolak permintaan
-        if (!$chatIsActive) {
-            return response()->json([
-                'error' => 'Chat ini sudah menjadi riwayat dan tidak dapat menerima pesan baru.',
-                'message' => 'Chat history - no new messages allowed'
-            ], 403);
-        }
-
-        $room = ChatRoom::where('tiket_id', $tiket->id)
-                        ->where('nama_roomchat', 'admin')
-                        ->firstOrFail();
-
-        $request->validate([
-            'konten' => 'required_without:file|nullable|string|max:2000',
-            'file'   => 'nullable|file|mimes:jpg,jpeg,png|max:10240',
-        ]);
-
-        $fileUrl    = null;
-        $tipeKonten = 'text';
-
-        if ($request->hasFile('file')) {
-            $fileUrl    = $request->file('file')->store('chat/files', 'public');
-            $tipeKonten = 'image';
-        }
-
-        $message = ChatMessage::create([
-            'id'          => 'MSG-' . strtoupper(Str::random(10)),
-            'room_id'     => $room->id,
-            'sender_id'   => Auth::id(),
-            'konten'      => $request->input('konten'),
-            'file_url'    => $fileUrl,
-            'tipe_konten' => $tipeKonten,
-        ]);
-
-        $senderName = Auth::user()->adminHelpdesk?->nama_lengkap
-            ?? Auth::user()->email;
-
+    protected function broadcastMessage($message, string $senderName): void
+    {
         broadcast(new NewChatMessage($message, $senderName));
+    }
 
-        return response()->json([
-            'id'          => $message->id,
-            'sender_id'   => $message->sender_id,
-            'konten'      => $message->konten,
-            'file_url'    => $fileUrl ? Storage::url($fileUrl) : null,
-            'tipe_konten' => $message->tipe_konten,
-            'created_at'  => Carbon::parse($message->created_at)->format('H:i'),
-            'sender_name' => $senderName,
-        ]);
+    protected function renderView(string $view, array $data)
+    {
+        return view($view, $data);
+    }
+
+    protected function jsonResponse(array $data, int $status = 200)
+    {
+        return response()->json($data, $status);
     }
 }
