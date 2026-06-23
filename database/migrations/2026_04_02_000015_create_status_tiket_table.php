@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('status_tiket', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('tiket_id')->nullable();
+            $table->string('id', 36)->primary();
+            $table->string('tiket_id', 36);
             $table->enum('status_tiket', [
                 'verifikasi_admin',
                 'perlu_revisi',
@@ -23,7 +23,6 @@ return new class extends Migration
             ]);
             $table->string('spesifikasi_perangkat_rusak')->nullable();
             $table->string('rekomendasi')->nullable();
-            $table->string('file_rekomendasi')->nullable();
             $table->text('catatan')->nullable();
             $table->string('file_bukti')->nullable();
             $table->timestamps();

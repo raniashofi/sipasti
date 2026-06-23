@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $artikel->nama_artikel_sop }} — Pusat Bantuan SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -132,8 +134,10 @@
                 </div>
 
                 {{-- Lampiran file --}}
-                @if($artikel->lampiran_file)
+                @if($artikel->lampirans->count())
                 <div class="px-5 sm:px-8 pb-5 sm:pb-7">
+                    <div class="space-y-2">
+                        @foreach($artikel->lampirans->sortBy('urutan') as $lampiran)
                     <div class="flex items-center gap-3 p-4 rounded-xl border border-gray-200 bg-gray-50">
                         <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
                              style="background:#EEF3F9;">
@@ -143,13 +147,15 @@
                         </div>
                         <div class="flex-1 min-w-0">
                             <p class="text-xs font-semibold text-gray-700">Lampiran</p>
-                            <p class="text-[11px] text-gray-400 truncate">{{ basename($artikel->lampiran_file) }}</p>
+                            <p class="text-[11px] text-gray-400 truncate">{{ $lampiran->nama_file }}</p>
                         </div>
-                        <a href="{{ Storage::url($artikel->lampiran_file) }}" target="_blank"
+                        <a href="{{ Storage::url($lampiran->path_file) }}" target="_blank"
                            class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white transition hover:opacity-90"
                            style="background:#01458E;">
                             Unduh
                         </a>
+                    </div>
+                        @endforeach
                     </div>
                 </div>
                 @endif
@@ -193,11 +199,11 @@
                                 </button>
                             </template>
                         </div>
-                        @if(($artikel->rating_count ?? 0) > 0)
+                        {{-- @if(($artikel->rating_count ?? 0) > 0)
                         <p class="text-[11px] text-gray-400">
                             Rata-rata {{ number_format($artikel->rating, 1) }} dari {{ number_format($artikel->rating_count) }} penilaian
                         </p>
-                        @endif
+                        @endif --}}
                     </div>
 
                     <div x-show="submitted" x-transition class="flex flex-col items-center gap-2" style="display:none;">

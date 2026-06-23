@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,15 +12,23 @@ use Illuminate\Database\Eloquent\Model;
  */
 class KategoriArtikel extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'kategori_artikel';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = true;
+    protected string $idPrefix = 'KTA';
 
     protected $fillable = ['id', 'nama_kategori', 'deskripsi'];
 
     public function knowledgeBases()
     {
-        return $this->hasMany(KnowledgeBase::class, 'kategori_artikel_id');
+        return $this->hasMany(ArtikelOpd::class, 'kategori_artikel_id');
+    }
+
+    public function artikelOpd()
+    {
+        return $this->hasMany(ArtikelOpd::class, 'kategori_artikel_id');
     }
 }

@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Distribusi & Eskalasi — Admin Helpdesk</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -174,7 +176,7 @@
                                     'kategori_nama'         => $kategoriNamaM,
                                     'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                     'lokasi'                => $tiket->lokasi ?? '—',
-                                    'foto_bukti'            => $tiket->foto_bukti,
+                                    'foto_bukti'            => $tiket->getFotoPaths(),
                                     'rekomendasi_penanganan'=> $tiket->rekomendasi_penanganan,
                                     'teknisi_nama'          => $allTeknisiM[0]['nama'] ?? '—',
                                     'all_teknisi'           => $allTeknisiM,
@@ -253,7 +255,7 @@
                                             'kategori_nama'         => $kategoriNama,
                                             'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                             'lokasi'                => $tiket->lokasi ?? '—',
-                                            'foto_bukti'            => $tiket->foto_bukti,
+                                            'foto_bukti'            => $tiket->getFotoPaths(),
                                             'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                             'teknisi_nama'          => $teknisiUtama['nama'] ?? '—',
                                             'all_teknisi'           => $allTeknisi,

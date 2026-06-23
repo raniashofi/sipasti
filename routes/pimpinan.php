@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('pimpinan')->name('pimpinan.')->middleware(['auth', 'role:pimpinan'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/export/csv', [DashboardController::class, 'exportCsv'])->name('export.csv');
+    Route::get('/export/csv', [DashboardController::class, 'exportXlsx'])->name('export.csv');
 
     // Log Aktivitas
     Route::get('/log',            [ActivityLogController::class, 'showPimpinanLog'])->name('log');

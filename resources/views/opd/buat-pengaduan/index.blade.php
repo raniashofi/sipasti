@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Buat Pengaduan — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -51,6 +53,12 @@
         <h1 class="text-2xl font-bold text-gray-900">Halo, apa yang bisa kami bantu hari ini?</h1>
         <p class="text-sm text-gray-400 mt-1">Pilih kategori di bawah untuk memulai diagnosis cepat</p>
     </div>
+
+    @if(session('error'))
+    <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        {{ session('error') }}
+    </div>
+    @endif
 
     @if($kategori->isEmpty())
     <div class="flex flex-col items-center justify-center py-24 text-center">

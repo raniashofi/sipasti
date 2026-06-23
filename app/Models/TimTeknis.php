@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 class TimTeknis extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'tim_teknis';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = false;
+    protected string $idPrefix = 'USR-TIM';
 
     protected $fillable = ['id','user_id','bidang_id','nama_lengkap','status_teknisi'];
 

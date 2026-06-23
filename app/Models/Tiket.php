@@ -2,26 +2,40 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use App\Models\KategoriSistem;
-use App\Models\KnowledgeBase;
+use App\Models\Concerns\HasPrefixedId;
 use App\Models\NodeDiagnosis;
+use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property string      $id
+ * @property string      $opd_id
+ * @property string|null $admin_id
+ * @property string      $node_diagnosis_id
+ * @property string|null $rekomendasi_penanganan
+ * @property string      $subjek_masalah
+ * @property string      $detail_masalah
+ * @property string|null $lokasi
+ * @property string|null $spesifikasi_perangkat
+ */
 class Tiket extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'tiket';
     public $incrementing = false;
     protected $keyType = 'string';
+    protected string $idPrefix = 'TKT';
+    protected bool $idUsesDate = true;
 
     protected $fillable = [
-        'id', 'opd_id', 'admin_id', 'kb_id', 'sop_internal_id', 'bidang_id', 'rekomendasi_penanganan', 'kategori_id',
+        'id', 'opd_id', 'admin_id', 'node_diagnosis_id', 'rekomendasi_penanganan',
         'subjek_masalah', 'detail_masalah', 'lokasi',
-        'foto_bukti', 'spesifikasi_perangkat',
+        'spesifikasi_perangkat',
         'penilaian', 'komentar_penutupan',
+        'reopened_count', 'last_reopened_at',
     ];
 
     protected $casts = [
-        'foto_bukti' => 'array',
     ];
 
     public function opd()
@@ -29,24 +43,57 @@ class Tiket extends Model
         return $this->belongsTo(Opd::class);
     }
 
+    public function buktiFoto()
+    {
+        return $this->hasMany(TiketBuktiFoto::class, 'tiket_id')->orderBy('created_at');
+    }
+
     public function bidang()
     {
-        return $this->belongsTo(Bidang::class, 'bidang_id');
+        return $this->hasOneThrough(
+            Bidang::class,
+            NodeDiagnosis::class,
+            'id',
+            'id',
+            'node_diagnosis_id',
+            'bidang_id'
+        );
     }
 
     public function kb()
     {
-        return $this->belongsTo(KnowledgeBase::class, 'kb_id');
+        return $this->hasOneThrough(
+            ArtikelOpd::class,
+            NodeDiagnosis::class,
+            'id',
+            'id',
+            'node_diagnosis_id',
+            'artikel_opd_id'
+        );
     }
 
     public function sopInternal()
     {
-        return $this->belongsTo(KnowledgeBase::class, 'sop_internal_id');
+        return $this->hasOneThrough(
+            SopInternal::class,
+            NodeDiagnosis::class,
+            'id',
+            'id',
+            'node_diagnosis_id',
+            'sop_internal_id'
+        );
     }
 
     public function kategori()
     {
-        return $this->belongsTo(KategoriSistem::class, 'kategori_id');
+        return $this->hasOneThrough(
+            KategoriSistem::class,
+            NodeDiagnosis::class,
+            'id',
+            'id',
+            'node_diagnosis_id',
+            'kategori_id'
+        );
     }
 
     public function admin()
@@ -71,7 +118,9 @@ class Tiket extends Model
 
     public function teknisiUtama()
     {
-        return $this->hasOne(TiketTeknisi::class)->where('peran_teknisi', 'teknisi_utama');
+        return $this->hasOne(TiketTeknisi::class)
+            ->where('peran_teknisi', 'teknisi_utama')
+            ->orderByDesc('waktu_ditugaskan');
     }
 
     public function chatRooms()
@@ -88,21 +137,123 @@ class Tiket extends Model
     public function isTransferred()
     {
         $chatRoom = $this->chatRoom;
-        return $chatRoom && $chatRoom->transferred_from_admin_id;
+        if (!$chatRoom) {
+            return false;
+        }
+        // Check jika ada admin di history (is_active = false)
+        return $chatRoom->users()
+            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->wherePivot('is_active', false)
+            ->exists();
     }
 
-    // Get transferred from admin
+    // Get transferred from admin (admin terakhir yang non-active)
     public function getTransferredFromAdmin()
     {
         $chatRoom = $this->chatRoom;
-        return $chatRoom && $chatRoom->transferred_from_admin_id
-            ? \App\Models\User::find($chatRoom->transferred_from_admin_id)
-            : null;
+        if (!$chatRoom) {
+            return null;
+        }
+        // Get admin dengan is_active = false, urutan terbaru
+        return $chatRoom->users()
+            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->wherePivot('is_active', false)
+            ->orderByPivot('sequence_number', 'desc')
+            ->first();
     }
 
     public function solutionNode()
     {
-        return $this->hasOne(NodeDiagnosis::class, 'kb_id', 'kb_id')
-                    ->where('tipe_node', 'solusi');
+        return $this->belongsTo(NodeDiagnosis::class, 'node_diagnosis_id');
+    }
+
+    public function getBidangIdAttribute(): ?string
+    {
+        $catatan = $this->relationLoaded('latestStatus')
+            ? ($this->latestStatus?->catatan ?? '')
+            : ($this->latestStatus()->value('catatan') ?? '');
+
+        if (preg_match('/^\[Transfer ke ([^\]]+)\]/', $catatan, $matches)) {
+            return $matches[1];
+        }
+
+        return $this->solutionNode?->bidang_id;
+    }
+
+    public function getKategoriIdAttribute(): ?string
+    {
+        return $this->solutionNode?->kategori_id;
+    }
+
+    /**
+     * Mendapatkan waktu mulai perhitungan SLA
+     * Jika tiket pernah dibuka kembali, gunakan last_reopened_at
+     * Jika belum, gunakan created_at
+     */
+    public function getSlaPeriodStartDate()
+    {
+        return $this->last_reopened_at ?? $this->created_at;
+    }
+
+    /**
+     * Check apakah tiket masih bisa dibuka kembali
+     * Max 3x: 1x pengajuan awal + 2x pembukaan ulang
+     */
+    public function canBeReopened(): bool
+    {
+        return $this->reopened_count < 3;
+    }
+
+    /**
+     * Mark tiket sebagai dibuka kembali
+     * Increment reopened_count dan set last_reopened_at
+     */
+    public function markAsReopened(): self
+    {
+        if (!$this->canBeReopened()) {
+            throw new \Exception('Tiket tidak bisa dibuka kembali lagi. Sudah mencapai batas maksimal pembukaan (3x)');
+        }
+
+        $this->increment('reopened_count');
+        $this->update(['last_reopened_at' => now()]);
+
+        return $this;
+    }
+
+    /**
+     * Get all foto paths for this ticket
+     */
+    public function getFotoPaths(): array
+    {
+        if ($this->relationLoaded('buktiFoto')) {
+            return $this->buktiFoto
+                ->pluck('foto_path')
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
+        return $this->buktiFoto()->pluck('foto_path')->filter()->values()->toArray();
+    }
+
+    /**
+     * Cek apakah tiket selesai tepat waktu berdasarkan SLA yang di-reset
+     * Jika ada last_reopened_at, SLA dihitung dari sana
+     */
+    public function isCompletedOnTime($completedAtTimestamp = null, $batasHariPengerjaan = null): bool
+    {
+        if (!$batasHariPengerjaan && $this->bidang) {
+            $batasHariPengerjaan = $this->bidang->batas_hari_pengerjaan;
+        }
+
+        if (!$batasHariPengerjaan) {
+            return true; // Jika tidak ada SLA, dianggap tepat waktu
+        }
+
+        $slaPeriodStart = $this->getSlaPeriodStartDate();
+        $completedAt = $completedAtTimestamp ?? now();
+        $deadline = \Carbon\Carbon::parse($slaPeriodStart)->addDays($batasHariPengerjaan);
+
+        return \Carbon\Carbon::parse($completedAt)->lte($deadline);
     }
 }

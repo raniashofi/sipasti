@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Detail Tiket — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -49,20 +51,35 @@
         'tiket_ditutup'  => ($statusSebelumTutup?->status_tiket ?? 'selesai'),
         default          => $currentStatus,
     };
+    $statusRekomendasiTeknis = $displayStatus === 'rusak_berat'
+        ? $allStatuses->where('status_tiket', 'rusak_berat')->last()
+        : $latest;
+
+    $bersihkanCatatanTeknis = function (?string $catatan): ?string {
+        $catatan = trim((string) $catatan);
+        if ($catatan === '') {
+            return null;
+        }
+
+        $catatan = preg_replace('/^\[Analisis Kerusakan dari Teknisi Utama\]\s*/', '', $catatan);
+        $catatan = preg_replace('/^\[Analisis\]\s*/', '', $catatan);
+
+        return trim($catatan) ?: null;
+    };
 
     $sudahDikonfirmasi = $tiket->penilaian !== null;
 
     /* ── Deadline konfirmasi ── */
     $batasKonfirmasiHari = 7;
     $statusMenunggu = $allStatuses
-        ->whereIn('status_tiket', ['selesai', 'rusak_berat'])
+        ->where('status_tiket', 'selesai')
         ->sortByDesc('created_at')
         ->first();
     $deadlineKonfirmasi = $statusMenunggu
         ? \Carbon\Carbon::parse($statusMenunggu->created_at)->addDays($batasKonfirmasiHari)
         : null;
     $sisaHari = $deadlineKonfirmasi ? (int) now()->diffInDays($deadlineKonfirmasi, false) : null;
-    $tampilkanPeringatan = in_array($currentStatus, ['selesai', 'rusak_berat'])
+    $tampilkanPeringatan = $currentStatus === 'selesai'
         && !$sudahDikonfirmasi
         && $deadlineKonfirmasi !== null;
 
@@ -73,10 +90,10 @@
     $step1Label = $displayStatus === 'perlu_revisi' ? 'Perlu Revisi' : 'Verifikasi Admin';
 
     $step2Label = match(true) {
-        in_array('panduan_remote',   $statusList) => 'Panduan Remote',
         in_array('perbaikan_teknis', $statusList) => 'Perbaikan Teknis',
-        $displayStatus === 'panduan_remote'        => 'Panduan Remote',
         $displayStatus === 'perbaikan_teknis'      => 'Perbaikan Teknis',
+        in_array('panduan_remote',   $statusList) => 'Panduan Remote',
+        $displayStatus === 'panduan_remote'        => 'Panduan Remote',
         default                                    => 'Tindak Lanjut',
     };
 
@@ -97,13 +114,13 @@
     /* ── Catatan singkat (perlu_revisi / rusak_berat) ── */
     $catatanDisplay = null;
     if (in_array($displayStatus, ['perlu_revisi','rusak_berat'])) {
-        $raw = $latest?->catatan;
-        $catatanDisplay = preg_replace('/^\[Analisis\]\s*/', '', $raw ?? '');
-        if (str_contains($catatanDisplay, ' — ')) {
+        $raw = $statusRekomendasiTeknis?->catatan;
+        $catatanDisplay = $bersihkanCatatanTeknis($raw);
+        if ($catatanDisplay && str_contains($catatanDisplay, ' — ')) {
             $parts = explode(' — ', $catatanDisplay, 2);
             $catatanDisplay = trim($parts[0]);
         }
-        $catatanDisplay = trim($catatanDisplay) ?: null;
+        $catatanDisplay = $catatanDisplay ? trim($catatanDisplay) : null;
     }
 
     /* ── Chat visibility berdasarkan riwayat status ──
@@ -118,6 +135,10 @@
     $adminChatActive  = $displayStatus === 'panduan_remote';
     $showTeknisChat   = $hadPerbaikanTeknis;
     $teknisChatActive = $displayStatus === 'perbaikan_teknis' || $currentStatus === 'dibuka_kembali';
+    $adminUnreadCount = (int) ($tiket->admin_unread_count ?? 0);
+    $teknisUnreadCount = (int) ($tiket->teknis_unread_count ?? 0);
+    $adminRoomId = $tiket->admin_room_id ?? null;
+    $teknisRoomId = $tiket->teknis_room_id ?? null;
 
     /* ── Re-open limit ── */
     $jumlahSelesai  = $allStatuses->where('status_tiket', 'selesai')->count();
@@ -369,7 +390,10 @@
             @endif
 
             {{-- ── Rusak Berat: Catatan Rekomendasi Teknis ── --}}
-            @if($displayStatus === 'rusak_berat')
+            @if($displayStatus === 'rusak_berat' && $currentStatus !== 'tiket_ditutup')
+            @php
+                $analisisKerusakan = $bersihkanCatatanTeknis($statusRekomendasiTeknis?->catatan);
+            @endphp
             <div class="rounded-2xl border border-red-200 overflow-hidden" style="background:#FEF2F2;">
                 <div class="flex items-center gap-2.5 px-6 py-3.5 border-b border-red-200" style="background:#FEE2E2;">
                     <svg class="w-4 h-4 text-red-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -382,22 +406,22 @@
                         Berdasarkan analisis teknis, perangkat dinyatakan mengalami kerusakan fatal dan tidak dapat diperbaiki (<em>unrepairable</em>).
                         Berikut adalah catatan resmi dari Tim Teknis sebagai dasar tindak lanjut.
                     </p>
-                    @if($latest?->catatan)
+                    @if($analisisKerusakan)
                     <div>
                         <p class="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-1">Analisis Kerusakan</p>
-                        <p class="text-sm text-red-900 leading-relaxed bg-white/60 rounded-xl px-4 py-3 border border-red-100">{{ $latest->catatan }}</p>
+                        <p class="text-sm text-red-900 leading-relaxed bg-white/60 rounded-xl px-4 py-3 border border-red-100">{{ $analisisKerusakan }}</p>
                     </div>
                     @endif
-                    @if($latest?->spesifikasi_perangkat_rusak)
+                    @if($statusRekomendasiTeknis?->spesifikasi_perangkat_rusak)
                     <div>
                         <p class="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-1">Spesifikasi Perangkat Rusak</p>
-                        <p class="text-sm text-red-900 leading-relaxed bg-white/60 rounded-xl px-4 py-3 border border-red-100">{{ $latest->spesifikasi_perangkat_rusak }}</p>
+                        <p class="text-sm text-red-900 leading-relaxed bg-white/60 rounded-xl px-4 py-3 border border-red-100">{{ $statusRekomendasiTeknis->spesifikasi_perangkat_rusak }}</p>
                     </div>
                     @endif
-                    @if($latest?->rekomendasi)
+                    @if($statusRekomendasiTeknis?->rekomendasi)
                     <div>
                         <p class="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-1">Rekomendasi Tindak Lanjut</p>
-                        <p class="text-sm text-red-900 leading-relaxed bg-white/60 rounded-xl px-4 py-3 border border-red-100">{{ $latest->rekomendasi }}</p>
+                        <p class="text-sm text-red-900 leading-relaxed bg-white/60 rounded-xl px-4 py-3 border border-red-100">{{ $statusRekomendasiTeknis->rekomendasi }}</p>
                     </div>
                     @endif
                 </div>
@@ -524,7 +548,7 @@
                     </div>
 
                     {{-- Foto Bukti --}}
-                    @php $fotos = is_array($tiket->foto_bukti) ? array_values(array_filter($tiket->foto_bukti)) : []; @endphp
+                    @php $fotos = $tiket->getFotoPaths(); @endphp
                     <div>
                         <label class="field-label">Foto Bukti</label>
                         @if(count($fotos) > 0)
@@ -602,9 +626,14 @@
                     @endif
                 </p>
                 <a href="{{ route('opd.tiket.chat', $tiket->id) }}?type=admin"
-                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold
+                   class="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold
                           transition hover:-translate-y-0.5 hover:shadow-md"
+                   data-chat-room-id="{{ $adminRoomId }}" data-chat-unread-button
                    style="background:#01458E;">
+                    @if($adminUnreadCount > 0)
+                    <span class="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                          style="background:#DC2626;">{{ $adminUnreadCount > 9 ? '9+' : $adminUnreadCount }}</span>
+                    @endif
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
                     </svg>
@@ -644,9 +673,14 @@
                     @endif
                 </p>
                 <a href="{{ route('opd.tiket.chat', $tiket->id) }}?type=teknis"
-                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold
+                   class="relative inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-bold
                           transition hover:-translate-y-0.5 hover:shadow-md"
+                   data-chat-room-id="{{ $teknisRoomId }}" data-chat-unread-button
                    style="background:#01458E;">
+                    @if($teknisUnreadCount > 0)
+                    <span class="absolute -top-2 -right-2 min-w-[20px] h-5 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center leading-none border-2 border-white"
+                          style="background:#DC2626;">{{ $teknisUnreadCount > 9 ? '9+' : $teknisUnreadCount }}</span>
+                    @endif
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
                     </svg>
@@ -811,7 +845,7 @@
                 @else
                 {{-- Konfirmasi normal: Buka Kembali / Tutup Tiket --}}
                 <div class="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-5"
-                     x-data="{ showTutup: false, showBuka: false, rating: 0, ratingHover: 0 }">
+                     x-data="{ showTutup: false, showBuka: false, rating: 0, ratingHover: 0, submittingTutup: false }">
                     <p class="text-sm font-semibold text-gray-800 text-center mb-4">
                         Apakah layanan IT / perangkat Anda sudah berfungsi normal kembali?
                     </p>
@@ -823,7 +857,7 @@
                             BELUM, BUKA KEMBALI
                         </button>
                         @endif
-                        <button type="button" @click="showTutup = true"
+                        <button type="button" @click="rating = 0; ratingHover = 0; submittingTutup = false; showTutup = true"
                                 class="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-95"
                                 style="background:#059669;">
                             YA, TUTUP TIKET
@@ -832,6 +866,7 @@
 
                     {{-- ══ MODAL: Tutup Tiket + Penilaian ══ --}}
                     <div x-show="showTutup"
+                         x-cloak
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0"
                          x-transition:enter-end="opacity-100"
@@ -844,6 +879,16 @@
 
                         <div class="relative z-10 bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 flex flex-col overflow-hidden"
                              @click.stop>
+                            <div x-show="submittingTutup"
+                                 x-cloak
+                                 x-transition.opacity
+                                 class="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-white/85 backdrop-blur-sm"
+                                 style="display:none;"
+                                 role="status"
+                                 aria-live="polite">
+                                <div class="w-12 h-12 rounded-full border-[3px] border-emerald-100 border-t-emerald-600 animate-spin"></div>
+                                <p class="text-sm font-bold text-emerald-700">Mengirim ulasan...</p>
+                            </div>
 
                             <div class="px-6 py-4 text-white shrink-0" style="background:#059669;border-radius:1.5rem 1.5rem 0 0;">
                                 <div class="flex items-center justify-between">
@@ -858,7 +903,7 @@
                                             <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.75);">Tiket #{{ $tiket->id }}</p>
                                         </div>
                                     </div>
-                                    <button @click="showTutup = false" class="hover:text-white/60 transition-colors">
+                                    <button type="button" @click="showTutup = false" class="hover:text-white/60 transition-colors">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
                                         </svg>
@@ -866,7 +911,11 @@
                                 </div>
                             </div>
 
-                            <form action="{{ route('opd.tiket.konfirm', $tiket->id) }}" method="POST" class="px-6 py-5 space-y-5">
+                            <form action="{{ route('opd.tiket.konfirm', $tiket->id) }}"
+                                  method="POST"
+                                  class="px-6 py-5 space-y-5"
+                                  data-loading-skip="true"
+                                  @submit="if (rating === 0) { $event.preventDefault(); return; } submittingTutup = true">
                                 @csrf
                                 <p class="text-sm text-gray-600 text-center leading-relaxed">
                                     Terima kasih! Tiket akan ditutup. Seberapa puas Anda dengan
@@ -885,8 +934,8 @@
                                 </div>
                                 <input type="hidden" name="penilaian" :value="rating">
                                 <button type="submit"
-                                        :disabled="rating === 0"
-                                        :class="rating === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-95'"
+                                        :disabled="rating === 0 || submittingTutup"
+                                        :class="rating === 0 || submittingTutup ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90 active:scale-95'"
                                         class="w-full py-3 rounded-xl text-sm font-bold text-white transition flex items-center justify-center gap-2"
                                         style="background:#059669;">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -901,6 +950,7 @@
 
                     {{-- ══ MODAL: Buka Kembali ══ --}}
                     <div x-show="showBuka"
+                         x-cloak
                          x-transition:enter="transition ease-out duration-200"
                          x-transition:enter-start="opacity-0"
                          x-transition:enter-end="opacity-100"
@@ -952,7 +1002,35 @@
                                               class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:border-[#DC2626] placeholder-gray-300 transition-colors"
                                               style="--tw-ring-color:#DC2626;"></textarea>
                                 </div>
-                                <div x-data="{ fileName: '' }">
+                                <div x-data="{ fileName: '', showToast: false, toastMessage: '', toastType: 'error', showErrorToast(msg) { this.toastMessage = msg; this.toastType = 'error'; this.showToast = true; setTimeout(() => { this.showToast = false; }, 5000); } }">
+                                    {{-- Toast Notification --}}
+                                    <div x-show="showToast"
+                                         x-cloak
+                                         x-transition:enter="transition ease-out duration-300"
+                                         x-transition:enter-start="opacity-0 translate-y--4"
+                                         x-transition:enter-end="opacity-100 translate-y-0"
+                                         x-transition:leave="transition ease-in duration-200"
+                                         x-transition:leave-start="opacity-100 translate-y-0"
+                                         x-transition:leave-end="opacity-0 translate-y--4"
+                                         class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+                                         style="display: none;">
+                                        <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                                             class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                                            <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                                                 class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            <div class="flex-1">
+                                                <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'" class="text-sm font-medium" x-text="toastMessage"></p>
+                                            </div>
+                                            <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {{-- End Toast --}}
                                     <label class="block text-sm font-semibold text-gray-700 mb-1.5">
                                         Upload Bukti <span class="font-normal text-gray-400">(Opsional)</span>
                                     </label>
@@ -964,11 +1042,20 @@
                                             Upload
                                             <input type="file" name="file_bukti" accept=".jpg,.jpeg,.png,.pdf"
                                                    class="sr-only"
-                                                   @change="fileName = $event.target.files[0]?.name ?? ''">
+                                                   @change="
+                                                       const file = $event.target.files[0];
+                                                       if (file && file.size > 5 * 1024 * 1024) {
+                                                           showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                                                           $event.target.value = '';
+                                                           fileName = '';
+                                                           return;
+                                                       }
+                                                       fileName = file?.name ?? '';
+                                                   ">
                                         </label>
                                         <span class="text-xs text-gray-400" x-text="fileName || 'Choose Images'"></span>
                                     </div>
-                                    <p class="text-[11px] text-gray-400 mt-1">JPG, JPEG, PNG dan PDF. Max 10 MB</p>
+                                    <p class="text-[11px] text-gray-400 mt-1">JPG, JPEG, PNG dan PDF. Max 5 MB</p>
                                 </div>
                                 <button type="submit"
                                         class="w-full py-3 rounded-xl text-sm font-bold text-white transition hover:opacity-90 active:scale-95 flex items-center justify-center gap-2"
@@ -996,6 +1083,12 @@
 <footer class="text-center py-6 mt-auto border-t border-gray-200 bg-white text-gray-400 text-xs font-medium">
     &copy; {{ date('Y') }} SiPasti &mdash; Dinas Komunikasi dan Informatika Kota Padang
 </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    window.initChatUnreadBadges?.(@json(Auth::id()));
+});
+</script>
 
 </body>
 </html>

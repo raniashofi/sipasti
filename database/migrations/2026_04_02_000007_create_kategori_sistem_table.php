@@ -9,12 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kategori_sistem', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('bidang_id')->nullable();
+            $table->string('id', 36)->primary();
             $table->string('nama_kategori')->unique();
             $table->text('deskripsi')->nullable();
             $table->string('icon')->nullable()->default('default');
-            $table->foreign('bidang_id')->references('id')->on('bidang')->nullOnDelete();
         });
     }
 

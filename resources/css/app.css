@@ -1,3 +1,144 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+[x-cloak] {
+    display: none !important;
+}
+
+.fixed.inset-0.bg-black\/40,
+.fixed.inset-0.bg-black\/45,
+.fixed.inset-0.bg-black\/50,
+.fixed.inset-0.bg-gray-500,
+.fixed.inset-0[class*="bg-black/"],
+.fixed.inset-0[style*="background:rgba(0,0,0"],
+.fixed.inset-0[style*="background: rgba(0,0,0"],
+.absolute.inset-0.bg-black\/40,
+.absolute.inset-0.bg-black\/45,
+.absolute.inset-0.bg-black\/50,
+.absolute.inset-0.bg-gray-500,
+.absolute.inset-0[class*="bg-black/"],
+.absolute.inset-0[style*="background:rgba(0,0,0"],
+.absolute.inset-0[style*="background: rgba(0,0,0"] {
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.fixed.inset-0.bg-black\/90,
+.fixed.inset-0[class*="bg-black/90"] {
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+.sipasti-loading-button {
+    cursor: wait !important;
+    opacity: 0.86;
+    pointer-events: none;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.sipasti-loading-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    max-width: 100%;
+    line-height: 1;
+}
+
+.sipasti-loading-mark {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.1em;
+    height: 1.1em;
+    flex: 0 0 1.1em;
+}
+
+.sipasti-loading-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 9999px;
+    animation: sipasti-spin 0.75s linear infinite;
+}
+
+.sipasti-loading-lottie {
+    display: none;
+    width: 1.35em;
+    height: 1.35em;
+    color: currentColor;
+}
+
+.sipasti-lottie-loaded .sipasti-loading-lottie {
+    display: inline-block;
+}
+
+.sipasti-lottie-loaded .sipasti-loading-spinner {
+    display: none;
+}
+
+.sipasti-loading-text {
+    white-space: nowrap;
+}
+
+.sipasti-modal-loading-host {
+    cursor: wait;
+}
+
+.sipasti-modal-loading-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(3px);
+    border-radius: inherit;
+}
+
+.sipasti-modal-loading-box {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.7rem;
+    color: #01458e;
+    text-align: center;
+}
+
+.sipasti-modal-loading-mark {
+    width: 3.25rem;
+    height: 3.25rem;
+    flex-basis: 3.25rem;
+}
+
+.sipasti-modal-loading-mark .sipasti-loading-spinner {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-width: 3px;
+}
+
+.sipasti-modal-loading-mark .sipasti-loading-lottie {
+    width: 3.5rem;
+    height: 3.5rem;
+}
+
+.sipasti-modal-loading-text {
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: #01458e;
+}
+
+@keyframes sipasti-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

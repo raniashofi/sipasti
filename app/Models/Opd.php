@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -15,10 +16,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Opd extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'opd';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = false;
+    protected string $idPrefix = 'OPD';
 
     protected $fillable = [
         'id','user_id','kode_opd','nama_opd','kdunit','parent_id',

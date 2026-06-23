@@ -2,27 +2,31 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * @property string        $id
- * @property string        $knowledge_base_id
+ * @property string|null   $artikel_opd_id
+ * @property string|null   $sop_internal_id
  * @property string        $nama_file
  * @property string        $path_file
  * @property string        $tipe_file
  * @property int           $ukuran_file
  * @property int           $urutan
- * @property KnowledgeBase $knowledgeBase
  */
 class LampiranArtikel extends Model
 {
+    use HasPrefixedId;
+
     protected $table = 'lampiran_artikel';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = true;
+    protected string $idPrefix = 'LMP';
 
     protected $fillable = [
-        'id', 'knowledge_base_id', 'nama_file', 'path_file',
+        'id', 'artikel_opd_id', 'sop_internal_id', 'nama_file', 'path_file',
         'tipe_file', 'ukuran_file', 'urutan',
     ];
 
@@ -31,12 +35,14 @@ class LampiranArtikel extends Model
         'urutan' => 'integer',
     ];
 
-    /**
-     * Relationship: Knowledge Base Article
-     */
-    public function knowledgeBase()
+    public function artikelOpd()
     {
-        return $this->belongsTo(KnowledgeBase::class);
+        return $this->belongsTo(ArtikelOpd::class, 'artikel_opd_id');
+    }
+
+    public function sopInternal()
+    {
+        return $this->belongsTo(SopInternal::class, 'sop_internal_id');
     }
 
     /**

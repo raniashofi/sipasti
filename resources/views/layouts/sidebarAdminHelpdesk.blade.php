@@ -5,7 +5,7 @@
     }
 </style>
 
-<div x-data="">
+<div x-data="{ showLogoutConfirm: false }">
     {{-- Mobile overlay --}}
     <div x-show="$store.sidebar.open"
          x-cloak
@@ -111,7 +111,11 @@
                      x-transition:enter-end="opacity-100 translate-y-0"
                      class="ml-7 mt-0.5 space-y-0.5">
                     @foreach($item['sub'] as $sub)
-                    @php $subActive = request()->routeIs($sub['route']); @endphp
+                    @php
+                        $subActive = request()->routeIs($sub['route'])
+                            || (($sidebarActive ?? null) === 'panduan' && $sub['route'] === 'admin_helpdesk.tiket.panduan')
+                            || (($sidebarActive ?? null) === 'riwayat' && $sub['route'] === 'admin_helpdesk.tiket.riwayat');
+                    @endphp
                     <a href="{{ Route::has($sub['route']) ? route($sub['route']) : '#' }}"
                        class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors
                               {{ $subActive
@@ -183,17 +187,69 @@
             </a>
 
             <div class="border-t border-gray-100 pt-3">
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit"
-                            class="flex items-center gap-2.5 w-full text-sm text-gray-400 hover:text-red-500 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                        </svg>
-                        Logout
-                    </button>
-                </form>
+                <button type="button"
+                        @click="showLogoutConfirm = true"
+                        class="flex items-center gap-2.5 w-full text-sm text-gray-400 hover:text-red-500 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <div x-show="showLogoutConfirm"
+             x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click.self="showLogoutConfirm = false"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-filter backdrop-blur-sm">
+            <div class="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+                <div class="px-6 py-5 text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-base font-bold">Konfirmasi Logout</p>
+                            <p class="text-xs text-white/85">Anda yakin ingin logout dari aplikasi?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-5">
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Pastikan tidak ada pekerjaan yang belum disimpan sebelum melanjutkan.
+                    </p>
+
+                    <div class="mt-6 flex gap-3">
+                        <button type="button"
+                                @click="showLogoutConfirm = false"
+                                class="flex-1 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200">
+                            Batal
+                        </button>
+                        <form method="POST" action="{{ route('logout') }}" class="flex-1">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-red-600/20 transition-all hover:bg-red-700 hover:shadow-red-600/30">
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 

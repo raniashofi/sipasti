@@ -5,9 +5,10 @@ namespace App\Http\Controllers\Pimpinan;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\AdminHelpdesk;
+use App\Models\ArtikelOpd;
 use App\Models\Bidang;
-use App\Models\KnowledgeBase;
 use App\Models\Opd;
+use App\Models\SopInternal;
 use App\Models\Tiket;
 use App\Models\TimTeknis;
 use Illuminate\Http\Request;
@@ -33,28 +34,179 @@ class DashboardController extends Controller
     // Status yang dianggap sebagai tiket selesai
     private array $statusSelesai = ['selesai', 'rusak_berat', 'tiket_ditutup'];
 
+    protected function statusSelesai(): array
+    {
+        return $this->statusSelesai;
+    }
+
+    protected function statusLabel(string $status): string
+    {
+        return $this->statusLabel[$status] ?? ucfirst($status);
+    }
+
+    protected function periodDateRange(Request $request): array
+    {
+        $period = $request->query('period', 'monthly');
+
+        if ($period === 'daily') {
+            return [now()->toDateString(), now()->toDateString(), $period];
+        }
+
+        if ($period === 'weekly') {
+            return [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString(), $period];
+        }
+
+        if ($period === 'yearly') {
+            return [now()->startOfYear()->toDateString(), now()->endOfYear()->toDateString(), $period];
+        }
+
+        if ($period === 'custom') {
+            return [
+                $request->query('date_from', now()->startOfMonth()->toDateString()),
+                $request->query('date_to', now()->toDateString()),
+                $period,
+            ];
+        }
+
+        return [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString(), 'monthly'];
+    }
+
+    protected function exportDateRange(Request $request): array
+    {
+        return [
+            $request->query('date_from', now()->startOfYear()->toDateString()),
+            $request->query('date_to', now()->toDateString()),
+        ];
+    }
+
+    protected function exportFilename(string $dateFrom, string $dateTo): string
+    {
+        return 'laporan_kinerja_tiket_' . $dateFrom . '_sd_' . $dateTo . '.xlsx';
+    }
+
+    protected function resolutionRate(int $totalTiket, int $tiketSelesai): int
+    {
+        return $totalTiket > 0 ? (int) round(($tiketSelesai / $totalTiket) * 100) : 0;
+    }
+
+    protected function damageTrendBuckets(string $dateFrom, string $dateTo, string $period): \Illuminate\Support\Collection
+    {
+        $start = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+        $end = \Carbon\Carbon::parse($dateTo)->endOfDay();
+        $buckets = collect();
+
+        if ($period === 'daily') {
+            for ($hour = 0; $hour < 24; $hour++) {
+                $hourStart = $start->clone()->setHour($hour)->setMinute(0)->setSecond(0);
+                $buckets->push([
+                    'label' => $hourStart->format('H:00'),
+                    'start' => $hourStart,
+                    'end' => $hourStart->clone()->setMinute(59)->setSecond(59),
+                ]);
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'weekly') {
+            for ($i = 0; $i < 7; $i++) {
+                $day = $start->clone()->addDays($i);
+                if ($day->gt($end)) break;
+
+                $buckets->push([
+                    'label' => $day->locale('id')->isoFormat('ddd'),
+                    'start' => $day->clone()->startOfDay(),
+                    'end' => $day->clone()->endOfDay(),
+                ]);
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'monthly') {
+            $current = $start->clone();
+            while ($current->lte($end)) {
+                $buckets->push([
+                    'label' => $current->format('d'),
+                    'start' => $current->clone()->startOfDay(),
+                    'end' => $current->clone()->endOfDay(),
+                ]);
+                $current->addDay();
+            }
+
+            return $buckets;
+        }
+
+        if ($period === 'yearly') {
+            for ($i = 0; $i < 12; $i++) {
+                $month = $start->clone()->startOfYear()->addMonths($i);
+                if ($month->gt($end)) break;
+
+                $buckets->push([
+                    'label' => $month->locale('id')->isoFormat('MMM'),
+                    'start' => $month->clone()->startOfMonth()->max($start),
+                    'end' => $month->clone()->endOfMonth()->min($end),
+                ]);
+            }
+
+            return $buckets;
+        }
+
+        $durationDays = $start->diffInDays($end);
+
+        if ($durationDays <= 1) {
+            for ($hour = 0; $hour < 24; $hour++) {
+                $hourStart = $start->clone()->setHour($hour)->setMinute(0)->setSecond(0);
+                $buckets->push([
+                    'label' => $hourStart->format('H:00'),
+                    'start' => $hourStart,
+                    'end' => $hourStart->clone()->setMinute(59)->setSecond(59),
+                ]);
+            }
+
+            return $buckets;
+        }
+
+        if ($durationDays <= 62) {
+            $current = $start->clone();
+            while ($current->lte($end)) {
+                $buckets->push([
+                    'label' => $current->format('d/m'),
+                    'start' => $current->clone()->startOfDay(),
+                    'end' => $current->clone()->endOfDay(),
+                ]);
+                $current->addDay();
+            }
+
+            return $buckets;
+        }
+
+        $current = $start->clone();
+        $weekNum = 1;
+        while ($current->lte($end)) {
+            $weekStart = $current->clone()->startOfDay();
+            $weekEnd = $current->clone()->addDays(6)->endOfDay();
+            if ($weekEnd->gt($end)) {
+                $weekEnd = $end->clone();
+            }
+
+            $buckets->push([
+                'label' => "W$weekNum",
+                'start' => $weekStart,
+                'end' => $weekEnd,
+            ]);
+
+            $current->addWeek();
+            $weekNum++;
+        }
+
+        return $buckets;
+    }
+
     public function index(Request $request)
     {
         // ── Filter periode waktu ──────────────────────────────────────
-        $period = $request->query('period', 'monthly'); // harian, mingguan, bulanan (default), tahunan, custom
-
-        // Hitung rentang tanggal berdasarkan period
-        if ($period === 'daily') {
-            $dateFrom = now()->toDateString();
-            $dateTo   = now()->toDateString();
-        } elseif ($period === 'weekly') {
-            $dateFrom = now()->startOfWeek()->toDateString();
-            $dateTo   = now()->endOfWeek()->toDateString();
-        } elseif ($period === 'yearly') {
-            $dateFrom = now()->startOfYear()->toDateString();
-            $dateTo   = now()->endOfYear()->toDateString();
-        } elseif ($period === 'custom') {
-            $dateFrom = $request->query('date_from', now()->startOfMonth()->toDateString());
-            $dateTo   = $request->query('date_to', now()->toDateString());
-        } else { // monthly (default)
-            $dateFrom = now()->startOfMonth()->toDateString();
-            $dateTo   = now()->endOfMonth()->toDateString();
-        }
+        [$dateFrom, $dateTo, $period] = $this->periodDateRange($request);
 
         // ── 1. Stat cards overview ─────────────────────────────────────
         $query = Tiket::whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
@@ -67,7 +219,8 @@ class DashboardController extends Controller
         )->count();
         $avgKepuasan  = (clone $query)->whereNotNull('penilaian')->avg('penilaian') ?? 0;
         $totalOpd     = Opd::count();
-        $totalKb      = KnowledgeBase::where('status_publikasi', 'published')->count();
+        $totalKb      = ArtikelOpd::where('status_publikasi', 'published')->count()
+            + SopInternal::where('status_publikasi', 'published')->count();
 
         // Tiket dalam periode
         $tiketBulanIni  = (clone $query)->count();
@@ -243,11 +396,55 @@ class DashboardController extends Controller
         }
 
         // ── 4. Distribusi per bidang ───────────────────────────────────
+        // Tren kerusakan aset per kategori sistem
+        $damageTrendBuckets = $this->damageTrendBuckets($dateFrom, $dateTo, $period);
+        $damageTrendLabels = $damageTrendBuckets->pluck('label')->values();
+        $damageTrendColors = ['#01458E', '#D97706', '#059669', '#7C3AED', '#DC2626'];
+
+        $topDamageCategories = DB::table('tiket as t')
+            ->join('node_diagnosis as nd', 't.node_diagnosis_id', '=', 'nd.id')
+            ->join('kategori_sistem as ks', 'nd.kategori_id', '=', 'ks.id')
+            ->select('ks.id', 'ks.nama_kategori', DB::raw('COUNT(*) as total'))
+            ->whereBetween('t.created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
+            ->groupBy('ks.id', 'ks.nama_kategori')
+            ->orderByDesc('total')
+            ->limit(5)
+            ->get();
+
+        $kategoriDamageTrend = $topDamageCategories->map(function ($kategori, $index) use ($damageTrendBuckets, $damageTrendColors) {
+            $points = $damageTrendBuckets->map(fn($bucket) =>
+                Tiket::whereBetween('created_at', [$bucket['start'], $bucket['end']])
+                    ->whereHas('solutionNode', fn($q) => $q->where('kategori_id', $kategori->id))
+                    ->count()
+            )->values();
+
+            $first = (int) ($points->first() ?? 0);
+            $last = (int) ($points->last() ?? 0);
+            $change = $last - $first;
+
+            return [
+                'id' => $kategori->id,
+                'nama' => $kategori->nama_kategori ?: 'Tanpa kategori',
+                'total' => (int) $kategori->total,
+                'data' => $points->all(),
+                'color' => $damageTrendColors[$index % count($damageTrendColors)],
+                'change' => $change,
+                'trend' => $change > 0 ? 'Naik' : ($change < 0 ? 'Turun' : 'Stabil'),
+            ];
+        })->values();
+
+        $damageTrendHighlight = $kategoriDamageTrend->sortByDesc('total')->first();
+        $damageTrendDatasets = $kategoriDamageTrend->map(fn($item) => [
+            'label' => $item['nama'],
+            'data' => $item['data'],
+            'color' => $item['color'],
+        ])->values();
+
         $bidangs        = Bidang::all();
         $tiketPerBidang = $bidangs->map(function ($bidang) use ($dateFrom, $dateTo) {
             return [
                 'nama'  => (string) ($bidang->nama_bidang ?? $bidang->id),
-                'total' => Tiket::where('bidang_id', $bidang->id)
+                'total' => Tiket::whereHas('solutionNode', fn($q) => $q->where('bidang_id', $bidang->id))
                     ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
                     ->count(),
             ];
@@ -371,6 +568,8 @@ class DashboardController extends Controller
             'totalOpd', 'totalKb', 'tiketBulanIni', 'selesaiBulanIni',
             'tiketPerStatus', 'trendMonths', 'tiketPerBidang',
             'performanceAdmin', 'workloadTeknis', 'auditLog', 'kpiData',
+            'damageTrendLabels', 'kategoriDamageTrend', 'damageTrendHighlight',
+            'damageTrendDatasets',
             'dateFrom', 'dateTo', 'period'
         ));
     }
@@ -380,12 +579,11 @@ class DashboardController extends Controller
      */
     public function exportCsv(Request $request)
     {
-        $dateFrom = $request->query('date_from', now()->startOfYear()->toDateString());
-        $dateTo   = $request->query('date_to', now()->toDateString());
+        [$dateFrom, $dateTo] = $this->exportDateRange($request);
 
         // Tambahkan relasi tiketTeknisi untuk mendapatkan semua teknisi yang ditugaskan
         $tikets = Tiket::with([
-            'opd', 'kategori', 'kb.kategori', 'latestStatus', 'admin', 'bidang',
+            'opd', 'kategori', 'kb.kategori', 'latestStatus', 'admin.bidang', 'bidang',
             'tiketTeknisi.timTeknis.bidang', // Relasi ke semua teknisi via TiketTeknisi
             'statusTiket',
         ])
@@ -393,7 +591,7 @@ class DashboardController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        $filename = 'laporan_kinerja_tiket_' . $dateFrom . '_sd_' . $dateTo . '.xlsx';
+        $filename = $this->exportFilename($dateFrom, $dateTo);
         $tempPath = storage_path('temp/' . uniqid() . '.xlsx');
         @mkdir(storage_path('temp'), 0755, true);
 
@@ -413,17 +611,22 @@ class DashboardController extends Controller
             new StringCell('Status Ketepatan'),
             new StringCell('Status Akhir'),
             new StringCell('Ditangani Oleh (Admin)'),
+            new StringCell('Bidang Admin'),
             new StringCell('Tim Teknis'),
+            new StringCell('Peran Tim Teknis'),
+            new StringCell('Bidang Tim Teknis'),
+            new StringCell('Status Tugas Teknis'),
+            new StringCell('Waktu Ditugaskan'),
             new StringCell('Skor Kepuasan (/5)'),
             new StringCell('Asal Instansi (OPD)'),
         ]));
 
-        $statusSelesai = ['selesai', 'rusak_berat', 'tiket_ditutup'];
+        $statusSelesai = $this->statusSelesai();
         $rowNumber = 0;
 
         foreach ($tikets as $tiket) {
             $statusAkhir = $tiket->latestStatus?->status_tiket;
-            $labelStatus = $this->statusLabel[$statusAkhir] ?? ($statusAkhir ?? '—');
+            $labelStatus = $statusAkhir ? $this->statusLabel($statusAkhir) : '—';
 
             // Perhitungan Waktu dan Durasi Penyelesaian (SLA)
             $waktuMasuk = $tiket->created_at;
@@ -469,20 +672,13 @@ class DashboardController extends Controller
             }
 
             // Cek status eskalasi
-            $isEskalasiBool = ($tiket->rekomendasi_penanganan === 'eskalasi' || $statusAkhir === 'perbaikan_teknis' || (in_array($statusAkhir, ['selesai', 'rusak_berat']) && $tiket->rekomendasi_penanganan === 'eskalasi'));
-
-            // Ambil daftar teknisi yang ditugaskan
-            $teknisiList = [];
-            if ($isEskalasiBool) {
-                $teknisiList = $tiket->tiketTeknisi
-                    ->map(fn($tt) => $tt->timTeknis?->nama_lengkap ?? 'Tidak diketahui')
-                    ->unique()
-                    ->values()
-                    ->toArray();
-            }
+            $barisTeknisi = $tiket->tiketTeknisi
+                ->sortBy(fn($tt) => ($tt->peran_teknisi === 'teknisi_utama' ? '0' : '1') . ($tt->waktu_ditugaskan?->format('YmdHis') ?? ''))
+                ->unique(fn($tt) => ($tt->teknis_id ?? 'unknown') . '|' . ($tt->peran_teknisi ?? 'unknown'))
+                ->values();
 
             // Jika tidak ada teknisi, tetap tambahkan 1 baris dengan "—"
-            if (empty($teknisiList)) {
+            if ($barisTeknisi->isEmpty()) {
                 $rowNumber++;
                 $writer->addRow(new Row([
                     new StringCell((string)$rowNumber),
@@ -502,7 +698,7 @@ class DashboardController extends Controller
                 ]));
             } else {
                 // Tambahkan satu baris untuk setiap teknisi
-                foreach ($teknisiList as $teknisi) {
+                foreach ($barisTeknisi as $teknisi) {
                     $rowNumber++;
                     $writer->addRow(new Row([
                         new StringCell((string)$rowNumber),
@@ -521,6 +717,142 @@ class DashboardController extends Controller
                         new StringCell($tiket->opd?->nama_opd ?? '—'),
                     ]));
                 }
+            }
+        }
+
+        $writer->close();
+
+        return response()->download($tempPath, $filename)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Export laporan tiket ke Excel dengan satu baris untuk setiap teknisi yang menangani.
+     */
+    public function exportXlsx(Request $request)
+    {
+        [$dateFrom, $dateTo] = $this->exportDateRange($request);
+
+        $tikets = Tiket::with([
+            'opd',
+            'kategori',
+            'kb.kategori',
+            'latestStatus',
+            'admin.bidang',
+            'bidang',
+            'tiketTeknisi.timTeknis.bidang',
+            'statusTiket',
+        ])
+            ->whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        $filename = $this->exportFilename($dateFrom, $dateTo);
+        $tempPath = storage_path('temp/' . uniqid() . '.xlsx');
+        @mkdir(storage_path('temp'), 0755, true);
+
+        $writer = new Writer();
+        $writer->openToFile($tempPath);
+
+        $writer->addRow(new Row([
+            new StringCell('No'),
+            new StringCell('ID Tiket'),
+            new StringCell('Subjek Masalah'),
+            new StringCell('Kategori'),
+            new StringCell('Waktu Dibuat'),
+            new StringCell('Waktu Diselesaikan'),
+            new StringCell('Durasi Penyelesaian (Jam)'),
+            new StringCell('Batas SLA (Hari)'),
+            new StringCell('Status Ketepatan'),
+            new StringCell('Status Akhir'),
+            new StringCell('Ditangani Oleh (Admin)'),
+            new StringCell('Bidang Admin'),
+            new StringCell('Tim Teknis'),
+            new StringCell('Peran Tim Teknis'),
+            new StringCell('Bidang Tim Teknis'),
+            new StringCell('Status Tugas Teknis'),
+            new StringCell('Waktu Ditugaskan'),
+            new StringCell('Skor Kepuasan (/5)'),
+            new StringCell('Asal Instansi (OPD)'),
+        ]));
+
+        $statusSelesai = $this->statusSelesai();
+        $rowNumber = 0;
+
+        foreach ($tikets as $tiket) {
+            $statusAkhir = $tiket->latestStatus?->status_tiket;
+            $labelStatus = $statusAkhir ? $this->statusLabel($statusAkhir) : '-';
+            $waktuMasuk = $tiket->created_at;
+            $waktuSelesai = null;
+            $durasiJam = '-';
+
+            if (in_array($statusAkhir, $statusSelesai) && $tiket->latestStatus) {
+                $waktuSelesai = $tiket->latestStatus->created_at;
+                if ($waktuMasuk && $waktuSelesai) {
+                    $durasiJam = (string) round($waktuMasuk->diffInMinutes($waktuSelesai) / 60, 1);
+                }
+            }
+
+            $kategori = $tiket->kategori?->nama_kategori ?? ($tiket->kb?->kategori?->nama_kategori ?? '-');
+            $batasHariBidang = $tiket->bidang?->batas_hari_pengerjaan;
+            $batasSlaLabel = $batasHariBidang ? (string) $batasHariBidang : '-';
+            $statusKetepatan = '-';
+
+            if ($batasHariBidang && in_array($statusAkhir, $statusSelesai)) {
+                $teknisiUtama = $tiket->tiketTeknisi->where('peran_teknisi', 'teknisi_utama')->first();
+                $statusSelesaiRecord = $tiket->statusTiket
+                    ->whereIn('status_tiket', ['selesai', 'rusak_berat', 'tiket_ditutup'])
+                    ->sortByDesc('created_at')
+                    ->first();
+
+                if ($teknisiUtama?->waktu_ditugaskan && $statusSelesaiRecord?->created_at) {
+                    $deadline = \Carbon\Carbon::parse($teknisiUtama->waktu_ditugaskan)->addDays($batasHariBidang);
+                    $waktuPenyelesaian = \Carbon\Carbon::parse($statusSelesaiRecord->created_at);
+                    $statusKetepatan = $waktuPenyelesaian->gt($deadline)
+                        ? 'Telat (' . (int) $deadline->diffInDays($waktuPenyelesaian) . ' hari)'
+                        : 'Tepat Waktu';
+                }
+            } elseif (!$batasHariBidang && in_array($statusAkhir, $statusSelesai)) {
+                $statusKetepatan = 'Tidak Ada Batas';
+            }
+
+            $barisTeknisi = $tiket->tiketTeknisi
+                ->sortBy(fn($tt) => ($tt->peran_teknisi === 'teknisi_utama' ? '0' : '1') . ($tt->waktu_ditugaskan?->format('YmdHis') ?? ''))
+                ->unique(fn($tt) => ($tt->teknis_id ?? 'unknown') . '|' . ($tt->peran_teknisi ?? 'unknown'))
+                ->values();
+
+            if ($barisTeknisi->isEmpty()) {
+                $barisTeknisi = collect([null]);
+            }
+
+            foreach ($barisTeknisi as $tt) {
+                $rowNumber++;
+
+                $writer->addRow(new Row([
+                    new StringCell((string) $rowNumber),
+                    new StringCell($tiket->id),
+                    new StringCell($tiket->subjek_masalah),
+                    new StringCell($kategori),
+                    new StringCell($waktuMasuk ? $waktuMasuk->format('d/m/Y H:i') : '-'),
+                    new StringCell($waktuSelesai ? $waktuSelesai->format('d/m/Y H:i') : '-'),
+                    new StringCell($durasiJam),
+                    new StringCell($batasSlaLabel),
+                    new StringCell($statusKetepatan),
+                    new StringCell($labelStatus),
+                    new StringCell($tiket->admin?->nama_lengkap ?? '-'),
+                    new StringCell($tiket->admin?->bidang?->nama_bidang ?? '-'),
+                    new StringCell($tt?->timTeknis?->nama_lengkap ?? '-'),
+                    new StringCell($tt ? ($tt->peran_teknisi === 'teknisi_utama' ? 'Teknisi Utama' : 'Teknisi Pendamping') : '-'),
+                    new StringCell($tt?->timTeknis?->bidang?->nama_bidang ?? '-'),
+                    new StringCell($tt ? match ($tt->status_tugas) {
+                        'aktif' => 'Aktif',
+                        'selesai' => 'Selesai',
+                        'dikembalikan' => 'Dikembalikan',
+                        default => $tt->status_tugas ?? '-',
+                    } : '-'),
+                    new StringCell($tt?->waktu_ditugaskan ? $tt->waktu_ditugaskan->format('d/m/Y H:i') : '-'),
+                    new StringCell((string) ($tiket->penilaian ?? 'Belum Dinilai')),
+                    new StringCell($tiket->opd?->nama_opd ?? '-'),
+                ]));
             }
         }
 

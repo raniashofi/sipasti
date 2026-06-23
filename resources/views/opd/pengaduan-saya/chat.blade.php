@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Chat — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -104,14 +106,14 @@
                 </div>
                 @endif
 
-                @php $fotos = is_array($tiket->foto_bukti) ? array_values(array_filter($tiket->foto_bukti)) : []; @endphp
+                @php $fotos = $tiket->buktiFoto()->orderBy('created_at')->get(); @endphp
                 @if(count($fotos) > 0)
                 <div>
                     <label class="field-label">Foto Bukti</label>
                     <div class="grid grid-cols-3 gap-2">
-                        @foreach($fotos as $idx => $foto)
+                        @foreach($fotos as $idx => $buktiFoto)
                         <div class="relative aspect-square">
-                            <img src="{{ Storage::url($foto) }}"
+                            <img src="{{ Storage::url($buktiFoto->foto_path) }}"
                                  alt="Foto Bukti {{ $idx + 1 }}"
                                  class="w-full h-full object-cover rounded-xl border border-gray-200 shadow-sm">
                             <span class="absolute bottom-1 left-1.5 text-[9px] bg-black/50 text-white px-1.5 py-0.5 rounded-md font-bold">{{ $idx + 1 }}</span>
@@ -155,14 +157,31 @@
                 type: '{{ $type }}',
                 chatIsActive: {{ json_encode($chatIsActive) }},
 
+                {{-- Toast Notification --}}
+                showToast: false,
+                toastMessage: '',
+                toastType: 'error',
+
                 init() {
                     this.$nextTick(() => this.scrollBottom());
 
                     window.Echo.private('chat.' + this.roomId)
                         .listen('.NewChatMessage', (e) => {
-                            this.messages.push(e);
+                            this.addMessage(e);
                             this.$nextTick(() => this.scrollBottom());
                         });
+                },
+
+                addMessage(message) {
+                    if (!message?.id) return;
+                    const existingIndex = this.messages.findIndex((msg) => msg.id === message.id);
+
+                    if (existingIndex >= 0) {
+                        this.messages.splice(existingIndex, 1, message);
+                        return;
+                    }
+
+                    this.messages.push(message);
                 },
 
                 scrollBottom() {
@@ -170,9 +189,23 @@
                     if (el) el.scrollTop = el.scrollHeight;
                 },
 
+                showErrorToast(message) {
+                    this.toastMessage = message;
+                    this.toastType = 'error';
+                    this.showToast = true;
+                    setTimeout(() => {
+                        this.showToast = false;
+                    }, 5000);
+                },
+
                 handleFile(event) {
                     const file = event.target.files[0];
                     if (!file) return;
+                    if (file.size > 5 * 1024 * 1024) {
+                        this.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.');
+                        event.target.value = '';
+                        return;
+                    }
                     this.selectedFile = file;
                     this.fileName = file.name;
                     const reader = new FileReader();
@@ -203,7 +236,7 @@
                             '{{ route('opd.tiket.chat.send', $tiket->id) }}',
                             fd
                         );
-                        this.messages.push(res.data);
+                        this.addMessage(res.data);
                         this.newMessage = '';
                         this.clearFile();
                         this.$nextTick(() => this.scrollBottom());

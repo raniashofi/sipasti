@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Revisi Tiket — SiPasti</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -93,6 +95,18 @@
                   photos: [],
                   isCameraOpen: false,
                   mediaStream: null,
+                  showToast: false,
+                  toastMessage: '',
+                  toastType: 'error',
+
+                  showErrorToast(message) {
+                      this.toastMessage = message;
+                      this.toastType = 'error';
+                      this.showToast = true;
+                      setTimeout(() => {
+                          this.showToast = false;
+                      }, 5000);
+                  },
 
                   async openCamera() {
                       if (this.photos.length >= 5) {
@@ -140,8 +154,8 @@
                   },
                   addFiles(files) {
                       for (const file of files) {
-                          if (this.photos.length >= 5) { alert('Maksimal 5 foto.'); break; }
-                          if (file.size > 5 * 1024 * 1024) { alert('File \'' + file.name + '\' melebihi 5 MB, dilewati.'); continue; }
+                          if (this.photos.length >= 5) { this.showErrorToast('Maksimal 5 foto.'); break; }
+                          if (file.size > 5 * 1024 * 1024) { this.showErrorToast('Gambar yang diupload terlalu besar. Maksimal 5 MB.'); continue; }
                           this.photos.push({ file, name: file.name, preview: URL.createObjectURL(file) });
                       }
                       this.rebuildInput();
@@ -159,6 +173,34 @@
               }">
             @csrf
             @method('PUT')
+
+            {{-- Toast Notification --}}
+            <div x-show="showToast"
+                 x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y--4"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y--4"
+                 class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] max-w-md"
+                 style="display: none;">
+                <div :class="toastType === 'error' ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'"
+                     class="rounded-xl px-4 py-3 flex items-start gap-3 shadow-lg">
+                    <svg :class="toastType === 'error' ? 'text-red-600' : 'text-yellow-600'"
+                         class="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <p :class="toastType === 'error' ? 'text-red-800' : 'text-yellow-800'" class="text-sm font-medium" x-text="toastMessage"></p>
+                    </div>
+                    <button @click="showToast = false" class="flex-shrink-0 text-gray-400 hover:text-gray-600 focus:outline-none">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
             {{-- Subjek Masalah --}}
             <div>
@@ -205,7 +247,7 @@
             </div>
 
             {{-- Foto Bukti --}}
-            @php $fotosLama = is_array($tiket->foto_bukti) ? array_values(array_filter($tiket->foto_bukti)) : []; @endphp
+            @php $fotosLama = $tiket->getFotoPaths(); @endphp
             <div>
                 <label class="field-label">
                     Foto Bukti
@@ -316,6 +358,7 @@
 
             {{-- Modal WebCam (Berada di dalam <form> karena meminjam x-data) --}}
             <div x-show="isCameraOpen"
+                 x-cloak
                  style="display: none;"
                  class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div class="bg-white rounded-2xl p-4 w-full max-w-lg shadow-2xl flex flex-col items-center" @click.stop>

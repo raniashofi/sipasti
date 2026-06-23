@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('activity_log', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('user_id')->nullable();
+            $table->string('id', 36)->primary();
+            $table->string('user_id', 36);
             $table->enum('role_pelaku', ['opd', 'pimpinan', 'super_admin', 'admin_helpdesk', 'tim_teknis']);
             $table->enum('jenis_aktivitas', ['login', 'logout', 'create', 'update', 'delete', 'escalate', 'approve', 'reject']);
             $table->string('detail_tindakan')->nullable();
@@ -19,11 +19,11 @@ return new class extends Migration
             $table->timestamp('waktu_eksekusi')->nullable();
             $table->string('nama_tabel')->nullable();
             $table->string('id_record')->nullable();
-            $table->json('data_before')->nullable();
-            $table->json('data_after')->nullable();
+            $table->longText('data_before')->nullable();
+            $table->longText('data_after')->nullable();
             $table->timestamps();
 
-            $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
+            $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         });
     }
 

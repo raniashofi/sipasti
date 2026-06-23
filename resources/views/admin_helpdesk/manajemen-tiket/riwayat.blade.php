@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Riwayat Tiket — Admin Helpdesk</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -228,6 +230,7 @@
                                     'tiket_ditutup'  => ['bg'=>'#DBEAFE','text'=>'#1D4ED8','label'=>'Tiket Ditutup'],
                                     default          => ['bg'=>'#F3F4F6','text'=>'#6B7280','label'=>ucfirst(str_replace('_',' ',$statusAkhirM ?? '—'))],
                                 };
+                                $hasAdminChatM = ($tiket->chatRooms ?? collect())->contains('nama_roomchat', 'admin');
                                 $tJM = json_encode([
                                     'id'                    => $tiket->id,
                                     'subjek_masalah'        => $tiket->subjek_masalah,
@@ -236,7 +239,7 @@
                                     'kategori_nama'         => $kategoriNamaM,
                                     'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                     'lokasi'                => $tiket->lokasi ?? '—',
-                                    'foto_bukti'            => $tiket->foto_bukti,
+                                    'foto_bukti'            => $tiket->getFotoPaths(),
                                     'rekomendasi_penanganan'=> $tiket->rekomendasi_penanganan,
                                     'teknisi_nama'          => $teknisiM?->nama_lengkap ?? '—',
                                     'all_teknisi'           => $allTeknisiM,
@@ -250,6 +253,8 @@
                                     'selesai_at'            => $tiket->latestStatus?->created_at?->translatedFormat('d M Y H:i') . ' WIB',
                                     'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
                                     'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
+                                    'has_admin_chat'        => $hasAdminChatM,
+                                    'chat_url'              => $hasAdminChatM ? route('admin_helpdesk.tiket.chat', $tiket->id) : null,
                                 ]);
                             @endphp
                             <div class="px-4 py-4 hover:bg-gray-50/50 transition-colors cursor-pointer"
@@ -266,6 +271,15 @@
                                     </div>
                                     <span class="text-[11px] font-medium px-2 py-0.5 rounded border border-gray-200 text-gray-600 bg-gray-50 shrink-0">{{ $kategoriNamaM }}</span>
                                 </div>
+                                @if($hasAdminChatM)
+                                <a href="{{ route('admin_helpdesk.tiket.chat', $tiket->id) }}"
+                                   @click.stop
+                                   class="mt-3 inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-lg text-xs font-bold text-white hover:opacity-90 transition-all"
+                                   style="background:#01458E;">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                    Riwayat Chat OPD
+                                </a>
+                                @endif
                             </div>
                             @empty
                             <div class="px-4 py-10 text-center text-sm text-gray-400">Belum ada riwayat tiket.</div>
@@ -310,6 +324,7 @@
                                             'tiket_ditutup'    => ['bg'=>'#DBEAFE','text'=>'#1D4ED8','border'=>'#BFDBFE','label'=>'Tiket Ditutup'],
                                             default            => ['bg'=>'#F3F4F6','text'=>'#6B7280','border'=>'#E5E7EB','label'=>ucfirst(str_replace('_',' ',$statusAkhir ?? '—'))],
                                         };
+                                        $hasAdminChat = ($tiket->chatRooms ?? collect())->contains('nama_roomchat', 'admin');
                                         $tiketJson = json_encode([
                                             'id'                    => $tiket->id,
                                             'subjek_masalah'        => $tiket->subjek_masalah,
@@ -318,7 +333,7 @@
                                             'kategori_nama'         => $kategoriNama,
                                             'spesifikasi_perangkat' => $tiket->spesifikasi_perangkat ?? '—',
                                             'lokasi'                => $tiket->lokasi ?? '—',
-                                            'foto_bukti'            => $tiket->foto_bukti,
+                                            'foto_bukti'            => $tiket->getFotoPaths(),
                                             'rekomendasi_penanganan' => $tiket->rekomendasi_penanganan,
                                             'teknisi_nama'          => $teknisi?->nama_lengkap ?? '—',
                                             'all_teknisi'           => $allTeknisi,
@@ -332,6 +347,8 @@
                                             'selesai_at'            => $tiket->latestStatus?->created_at?->translatedFormat('d M Y H:i') . ' WIB',
                                             'sop_judul'             => $tiket->sopInternal?->nama_artikel_sop ?? null,
                                             'sop_konten'            => $tiket->sopInternal?->isi_konten ?? null,
+                                            'has_admin_chat'        => $hasAdminChat,
+                                            'chat_url'              => $hasAdminChat ? route('admin_helpdesk.tiket.chat', $tiket->id) : null,
                                         ]);
                                     @endphp
                                     <tr class="hover:bg-blue-50/50 cursor-pointer transition-colors"
@@ -377,13 +394,15 @@
                                             <p class="text-[11px] text-gray-400 mt-0.5">{{ $tiket->latestStatus?->created_at?->format('H:i:s') }} WIB</p>
                                         </td>
                                         <td class="px-5 py-4 whitespace-nowrap" @click.stop>
-                                            <div class="flex items-center justify-center">
-                                                <button type="button" @click="openDetail({{ $tiketJson }})"
-                                                        class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-all shadow-sm focus:outline-none"
-                                                        style="background:#01458E;">
-                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                                    Detail
-                                                </button>
+                                            <div class="flex items-center justify-center gap-2">
+                                                @if($hasAdminChat)
+                                                <a href="{{ route('admin_helpdesk.tiket.chat', $tiket->id) }}"
+                                                   class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg text-white hover:opacity-90 transition-all shadow-sm focus:outline-none"
+                                                   style="background:#01458E;">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                                                    Chat
+                                                </a>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -622,8 +641,16 @@
                 </div>
 
                 {{-- Drawer Footer: Status Akhir --}}
-                <div class="shrink-0 p-4 sm:p-5 border-t border-gray-100 bg-white">
-                    <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Status Penanganan Akhir</h4>
+            <div class="shrink-0 p-4 sm:p-5 border-t border-gray-100 bg-white">
+                <template x-if="selectedTiket?.has_admin_chat && selectedTiket?.chat_url">
+                    <a :href="selectedTiket.chat_url"
+                       class="mb-3 inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-bold text-white hover:opacity-90 transition-all"
+                       style="background:#01458E;">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12c0 4.418-4.03 8-9 8a9.86 9.86 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                        Lihat Riwayat Chat OPD
+                    </a>
+                </template>
+                <h4 class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Status Penanganan Akhir</h4>
                     <div class="flex items-center gap-3 p-3 rounded-xl border"
                          :style="'background:' + selectedTiket?.status_akhir_bg + '20; border-color:' + selectedTiket?.status_akhir_bg">
                         <svg x-show="selectedTiket?.status_akhir === 'Selesai'" class="w-5 h-5 shrink-0" :style="'color:' + selectedTiket?.status_akhir_text" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>

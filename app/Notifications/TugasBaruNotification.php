@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Support\IdGenerator;
+
 use Illuminate\Notifications\Notification;
 
 /**
@@ -20,7 +22,9 @@ class TugasBaruNotification extends Notification
         public readonly string $kodeTiket,
         public readonly string $judulMasalah,
         public readonly string $url,
-    ) {}
+    ) {
+        $this->id = IdGenerator::make('NTF');
+    }
 
     public function via(object $notifiable): array
     {

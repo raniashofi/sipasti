@@ -9,9 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('chat_room_users', function (Blueprint $table) {
-            $table->uuid('room_id');
-            $table->uuid('user_id');
+            $table->string('room_id', 36);
+            $table->string('user_id', 36);
             $table->enum('role_di_room', ['opd', 'admin_helpdesk', 'tim_teknis'])->nullable();
+            $table->string('bidang_id', 36)->nullable()->comment('Bidang admin/room chat jika ada');
             $table->timestamp('last_read_at')->nullable();
 
             // Admin tracking fields (untuk multi-admin history)
@@ -24,6 +25,7 @@ return new class extends Migration
 
             $table->foreign('room_id')->references('id')->on('chat_room')->cascadeOnDelete();
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            $table->foreign('bidang_id')->references('id')->on('bidang')->nullOnDelete();
         });
     }
 

@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Manajemen Pengguna Internal — Super Admin</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
@@ -272,7 +274,7 @@
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden flex-1 flex flex-col">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden flex flex-col">
 
                 {{-- Sub-tabs: Tim Teknis / Admin Helpdesk / Pimpinan --}}
                 <div class="flex items-center justify-between px-4 sm:px-7 pt-4 sm:pt-5 pb-0 border-b border-gray-100 overflow-x-auto w-full" style="scrollbar-width:none;">
@@ -349,7 +351,7 @@
                 </div>
 
                 {{-- ── TABEL TIM TEKNIS ── --}}
-                <div x-show="tab === 'tim_teknis'" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
+                <div x-show="tab === 'tim_teknis'" class="hidden md:block overflow-x-auto table-wrap min-w-full">
                     <table class="w-full min-w-[800px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -387,11 +389,6 @@
                             <tr x-show="filteredTT.length === 0">
                                 <td colspan="6" class="px-4 sm:px-7 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</td>
                             </tr>
-                            <template x-if="filteredTT.length > 0 && paginatedTT.length < 10">
-                                <template x-for="i in (10 - paginatedTT.length)" :key="'skt-' + i">
-                                    <tr class="border-b border-gray-50"><td colspan="6" class="px-4 sm:px-7 py-5"><div class="h-4 rounded-full bg-[#EEF3F9]"></div></td></tr>
-                                </template>
-                            </template>
                         </tbody>
                     </table>
                 </div>
@@ -425,7 +422,7 @@
                 </div>
 
                 {{-- ── TABEL ADMIN HELPDESK ── --}}
-                <div x-show="tab === 'admin_helpdesk'" style="display:none;" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
+                <div x-show="tab === 'admin_helpdesk'" style="display:none;" class="hidden md:block overflow-x-auto table-wrap min-w-full">
                     <table class="w-full min-w-[800px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -463,11 +460,6 @@
                             <tr x-show="filteredAH.length === 0">
                                 <td colspan="6" class="px-4 sm:px-7 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</td>
                             </tr>
-                            <template x-if="filteredAH.length > 0 && paginatedAH.length < 10">
-                                <template x-for="i in (10 - paginatedAH.length)" :key="'ska-' + i">
-                                    <tr class="border-b border-gray-50"><td colspan="6" class="px-4 sm:px-7 py-5"><div class="h-4 rounded-full bg-[#EEF3F9]"></div></td></tr>
-                                </template>
-                            </template>
                         </tbody>
                     </table>
                 </div>
@@ -500,7 +492,7 @@
                 </div>
 
                 {{-- ── TABEL PIMPINAN ── --}}
-                <div x-show="tab === 'pimpinan'" style="display:none;" class="hidden md:block overflow-x-auto table-wrap flex-1 min-w-full">
+                <div x-show="tab === 'pimpinan'" style="display:none;" class="hidden md:block overflow-x-auto table-wrap min-w-full">
                     <table class="w-full min-w-[700px]">
                         <thead>
                             <tr class="border-b border-gray-100 bg-gray-50">
@@ -536,11 +528,6 @@
                             <tr x-show="filteredPimpinan.length === 0">
                                 <td colspan="5" class="px-4 sm:px-7 py-10 text-center text-sm text-gray-400">Tidak ada data yang cocok.</td>
                             </tr>
-                            <template x-if="filteredPimpinan.length > 0 && paginatedPimpinan.length < 10">
-                                <template x-for="i in (10 - paginatedPimpinan.length)" :key="'skp-' + i">
-                                    <tr class="border-b border-gray-50"><td colspan="5" class="px-4 sm:px-7 py-5"><div class="h-4 rounded-full bg-[#EEF3F9]"></div></td></tr>
-                                </template>
-                            </template>
                         </tbody>
                     </table>
                 </div>

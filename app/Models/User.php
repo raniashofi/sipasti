@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
+use App\Support\IdGenerator;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 /**
  * @property string $id
+ * @property string|null $name
  * @property string $email
+ * @property \Illuminate\Support\Carbon|null $email_verified_at
  * @property string $password
  * @property string|null $gambar
  * @property string $role
@@ -16,19 +20,25 @@ use Illuminate\Notifications\Notifiable;
  */
 class User extends Authenticatable
 {
-    use Notifiable;
+    use HasPrefixedId, Notifiable;
     protected $table = 'users';
     public $incrementing = false;
     protected $keyType = 'string';
     public $timestamps = true;
 
     protected $fillable = [
-        'id','email','password','gambar','role','last_login_at'
+        'id','name','email','email_verified_at','password','gambar','role','last_login_at'
     ];
 
     protected $casts = [
+        'email_verified_at' => 'datetime',
         'last_login_at' => 'datetime',
     ];
+
+    protected function getIdPrefix(): string
+    {
+        return IdGenerator::userPrefix($this->role);
+    }
 
     // RELASI
     public function opd()

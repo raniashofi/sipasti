@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPrefixedId;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -15,10 +16,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class StatusTiket extends Model
 {
+    use HasPrefixedId;
+
     protected $table    = 'status_tiket';
     public $incrementing = false;
     protected $keyType  = 'string';
     public $timestamps  = false;
+    protected string $idPrefix = 'STS';
 
     protected $casts = [
         'created_at' => 'datetime',

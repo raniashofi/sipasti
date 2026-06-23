@@ -16,11 +16,19 @@ class ChatRoomUser extends Model
         'room_id',
         'user_id',
         'role_di_room',
+        'bidang_id',
         'last_read_at',
+        'sequence_number',
+        'started_at',
+        'ended_at',
+        'is_active',
     ];
 
     protected $casts = [
         'last_read_at' => 'datetime',
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
 
     public function user()

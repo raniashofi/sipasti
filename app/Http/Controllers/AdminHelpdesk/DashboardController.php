@@ -5,96 +5,129 @@ namespace App\Http\Controllers\AdminHelpdesk;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\AdminHelpdesk;
-use App\Models\KnowledgeBase;
-use App\Models\StatusTiket;
+use App\Models\SopInternal;
+use App\Models\Tiket;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $adminProfile = AdminHelpdesk::with('bidang')->where('user_id', Auth::id())->first();
+        $adminProfile = $this->findAdminProfile();
         $adminId      = $adminProfile?->id;
         $bidangId     = $adminProfile?->bidang_id;
 
-        // Helper: filter tiket berdasarkan bidang admin (via kb → kategori → bidang)
         $filterBidang = function ($query) use ($bidangId) {
             if ($bidangId) {
-                $query->whereNotNull('kb_id')
-                      ->whereHas('kb.kategori', fn($q) => $q->where('bidang_id', $bidangId));
+                $query->whereHas('solutionNode', fn($q) => $q->where('bidang_id', $bidangId));
             }
         };
 
-        // Stat cards — semua difilter per bidang admin
-        $menungguVerif = StatusTiket::where('status_tiket', 'verifikasi_admin')
-            ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'))
-            ->whereHas('tiket', $filterBidang)
-            ->count();
+        $latestStatus = fn($statuses) => fn($q) => $q->whereIn('status_tiket', (array) $statuses);
 
-        $pandуanRemote = $adminId
-            ? StatusTiket::where('status_tiket', 'panduan_remote')
-                ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'))
-                ->whereHas('tiket', fn($q) => $q->where('admin_id', $adminId))
-                ->count()
-            : 0;
+        $menungguIds = $this->menungguVerifikasiIds($adminProfile, $filterBidang);
+        $menungguVerif = $menungguIds->count();
 
-        $eskalasi = $adminId
-            ? StatusTiket::where('status_tiket', 'perbaikan_teknis')
-                ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'))
-                ->whereHas('tiket', fn($q) => $q->where('admin_id', $adminId))
-                ->count()
-            : 0;
+        $panduanRemote = $this->countTiketByAdmin($adminId, $latestStatus('panduan_remote'));
 
-        $selesai = $adminId
-            ? StatusTiket::where('status_tiket', 'selesai')
-                ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'))
-                ->whereHas('tiket', fn($q) => $q->where('admin_id', $adminId))
-                ->count()
-            : 0;
+        $distribusi = $this->countDistribusi($adminId);
+
+        $selesai = $this->countTiketByAdmin($adminId, $latestStatus(['selesai', 'rusak_berat', 'tiket_ditutup']));
+
+        $rusakBerat = $this->countTiketByAdmin($adminId, $latestStatus('rusak_berat'));
+
+        $selesaiDitutup = $this->countTiketByAdmin($adminId, $latestStatus(['selesai', 'tiket_ditutup']));
 
         $stats = [
             'menunggu_verif' => $menungguVerif,
-            'panduan_remote' => $pandуanRemote,
-            'eskalasi'       => $eskalasi,
+            'panduan_remote' => $panduanRemote,
+            'eskalasi'       => $distribusi,
             'selesai'        => $selesai,
-            'total_kb'       => KnowledgeBase::where('status_publikasi', 'published')->count(),
+            'total_kb'       => $this->countPublishedSop(),
         ];
 
-        // Distribusi status — semua difilter per bidang admin
-        $statusLabels = [
-            'verifikasi_admin' => 'Menunggu Verif',
-            'perlu_revisi'     => 'Perlu Revisi',
-            'panduan_remote'   => 'Panduan Remote',
-            'perbaikan_teknis' => 'Perbaikan Teknis',
-            'rusak_berat'      => 'Rusak Berat',
-            'selesai'          => 'Selesai',
+        $tiketPerStatus = [
+            'Menunggu Verif'    => $menungguVerif,
+            'Panduan Remote'    => $panduanRemote,
+            'Distribusi Teknis' => $distribusi,
+            'Rusak Berat'       => $rusakBerat,
+            'Selesai/Ditutup'   => $selesaiDitutup,
         ];
 
-        $tiketPerStatus = [];
-        foreach ($statusLabels as $key => $label) {
-            $query = StatusTiket::where('status_tiket', $key)
-                ->whereIn('id', fn($q) => $q->selectRaw('MAX(id)')->from('status_tiket')->groupBy('tiket_id'));
+        $recentActivity = $this->recentAdminActivity();
 
-            if ($key === 'verifikasi_admin') {
-                // Belum ada admin_id → filter lewat bidang (kb → kategori → bidang)
-                $query->whereHas('tiket', $filterBidang);
-            } elseif ($adminId) {
-                // Sudah diterima admin ini → filter lewat admin_id
-                $query->whereHas('tiket', fn($q) => $q->where('admin_id', $adminId));
-            }
+        return $this->renderView('admin_helpdesk.dashboard', compact(
+            'stats', 'tiketPerStatus', 'recentActivity', 'adminProfile'
+        ));
+    }
 
-            $tiketPerStatus[$label] = $query->count();
-        }
+    // ── Protected methods (overridable for unit testing) ─────
 
-        // Log aktivitas semua admin helpdesk dari berbagai bidang
-        $recentActivity = ActivityLog::with('user')
+    protected function findAdminProfile()
+    {
+        return AdminHelpdesk::with('bidang')->where('user_id', Auth::id())->first();
+    }
+
+    protected function countTiketByAdmin(?string $adminId, callable $statusFilter): int
+    {
+        if (!$adminId) return 0;
+        return Tiket::where('admin_id', $adminId)->whereHas('latestStatus', $statusFilter)->count();
+    }
+
+    protected function countPublishedSop(): int
+    {
+        return SopInternal::where('status_publikasi', 'published')->count();
+    }
+
+    protected function recentAdminActivity()
+    {
+        return ActivityLog::with('user')
             ->where('role_pelaku', 'admin_helpdesk')
             ->orderByDesc('id')
             ->limit(8)
             ->get();
+    }
 
-        return view('admin_helpdesk.dashboard', compact(
-            'stats', 'tiketPerStatus', 'recentActivity', 'adminProfile'
-        ));
+    protected function countDistribusi(?string $adminId): int
+    {
+        if (!$adminId) return 0;
+        return Tiket::where('admin_id', $adminId)
+            ->where(fn($q) => $q
+                ->whereHas('latestStatus', fn($sq) => $sq->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']))
+                ->orWhereHas('tiketTeknisi', fn($tq) => $tq->where('status_tugas', 'aktif')))
+            ->count();
+    }
+
+    protected function renderView(string $view, array $data)
+    {
+        return view($view, $data);
+    }
+
+    protected function menungguVerifikasiIds($admin, callable $filterBidang)
+    {
+        $prefixKembali = '[Dikembalikan oleh Tim Teknis] ';
+        $prefixTransfer = '[Transfer ke ';
+
+        $queryBaru = Tiket::query()
+            ->whereNull('admin_id')
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
+                ->where(fn($q2) => $q2->whereNull('catatan')->orWhere('catatan', 'not like', '[Transfer ke %]')));
+        $filterBidang($queryBaru);
+
+        $queryTransfer = Tiket::query()
+            ->where(fn($q) => $q->whereNull('admin_id')->orWhere('admin_id', $admin?->id))
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
+                ->where('catatan', 'like', $prefixTransfer . ($admin?->bidang_id ?? '') . ']%'));
+
+        $queryKembali = Tiket::query()
+            ->where('admin_id', $admin?->id)
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
+                ->where('catatan', 'like', $prefixKembali . '%'));
+
+        return $queryBaru->pluck('id')
+            ->merge($queryTransfer->pluck('id'))
+            ->merge($queryKembali->pluck('id'))
+            ->unique()
+            ->values();
     }
 }

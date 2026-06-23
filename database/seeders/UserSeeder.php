@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\IdGenerator;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -19,7 +20,7 @@ class UserSeeder extends Seeder
 
         // Super Admin
         $users[] = [
-            'id'       => 'USR-SUPER-ADMIN',
+            'id'       => IdGenerator::make('USR-SUPER'),
             'email'    => 'superadmin@padang.go.id',
             'password' => Hash::make('superadmin123'),
             'gambar'   => null,
@@ -29,20 +30,20 @@ class UserSeeder extends Seeder
         // Admin Helpdesk — 2 akun per bidang (3 bidang = 6 akun)
         $helpdeskAccounts = [
             // Bidang E-Government
-            ['id' => 'USR-HD-EGV-001', 'email' => 'helpdesk.egov1@padang.go.id',      'password' => 'egov1123'],
-            ['id' => 'USR-HD-EGV-002', 'email' => 'helpdesk.egov2@padang.go.id',      'password' => 'egov2123'],
+            ['email' => 'helpdesk.egov1@padang.go.id',      'password' => 'egov1123'],
+            ['email' => 'helpdesk.egov2@padang.go.id',      'password' => 'egov2123'],
             // Bidang Infrastruktur Teknologi Informasi
-            ['id' => 'USR-HD-ITI-001', 'email' => 'helpdesk.infra1@padang.go.id',     'password' => 'infra1123'],
-            ['id' => 'USR-HD-ITI-002', 'email' => 'helpdesk.infra2@padang.go.id',     'password' => 'infra2123'],
+            ['email' => 'helpdesk.infra1@padang.go.id',     'password' => 'infra1123'],
+            ['email' => 'helpdesk.infra2@padang.go.id',     'password' => 'infra2123'],
             // Bidang Statistik & Persandian
-            ['id' => 'USR-HD-SPS-001', 'email' => 'helpdesk.statistik1@padang.go.id', 'password' => 'statistik1123'],
-            ['id' => 'USR-HD-SPS-002', 'email' => 'helpdesk.statistik2@padang.go.id', 'password' => 'statistik2123'],
+            ['email' => 'helpdesk.statistik1@padang.go.id', 'password' => 'statistik1123'],
+            ['email' => 'helpdesk.statistik2@padang.go.id', 'password' => 'statistik2123'],
         ];
 
         foreach ($helpdeskAccounts as $hd) {
             $this->command->line("  email: {$hd['email']} | password: {$hd['password']}");
             $users[] = [
-                'id'       => $hd['id'],
+                'id'       => IdGenerator::make('USR-HD'),
                 'email'    => $hd['email'],
                 'password' => Hash::make($hd['password']),
                 'gambar'   => null,
@@ -53,20 +54,20 @@ class UserSeeder extends Seeder
         // Tim Teknis — 2 per bidang (3 bidang = 6 tim teknis)
         $timTeknis = [
             // Bidang E-Government
-            ['id' => 'USR-TIM-EGV-001', 'email' => 'timteknis.egov1@padang.go.id',      'password' => 'timegov1123', 'bidang_id' => 'BIDANG-001'],
-            ['id' => 'USR-TIM-EGV-002', 'email' => 'timteknis.egov2@padang.go.id',      'password' => 'timegov2123', 'bidang_id' => 'BIDANG-001'],
+            ['email' => 'timteknis.egov1@padang.go.id',      'password' => 'timegov1123'],
+            ['email' => 'timteknis.egov2@padang.go.id',      'password' => 'timegov2123'],
             // Bidang Infrastruktur Teknologi Informasi
-            ['id' => 'USR-TIM-ITI-001', 'email' => 'timteknis.infra1@padang.go.id',     'password' => 'timeinfra1123', 'bidang_id' => 'BIDANG-002'],
-            ['id' => 'USR-TIM-ITI-002', 'email' => 'timteknis.infra2@padang.go.id',     'password' => 'timeinfra2123', 'bidang_id' => 'BIDANG-002'],
+            ['email' => 'timteknis.infra1@padang.go.id',     'password' => 'timeinfra1123'],
+            ['email' => 'timteknis.infra2@padang.go.id',     'password' => 'timeinfra2123'],
             // Bidang Statistik & Persandian
-            ['id' => 'USR-TIM-SPS-001', 'email' => 'timteknis.persandian1@padang.go.id', 'password' => 'timepersandian1123', 'bidang_id' => 'BIDANG-003'],
-            ['id' => 'USR-TIM-SPS-002', 'email' => 'timteknis.persandian2@padang.go.id', 'password' => 'timepersandian2123', 'bidang_id' => 'BIDANG-003'],
+            ['email' => 'timteknis.persandian1@padang.go.id', 'password' => 'timepersandian1123'],
+            ['email' => 'timteknis.persandian2@padang.go.id', 'password' => 'timepersandian2123'],
         ];
 
         foreach ($timTeknis as $tt) {
-            $this->command->line("  email: {$tt['email']} | password: {$tt['password']} | bidang: {$tt['bidang_id']}");
+            $this->command->line("  email: {$tt['email']} | password: {$tt['password']}");
             $users[] = [
-                'id'       => $tt['id'],
+                'id'       => IdGenerator::make('USR-TIM'),
                 'email'    => $tt['email'],
                 'password' => Hash::make($tt['password']),
                 'gambar'   => null,
@@ -76,7 +77,7 @@ class UserSeeder extends Seeder
 
         // Pimpinan
         $users[] = [
-            'id'       => 'USR-PIMPINAN',
+            'id'       => IdGenerator::make('USR-PIM'),
             'email'    => 'pimpinan@padang.go.id',
             'password' => Hash::make('pimpinan123'),
             'gambar'   => null,
@@ -148,7 +149,7 @@ class UserSeeder extends Seeder
             $this->command->line("  email: {$opd['email']} | password: {$password}");
 
             $users[] = [
-                'id'       => 'USR-OPD-' . strtoupper($slug),
+                'id'       => IdGenerator::make('USR-OPD'),
                 'email'    => $opd['email'],
                 'password' => Hash::make($password),
                 'gambar'   => null,

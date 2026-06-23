@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard — Admin Helpdesk</title>
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -72,7 +74,7 @@
                     'color' => '#0263C8',
                     'bg'    => '#EBF3FF',
                     'icon'  => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
-                    'route' => 'admin_helpdesk.tiket.panduan_remote',
+                    'route' => 'admin_helpdesk.tiket.panduan',
                     'badge' => null,
                 ],
                 [
@@ -145,7 +147,7 @@
                         </div>
 
                         @php
-                        $chartColors = ['#D97706','#EF4444','#0263C8','#7C3AED','#DC2626','#059669'];
+                        $chartColors = ['#D97706','#0263C8','#7C3AED','#DC2626','#059669'];
                         $ci = 0;
                         @endphp
                         <div class="mt-8 space-y-3 px-2">
@@ -267,7 +269,7 @@
                     [
                         'label' => 'Panduan Remote',
                         'desc'  => 'Pantau chat & perbaikan remote',
-                        'route' => 'admin_helpdesk.tiket.panduan_remote',
+                        'route' => 'admin_helpdesk.tiket.panduan',
                         'color' => '#0263C8',
                         'bg'    => '#EBF3FF',
                         'icon'  => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
@@ -329,7 +331,7 @@
     (function () {
         const labels = @json(array_keys($tiketPerStatus ?? []));
         const data   = @json(array_values($tiketPerStatus ?? []));
-        const colors = ['#D97706','#EF4444','#0263C8','#7C3AED','#DC2626','#059669'];
+        const colors = ['#D97706','#0263C8','#7C3AED','#DC2626','#059669'];
         const total  = data.reduce((a, b) => a + b, 0);
 
         new Chart(document.getElementById('tiketChart'), {

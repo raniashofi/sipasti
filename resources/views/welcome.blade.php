@@ -6,6 +6,9 @@
     <title>{{ config('app.name', 'SiPasti') }}</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <link rel="icon" type="image/png" href="{{ asset('storage/logo/logo_kominfo.png') }}">
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
@@ -107,7 +110,7 @@
     </div>
 
     {{-- ── Header ── --}}
-    <header class="anim-fade-in relative z-20 flex justify-between items-center px-4 sm:px-6 md:px-10 py-4 sm:py-5 border-b border-gray-200"
+    <header x-data="{ showLogoutConfirm: false }" class="anim-fade-in relative z-20 flex justify-between items-center px-4 sm:px-6 md:px-10 py-4 sm:py-5 border-b border-gray-200"
             style="background-color: rgba(249,250,252,0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
         <div class="flex items-center gap-3">
             <img src="{{ asset('storage/logo/logo_sipasti.png') }}" alt="SiPasti Logo" class="h-5 w-auto">
@@ -128,13 +131,11 @@
                 class="text-xs sm:text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium">
                     Dashboard
                 </a>
-                <form method="POST" action="{{ route('logout') }}" class="inline">
-                    @csrf
-                    <button type="submit"
-                            class="text-xs sm:text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium cursor-pointer">
-                        Logout
-                    </button>
-                </form>
+                <button type="button"
+                        @click="showLogoutConfirm = true"
+                        class="text-xs sm:text-sm text-gray-500 hover:text-[#01458E] transition-colors duration-200 font-medium cursor-pointer">
+                    Logout
+                </button>
             @else
                 <a href="{{ route('login') }}"
                    class="text-xs sm:text-sm px-4 sm:px-5 py-2 bg-[#01458E] text-white rounded-lg font-semibold btn-primary-glow">
@@ -142,6 +143,60 @@
                 </a>
             @endauth
         </nav>
+
+        <div x-show="showLogoutConfirm"
+             x-cloak
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click.self="showLogoutConfirm = false"
+             class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-filter backdrop-blur-sm">
+            <div class="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+                <div class="px-6 py-5 text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-base font-bold">Konfirmasi Logout</p>
+                            <p class="text-xs text-white/85">Anda yakin ingin logout dari aplikasi?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-5">
+                    <p class="text-sm leading-relaxed text-gray-600">
+                        Pastikan semua pekerjaan sudah selesai sebelum melanjutkan.
+                    </p>
+
+                    <div class="mt-6 flex gap-3">
+                        <button type="button"
+                                @click="showLogoutConfirm = false"
+                                class="flex-1 rounded-xl border border-gray-200 bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200">
+                            Batal
+                        </button>
+                        <form method="POST" action="{{ route('logout') }}" class="flex-1">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-red-600/20 transition-all hover:bg-red-700 hover:shadow-red-600/30">
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </header>
 
     {{-- ── Hero ── --}}
