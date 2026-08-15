@@ -46,7 +46,6 @@
                     'nama_file' => $lampiran->nama_file,
                     'url' => asset('storage/' . $lampiran->path_file),
                 ])->values()),
-                tags: @json($a->tags->pluck('nama_tag')->toArray())
             },
             @endforeach
         };
@@ -187,7 +186,7 @@
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
                         </svg>
-                        <input type="text" name="search" value="{{ $search }}" placeholder="Cari judul artikel atau tag..."
+                        <input type="text" name="search" value="{{ $search }}" placeholder="Cari judul artikel..."
                                oninput="clearTimeout(window._st); window._st = setTimeout(() => document.getElementById('filterForm').submit(), 500)"
                                class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-700 bg-[#F0F4F8] focus:outline-none focus:ring-2 focus:ring-blue-200">
                     </div>
@@ -234,17 +233,6 @@
                             </span>
                             @endif
                         </div>
-
-                        @if($article->tags->count())
-                        <div class="flex flex-wrap gap-1.5 mb-4">
-                            @foreach($article->tags->take(3) as $tag)
-                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#EEF3F9] text-[#01458E]">{{ $tag->nama_tag }}</span>
-                            @endforeach
-                            @if($article->tags->count() > 3)
-                            <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-gray-100 text-gray-500">+{{ $article->tags->count() - 3 }}</span>
-                            @endif
-                        </div>
-                        @endif
 
                         <div class="flex flex-col gap-3">
                             <div class="text-[11px] text-gray-500 flex items-center gap-1.5">
@@ -301,16 +289,6 @@
                                 <td class="px-7 py-4 text-sm text-gray-500">{{ $i + 1 }}</td>
                                 <td class="px-4 py-4">
                                     <p class="text-sm font-bold text-gray-900 group-hover:text-[#01458E] transition-colors">{{ $article->nama_artikel_sop }}</p>
-                                    @if($article->tags->count())
-                                    <div class="flex flex-wrap gap-1.5 mt-2">
-                                        @foreach($article->tags->take(3) as $tag)
-                                        <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#EEF3F9] text-[#01458E]">{{ $tag->nama_tag }}</span>
-                                        @endforeach
-                                        @if($article->tags->count() > 3)
-                                        <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-gray-100 text-gray-500">+{{ $article->tags->count() - 3 }}</span>
-                                        @endif
-                                    </div>
-                                    @endif
                                 </td>
                                 <td class="px-4 py-4">
                                     @if($article->status_publikasi === 'published')

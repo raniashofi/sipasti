@@ -172,6 +172,11 @@
                     toastMessage: '',
                     toastType: 'error',
 
+                    // Duplicate check state
+                    duplicateWarning: null,
+                    forceSubmit: false,
+                    isChecking: false,
+
                     showErrorToast(message) {
                         this.toastMessage = message;
                         this.toastType = 'error';
@@ -179,6 +184,55 @@
                         setTimeout(() => {
                             this.showToast = false;
                         }, 5000);
+                    },
+
+                    // Submit form: cek duplikat via AJAX dulu, baru submit
+                    async submitForm() {
+                        // Jika user sudah klik 'Tetap Kirim', langsung submit
+                        if (this.forceSubmit) {
+                            this.$root.submit();
+                            return;
+                        }
+
+                        this.isChecking = true;
+                        this.duplicateWarning = null;
+
+                        try {
+                            const formData = new FormData(this.$root);
+                            const res = await fetch('{{ route('opd.diagnosis.tiket.checkDuplicate') }}', {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json',
+                                },
+                                body: formData,
+                            });
+
+                            const data = await res.json();
+
+                            if (data.duplicate) {
+                                this.duplicateWarning = data;
+                                this.isChecking = false;
+                                // Scroll ke warning
+                                this.$nextTick(() => {
+                                    const el = document.getElementById('duplicate-warning-box');
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                });
+                                return;
+                            }
+                        } catch (e) {
+                            // Jika AJAX gagal, tetap lanjut submit agar tidak blocking
+                        }
+
+                        this.isChecking = false;
+                        this.$root.submit();
+                    },
+
+                    // Tetap kirim meskipun ada duplikat
+                    forceSubmitForm() {
+                        this.forceSubmit = true;
+                        this.duplicateWarning = null;
+                        this.$root.submit();
                     },
 
                     // Fungsi untuk inisiasi webcam
@@ -255,7 +309,7 @@
                         this.photos.forEach(p => dt.items.add(p.file));
                         this.$refs.mainInput.files = dt.files;
                     }
-                }" class="px-4 py-5 sm:px-7 sm:py-6">
+                }" @submit.prevent="submitForm()" class="px-4 py-5 sm:px-7 sm:py-6">
                 {{-- Toast Notification --}}
                 <div x-show="showToast"
                      x-cloak
@@ -283,15 +337,12 @@
                         </button>
                     </div>
                 </div>
-                                @csrf
+                @csrf
                 <input type="hidden" name="kategori_id"              value="{{ $kategoriId }}">
                 <input type="hidden" name="kategori_nama"            value="{{ $kategoriNama }}">
                 <input type="hidden" name="kategori_deskripsi"       value="{{ $kategoriDeskripsi ?? '' }}">
                 <input type="hidden" name="node_diagnosis_id"        value="{{ $nodeDiagnosisId ?? '' }}">
                 <input type="hidden" name="rekomendasi_penanganan"   value="{{ $rekomendasi ?? '' }}">
-                @if(session('duplicate_tiket_warning'))
-                    <input type="hidden" name="force_submit_duplicate" value="{{ session('duplicate_tiket_warning.id') }}">
-                @endif
 
                 <div class="space-y-5">
                     @error('node_diagnosis_id')
@@ -300,34 +351,38 @@
                     </div>
                     @enderror
 
-                    @if(session('duplicate_tiket_warning'))
-                        @php $duplikat = session('duplicate_tiket_warning'); @endphp
-                        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                                </svg>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-bold text-amber-900">Tiket serupa masih aktif</p>
-                                    <p class="text-xs text-amber-800 leading-relaxed mt-1">
-                                        Sistem menemukan tiket serupa: <span class="font-semibold">#{{ $duplikat['id'] }}</span>
-                                        tentang "{{ $duplikat['subjek'] }}". Periksa tiket tersebut jika masalahnya sama,
-                                        atau kirim lagi jika ini memang pengaduan yang berbeda.
-                                    </p>
-                                    <div class="mt-3 flex flex-col sm:flex-row gap-2">
-                                        <a href="{{ $duplikat['url'] }}"
-                                           class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-white border border-amber-200 text-xs font-bold text-amber-800 hover:bg-amber-100">
-                                            Lihat Tiket Lama
-                                        </a>
-                                        <button type="submit"
-                                                class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 text-xs font-bold text-white hover:bg-amber-700">
-                                            Tetap Kirim Tiket Baru
-                                        </button>
-                                    </div>
+                    {{-- Alpine.js-driven duplicate warning (tanpa reload halaman) --}}
+                    <div x-show="duplicateWarning" x-cloak
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 -translate-y-2"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         id="duplicate-warning-box"
+                         class="rounded-xl border border-amber-200 bg-amber-50 p-4"
+                         style="display: none;">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.007M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            </svg>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-bold text-amber-900">Tiket serupa masih aktif</p>
+                                <p class="text-xs text-amber-800 leading-relaxed mt-1">
+                                    Sistem menemukan tiket serupa: <span class="font-semibold" x-text="'#' + duplicateWarning?.id"></span>
+                                    tentang "<span x-text="duplicateWarning?.subjek"></span>". Periksa tiket tersebut jika masalahnya sama,
+                                    atau kirim lagi jika ini memang pengaduan yang berbeda.
+                                </p>
+                                <div class="mt-3 flex flex-col sm:flex-row gap-2">
+                                    <a :href="duplicateWarning?.url"
+                                       class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-white border border-amber-200 text-xs font-bold text-amber-800 hover:bg-amber-100">
+                                        Lihat Tiket Lama
+                                    </a>
+                                    <button type="button" @click="forceSubmitForm()"
+                                            class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 text-xs font-bold text-white hover:bg-amber-700">
+                                        Tetap Kirim Tiket Baru
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    @endif
+                    </div>
 
                     {{-- Subjek --}}
                     <div>
@@ -481,13 +536,22 @@
                 {{-- Submit --}}
                 <div class="mt-6 pt-5 border-t border-gray-100 flex justify-stretch sm:justify-end">
                     <button type="submit"
-                            class="flex items-center justify-center gap-2.5 w-full sm:w-auto px-8 py-3 rounded-xl text-white text-sm font-bold
-                                   transition hover:-translate-y-0.5 hover:shadow-lg active:scale-95"
+                            :disabled="isChecking"
+                            :class="isChecking ? 'opacity-60 cursor-wait' : 'hover:-translate-y-0.5 hover:shadow-lg active:scale-95'"
+                            class="flex items-center justify-center gap-2.5 w-full sm:w-auto px-8 py-3 rounded-xl text-white text-sm font-bold transition"
                             style="background:#01458E;">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
-                        </svg>
-                        Kirim Tiket
+                        <template x-if="isChecking">
+                            <svg class="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </template>
+                        <template x-if="!isChecking">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                            </svg>
+                        </template>
+                        <span x-text="isChecking ? 'Memeriksa...' : 'Kirim Tiket'"></span>
                     </button>
                 </div>
                 {{-- Modal WebCam (Akan muncul jika isCameraOpen = true) --}}

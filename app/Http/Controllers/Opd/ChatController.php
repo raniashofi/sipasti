@@ -27,13 +27,12 @@ class ChatController extends Controller
         $tiket = $this->findTiketForOpd($opd->id, $tiketId, ['statusTiket', 'buktiFoto']);
 
         $type = $this->validRoomType($request->query('type'));
-        $roomBidangId = $tiket->bidang_id;
 
         // Buat atau temukan room sesuai tipe
         $room = $this->firstOrCreateRoom($tiket->id, $type);
 
         // Tambahkan OPD ke room jika belum ada
-        $this->firstOrCreateRoomUser($room->id, $user->id, $roomBidangId);
+        $this->firstOrCreateRoomUser($room->id, $user->id);
         $this->markRoomAsRead($room->id, $user->id);
 
         // Load pesan dengan info pengirim
@@ -159,11 +158,10 @@ class ChatController extends Controller
         );
     }
 
-    protected function firstOrCreateRoomUser(string $roomId, string $userId, ?string $bidangId): void
+    protected function firstOrCreateRoomUser(string $roomId, string $userId): void
     {
         ChatRoomUser::firstOrCreate(
-            ['room_id' => $roomId, 'user_id' => $userId],
-            ['role_di_room' => 'opd', 'bidang_id' => $bidangId]
+            ['room_id' => $roomId, 'user_id' => $userId]
         );
     }
 

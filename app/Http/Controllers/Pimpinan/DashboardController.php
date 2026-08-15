@@ -208,21 +208,22 @@ class DashboardController extends Controller
         // ── Filter periode waktu ──────────────────────────────────────
         [$dateFrom, $dateTo, $period] = $this->periodDateRange($request);
 
-        // ── 1. Stat cards overview ─────────────────────────────────────
-        $query = Tiket::whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
-        $totalTiket   = (clone $query)->count();
-        $tiketAktif   = (clone $query)->whereHas('latestStatus', fn($q) =>
+        // ── 1. Stat cards overview (keseluruhan) ──────────────────────
+        $allTimeQuery = Tiket::query();
+        $totalTiketAllTime = (clone $allTimeQuery)->count();
+        $tiketAktifAllTime  = (clone $allTimeQuery)->whereHas('latestStatus', fn($q) =>
             $q->whereNotIn('status_tiket', $this->statusSelesai)
         )->count();
-        $tiketSelesai = (clone $query)->whereHas('latestStatus', fn($q) =>
+        $tiketSelesaiAllTime = (clone $allTimeQuery)->whereHas('latestStatus', fn($q) =>
             $q->whereIn('status_tiket', $this->statusSelesai)
         )->count();
-        $avgKepuasan  = (clone $query)->whereNotNull('penilaian')->avg('penilaian') ?? 0;
+        $avgKepuasanAllTime = (clone $allTimeQuery)->whereNotNull('penilaian')->avg('penilaian') ?? 0;
         $totalOpd     = Opd::count();
         $totalKb      = ArtikelOpd::where('status_publikasi', 'published')->count()
             + SopInternal::where('status_publikasi', 'published')->count();
 
-        // Tiket dalam periode
+        // ── 1.b Stat cards dan ringkasan periode aktif ────────────────
+        $query = Tiket::whereBetween('created_at', [$dateFrom . ' 00:00:00', $dateTo . ' 23:59:59']);
         $tiketBulanIni  = (clone $query)->count();
         $selesaiBulanIni = (clone $query)->whereHas('latestStatus', fn($q) =>
             $q->whereIn('status_tiket', $this->statusSelesai)
@@ -253,6 +254,25 @@ class DashboardController extends Controller
         $trendMonths = collect();
         $dateFromCarbon = \Carbon\Carbon::parse($dateFrom);
         $dateToCarbon = \Carbon\Carbon::parse($dateTo);
+        $trendTitle = 'Tren Tiket';
+        $trendSubtitle = '';
+
+        if ($period === 'daily') {
+            $trendTitle = 'Tren Tiket — Harian';
+            $trendSubtitle = 'Perbandingan tiket masuk vs. diselesaikan per jam hari ini';
+        } elseif ($period === 'weekly') {
+            $trendTitle = 'Tren Tiket — Mingguan';
+            $trendSubtitle = 'Perbandingan tiket masuk vs. diselesaikan per hari minggu ini';
+        } elseif ($period === 'monthly') {
+            $trendTitle = 'Tren Tiket — Bulanan';
+            $trendSubtitle = 'Perbandingan tiket masuk vs. diselesaikan per hari bulan ini';
+        } elseif ($period === 'yearly') {
+            $trendTitle = 'Tren Tiket — Tahunan';
+            $trendSubtitle = 'Perbandingan tiket masuk vs. diselesaikan per bulan tahun ini';
+        } else {
+            $trendTitle = 'Tren Tiket — Custom Range';
+            $trendSubtitle = 'Perbandingan tiket masuk vs. diselesaikan per bulan dalam rentang yang dipilih';
+        }
 
         if ($period === 'daily') {
             // Hourly breakdown untuk hari ini
@@ -329,69 +349,35 @@ class DashboardController extends Controller
                 ]);
             }
         } else {
-            // Custom: tentukan interval berdasarkan durasi
-            $durationDays = $dateToCarbon->diffInDays($dateFromCarbon);
+            // Custom range selalu ditampilkan per bulan, dengan bucket awal/akhir mengikuti batas tanggal yang dipilih
+            $currentMonth = $dateFromCarbon->clone()->startOfMonth();
+            $lastMonth = $dateToCarbon->clone()->startOfMonth();
 
-            if ($durationDays <= 1) {
-                // Hourly
-                for ($hour = 0; $hour < 24; $hour++) {
-                    $hourStart = $dateFromCarbon->clone()->setHour($hour)->setMinute(0)->setSecond(0);
-                    $hourEnd = $hourStart->clone()->setMinute(59)->setSecond(59);
+            while ($currentMonth->lte($lastMonth)) {
+                $monthStart = $currentMonth->clone()->startOfMonth();
+                $monthEnd = $currentMonth->clone()->endOfMonth();
 
-                    $masuk = Tiket::whereBetween('created_at', [$hourStart, $hourEnd])->count();
-                    $selesai = Tiket::whereBetween('created_at', [$hourStart, $hourEnd])
-                        ->whereHas('latestStatus', fn($q) =>
-                            $q->whereIn('status_tiket', $this->statusSelesai)
-                        )->count();
-
-                    $trendMonths->push([
-                        'label'   => $hourStart->format('H:00'),
-                        'masuk'   => $masuk,
-                        'selesai' => $selesai,
-                    ]);
+                if ($monthStart->lt($dateFromCarbon)) {
+                    $monthStart = $dateFromCarbon->clone();
                 }
-            } elseif ($durationDays <= 62) {
-                // Daily
-                for ($i = 0; $i <= $durationDays; $i++) {
-                    $date = $dateFromCarbon->clone()->addDays($i);
-                    if ($date > $dateToCarbon) break;
 
-                    $masuk = Tiket::whereDate('created_at', $date->toDateString())->count();
-                    $selesai = Tiket::whereDate('created_at', $date->toDateString())
-                        ->whereHas('latestStatus', fn($q) =>
-                            $q->whereIn('status_tiket', $this->statusSelesai)
-                        )->count();
-
-                    $trendMonths->push([
-                        'label'   => $date->format('d/m'),
-                        'masuk'   => $masuk,
-                        'selesai' => $selesai,
-                    ]);
+                if ($monthEnd->gt($dateToCarbon)) {
+                    $monthEnd = $dateToCarbon->clone();
                 }
-            } else {
-                // Weekly
-                $current = $dateFromCarbon->clone();
-                $weekNum = 1;
-                while ($current <= $dateToCarbon) {
-                    $weekStart = $current->clone();
-                    $weekEnd = $current->clone()->addDays(6)->setTime(23, 59, 59);
-                    if ($weekEnd > $dateToCarbon) $weekEnd = $dateToCarbon;
 
-                    $masuk = Tiket::whereBetween('created_at', [$weekStart, $weekEnd])->count();
-                    $selesai = Tiket::whereBetween('created_at', [$weekStart, $weekEnd])
-                        ->whereHas('latestStatus', fn($q) =>
-                            $q->whereIn('status_tiket', $this->statusSelesai)
-                        )->count();
+                $masuk = Tiket::whereBetween('created_at', [$monthStart->startOfDay(), $monthEnd->endOfDay()])->count();
+                $selesai = Tiket::whereBetween('created_at', [$monthStart->startOfDay(), $monthEnd->endOfDay()])
+                    ->whereHas('latestStatus', fn($q) =>
+                        $q->whereIn('status_tiket', $this->statusSelesai)
+                    )->count();
 
-                    $trendMonths->push([
-                        'label'   => "W$weekNum",
-                        'masuk'   => $masuk,
-                        'selesai' => $selesai,
-                    ]);
+                $trendMonths->push([
+                    'label'   => $currentMonth->locale('id')->isoFormat('MMMM YYYY'),
+                    'masuk'   => $masuk,
+                    'selesai' => $selesai,
+                ]);
 
-                    $current->addWeeks(1);
-                    $weekNum++;
-                }
+                $currentMonth->addMonthNoOverflow();
             }
         }
 
@@ -413,7 +399,7 @@ class DashboardController extends Controller
 
         $kategoriDamageTrend = $topDamageCategories->map(function ($kategori, $index) use ($damageTrendBuckets, $damageTrendColors) {
             $points = $damageTrendBuckets->map(fn($bucket) =>
-                Tiket::whereBetween('created_at', [$bucket['start'], $bucket['end']])
+                Tiket::whereBetween('created_at', [data_get($bucket, 'start'), data_get($bucket, 'end')])
                     ->whereHas('solutionNode', fn($q) => $q->where('kategori_id', $kategori->id))
                     ->count()
             )->values();
@@ -540,7 +526,7 @@ class DashboardController extends Controller
             [
                 'label'   => 'Tingkat Resolusi',
                 'target'  => 90,   // %
-                'actual'  => $totalTiket > 0 ? round(($tiketSelesai / $totalTiket) * 100) : 0,
+                'actual'  => $totalTiketAllTime > 0 ? round(($tiketSelesaiAllTime / $totalTiketAllTime) * 100) : 0,
                 'unit'    => '%',
                 'color'   => '#059669',
                 'bg'      => '#D1FAE5',
@@ -548,7 +534,7 @@ class DashboardController extends Controller
             [
                 'label'   => 'Skor Kepuasan',
                 'target'  => 4.0,
-                'actual'  => round($avgKepuasan, 1),
+                'actual'  => round($avgKepuasanAllTime, 1),
                 'unit'    => '/ 5',
                 'color'   => '#D97706',
                 'bg'      => '#FEF3C7',
@@ -564,12 +550,13 @@ class DashboardController extends Controller
         ];
 
         return view('pimpinan.dashboard', compact(
-            'totalTiket', 'tiketAktif', 'tiketSelesai', 'avgKepuasan',
+            'totalTiketAllTime', 'tiketAktifAllTime', 'tiketSelesaiAllTime', 'avgKepuasanAllTime',
             'totalOpd', 'totalKb', 'tiketBulanIni', 'selesaiBulanIni',
             'tiketPerStatus', 'trendMonths', 'tiketPerBidang',
             'performanceAdmin', 'workloadTeknis', 'auditLog', 'kpiData',
             'damageTrendLabels', 'kategoriDamageTrend', 'damageTrendHighlight',
             'damageTrendDatasets',
+            'trendTitle', 'trendSubtitle',
             'dateFrom', 'dateTo', 'period'
         ));
     }

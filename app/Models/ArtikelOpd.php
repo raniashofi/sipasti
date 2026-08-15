@@ -48,10 +48,6 @@ class ArtikelOpd extends Model
         return $this->kategoriArtikel();
     }
 
-    public function tags()
-    {
-        return $this->belongsToMany(Tag::class, 'artikel_opd_tag', 'artikel_opd_id', 'tag_id');
-    }
 
     public function lampirans()
     {

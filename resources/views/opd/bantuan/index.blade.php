@@ -34,7 +34,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
                 </svg>
                 <input type="text" name="search" value="{{ $search }}"
-                       placeholder="Ketik masalah, kata kunci, atau tag..."
+                       placeholder="Ketik masalah atau kata kunci..."
                        class="w-full pl-11 pr-4 py-3 rounded-xl text-sm bg-white border-0 focus:outline-none focus:ring-2 focus:ring-white/40 text-gray-800 placeholder-gray-400">
             </div>
             <button type="submit"

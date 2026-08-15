@@ -48,10 +48,6 @@ class SopInternal extends Model
         return $this->belongsTo(Bidang::class, 'bidang_id');
     }
 
-    public function tags()
-    {
-        return $this->belongsToMany(Tag::class, 'sop_internal_tag', 'sop_internal_id', 'tag_id');
-    }
 
     public function lampirans()
     {

@@ -501,17 +501,6 @@
                                                     style="background:#FEF3C7;color:#D97706;">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
                                             </button>
-                                            @if($tiket->can_terima)
-                                            <button @click.stop="setTiket({{ $tJ2 }}); showModal = 'terima'"
-                                                    class="w-8 h-8 rounded-lg flex items-center justify-center"
-                                                    style="background:#D1FAE5;color:#059669;">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                            </button>
-                                            @else
-                                            <div class="w-8 h-8 rounded-lg flex items-center justify-center cursor-not-allowed opacity-50" style="background:#F3F4F6;color:#9CA3AF;">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                            </div>
-                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -606,25 +595,6 @@
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
                                                         </svg>
                                                     </button>
-                                                    @if($tiket->can_terima)
-                                                    <button type="button"
-                                                            @click.stop="setTiket({{ $tiketJson }}); showModal = 'terima'"
-                                                            title="Terima & Proses"
-                                                            class="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:scale-110"
-                                                            style="background:#D1FAE5;color:#059669;">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                                        </svg>
-                                                    </button>
-                                                    @else
-                                                    <div title="Bidang tidak sesuai atau tiket belum memiliki KB"
-                                                         class="w-8 h-8 rounded-lg flex items-center justify-center cursor-not-allowed opacity-50"
-                                                         style="background:#F3F4F6;color:#9CA3AF;">
-                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                                        </svg>
-                                                    </div>
-                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -835,7 +805,7 @@
                             </svg>
                             Lihat Pesan Transfer
                         </button>
-                        <button @click="showModal = 'terima'"
+                        {{-- <button @click="showModal = 'terima'"
                                 :disabled="!selectedTiket?.can_terima"
                                 :title="!selectedTiket?.can_terima ? 'Bidang tiket tidak sesuai dengan bidang Anda' : ''"
                                 class="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all focus:outline-none"
@@ -846,7 +816,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                             </svg>
                             Terima & Proses Tiket
-                        </button>
+                        </button> --}}
                         <div class="flex gap-2.5">
                             <button @click="showModal = 'transfer-pilih'"
                                     class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 focus:outline-none transition-colors">
@@ -1069,7 +1039,7 @@
                                      x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
                                      class="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-[110] max-h-44 overflow-y-auto"
                                      style="display:none;">
-                                    <template x-for="bidang in bidangList.filter(b => String(b.id) !== String(selectedTiket?.bidang_id))" :key="'bidang-' + bidang.id">
+                                    <template x-for="bidang in bidangList.filter(b => String(b.id) !== String(bidangAdminId))" :key="'bidang-' + bidang.id">
                                         <div @click="bidangId = bidang.id; bidangOpen = false"
                                              class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
                                              :class="bidangId === bidang.id ? 'bg-blue-50/50 hover:bg-blue-50/80' : ''">
@@ -1084,7 +1054,7 @@
                                             </div>
                                         </div>
                                     </template>
-                                    <div x-show="bidangList.filter(b => String(b.id) !== String(selectedTiket?.bidang_id)).length === 0"
+                                    <div x-show="bidangList.filter(b => String(b.id) !== String(bidangAdminId)).length === 0"
                                          class="px-4 py-4 text-xs text-gray-400 text-center">
                                         Tidak ada bidang lain tersedia
                                     </div>
@@ -1427,6 +1397,7 @@
 
             // Variabel AlpineJS untuk Bidang (Transfer)
             bidangList: @json($bidangListData),
+            bidangAdminId: @json($admin?->bidang_id),
             bidangId: '',
             bidangOpen: false,
 

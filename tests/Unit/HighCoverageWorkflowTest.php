@@ -443,7 +443,6 @@ class HighCoverageWorkflowTest extends TestCase
             'is_active' => true,
         ])->users()->syncWithoutDetaching([
             $this->adminUser->id => [
-                'role_di_room' => 'admin_helpdesk',
                 'bidang_id' => $this->bidang->id,
                 'sequence_number' => 1,
                 'started_at' => now(),
@@ -476,6 +475,7 @@ class HighCoverageWorkflowTest extends TestCase
         ]);
 
         $doneByAdminTicket = $this->freshTicket('Tiket selesai admin', $this->admin->id, 'panduan_remote', '[Dibuka Kembali oleh OPD] Butuh cek ulang');
+        $doneByAdminTicket->update(['reopened_count' => 3]);
         $controller->selesaiOlehAdmin($this->postRequest(['catatan' => 'Sudah selesai remote']), $doneByAdminTicket->id);
         $this->assertDatabaseHas('status_tiket', [
             'tiket_id' => $doneByAdminTicket->id,
@@ -546,7 +546,6 @@ class HighCoverageWorkflowTest extends TestCase
             'status_publikasi' => 'published',
             'visibilitas_akses' => 'opd',
             'kategori_artikel_id' => $this->kategoriArtikel->id,
-            'tags_raw' => 'jaringan, perangkat',
         ]));
         $newArticle = ArtikelOpd::where('judul', 'Artikel Aman')->firstOrFail();
         $lampiran = LampiranArtikel::create([
@@ -568,7 +567,6 @@ class HighCoverageWorkflowTest extends TestCase
             'visibilitas_akses' => 'opd',
             'kategori_artikel_id' => $this->kategoriArtikel->id,
             'remove_lampiran_ids' => [$lampiran->id],
-            'tags_raw' => 'update',
         ]), $newArticle->id);
 
         $imageRequest = $this->filePostRequest([
@@ -676,6 +674,7 @@ class HighCoverageWorkflowTest extends TestCase
         ]))->name());
 
         $doneTicket = $this->freshTicket('Tugas selesai teknisi', $this->admin->id, 'dibuka_kembali', 'Buka kembali');
+        $doneTicket->update(['reopened_count' => 3]);
         $this->assignTechnician($doneTicket, 'selesai');
         $controller->selesai($this->postRequest(['catatan' => 'Sudah diperbaiki']), $doneTicket->id);
         $this->assertDatabaseHas('status_tiket', [

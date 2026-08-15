@@ -8,7 +8,6 @@ use App\Models\Bidang;
 use App\Models\KategoriArtikel;
 use App\Models\LampiranArtikel;
 use App\Models\SopInternal;
-use App\Models\Tag;
 use App\Support\IdGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -41,14 +40,12 @@ class KnowledgeBaseController extends Controller
         $search       = $request->query('search', '');
         $statusFilter = $request->query('status', '');
 
-        $query = ArtikelOpd::with('tags')
-            ->with('lampirans')
+        $query = ArtikelOpd::with('lampirans')
             ->where('kategori_artikel_id', $id);
 
         if ($search) {
             $query->where(fn ($q) =>
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhereHas('tags', fn ($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
             );
         }
         if ($statusFilter) {
@@ -83,14 +80,12 @@ class KnowledgeBaseController extends Controller
         $search       = $request->query('search', '');
         $statusFilter = $request->query('status', '');
 
-        $query = SopInternal::with('tags')
-            ->with('lampirans')
+        $query = SopInternal::with('lampirans')
             ->where('bidang_id', $id);
 
         if ($search) {
             $query->where(fn ($q) =>
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhereHas('tags', fn ($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
             );
         }
         if ($statusFilter) {
@@ -275,7 +270,7 @@ class KnowledgeBaseController extends Controller
         ]);
 
         $this->storeLampirans($request, $id, $isOpd, $articlePath);
-        $this->syncTags($id, $request->visibilitas_akses, $request->input('tags_raw') ?? '');
+
 
         return redirect()->to($this->backUrl($request->visibilitas_akses, $request->kategori_artikel_id, $request->bidang_id))
             ->with('success', 'Artikel berhasil ditambahkan.');
@@ -365,7 +360,6 @@ class KnowledgeBaseController extends Controller
         $article->update($updateData);
         $this->deleteLampirans($request->input('remove_lampiran_ids', []), $article);
         $this->storeLampirans($request, $id, $isOpd, $articlePath);
-        $this->syncTags($id, $request->visibilitas_akses, $request->input('tags_raw') ?? '');
 
         return redirect()->to($this->backUrl($request->visibilitas_akses, $request->kategori_artikel_id, $request->bidang_id))
             ->with('success', 'Artikel berhasil diperbarui.');
@@ -467,12 +461,12 @@ class KnowledgeBaseController extends Controller
 
     private function findArticleOrFail(string $id): ArtikelOpd|SopInternal
     {
-        $artikelOpd = ArtikelOpd::with('kategoriArtikel', 'tags', 'lampirans')->find($id);
+        $artikelOpd = ArtikelOpd::with('kategoriArtikel', 'lampirans')->find($id);
         if ($artikelOpd) {
             return $artikelOpd;
         }
 
-        return SopInternal::with('bidang', 'tags', 'lampirans')->findOrFail($id);
+        return SopInternal::with('bidang', 'lampirans')->findOrFail($id);
     }
 
     private function storeLampirans(Request $request, string $articleId, bool $isOpd, string $articlePath): void
@@ -525,26 +519,6 @@ class KnowledgeBaseController extends Controller
         }
     }
 
-    private function syncTags(string $articleId, string $visibility, ?string $raw): void
-    {
-        $article  = $visibility === 'opd'
-            ? ArtikelOpd::findOrFail($articleId)
-            : SopInternal::findOrFail($articleId);
-        $raw      = $raw ?? '';
-        $tagNames = array_filter(array_map('trim', explode(',', $raw)));
-        $tagIds   = [];
-
-        foreach ($tagNames as $name) {
-            $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
-            $tag  = Tag::firstOrCreate(
-                ['slug' => $slug],
-                ['nama_tag' => $name]
-            );
-            $tagIds[] = $tag->id;
-        }
-
-        $article->tags()->sync($tagIds);
-    }
 
     private function sanitizeHtml(?string $html): ?string
     {

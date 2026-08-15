@@ -28,7 +28,7 @@ class Tiket extends Model
     protected bool $idUsesDate = true;
 
     protected $fillable = [
-        'id', 'opd_id', 'admin_id', 'node_diagnosis_id', 'rekomendasi_penanganan',
+        'id', 'opd_id', 'admin_id', 'bidang_id', 'node_diagnosis_id', 'rekomendasi_penanganan',
         'subjek_masalah', 'detail_masalah', 'lokasi',
         'spesifikasi_perangkat',
         'penilaian', 'komentar_penutupan',
@@ -37,6 +37,18 @@ class Tiket extends Model
 
     protected $casts = [
     ];
+
+    protected static function booted()
+    {
+        static::creating(function ($tiket) {
+            if (empty($tiket->bidang_id) && $tiket->node_diagnosis_id) {
+                $node = NodeDiagnosis::find($tiket->node_diagnosis_id);
+                if ($node) {
+                    $tiket->bidang_id = $node->bidang_id;
+                }
+            }
+        });
+    }
 
     public function opd()
     {
@@ -50,14 +62,7 @@ class Tiket extends Model
 
     public function bidang()
     {
-        return $this->hasOneThrough(
-            Bidang::class,
-            NodeDiagnosis::class,
-            'id',
-            'id',
-            'node_diagnosis_id',
-            'bidang_id'
-        );
+        return $this->belongsTo(Bidang::class);
     }
 
     public function kb()
@@ -142,7 +147,7 @@ class Tiket extends Model
         }
         // Check jika ada admin di history (is_active = false)
         return $chatRoom->users()
-            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->where('users.role', 'admin_helpdesk')
             ->wherePivot('is_active', false)
             ->exists();
     }
@@ -156,7 +161,7 @@ class Tiket extends Model
         }
         // Get admin dengan is_active = false, urutan terbaru
         return $chatRoom->users()
-            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->where('users.role', 'admin_helpdesk')
             ->wherePivot('is_active', false)
             ->orderByPivot('sequence_number', 'desc')
             ->first();
@@ -165,19 +170,6 @@ class Tiket extends Model
     public function solutionNode()
     {
         return $this->belongsTo(NodeDiagnosis::class, 'node_diagnosis_id');
-    }
-
-    public function getBidangIdAttribute(): ?string
-    {
-        $catatan = $this->relationLoaded('latestStatus')
-            ? ($this->latestStatus?->catatan ?? '')
-            : ($this->latestStatus()->value('catatan') ?? '');
-
-        if (preg_match('/^\[Transfer ke ([^\]]+)\]/', $catatan, $matches)) {
-            return $matches[1];
-        }
-
-        return $this->solutionNode?->bidang_id;
     }
 
     public function getKategoriIdAttribute(): ?string
@@ -215,7 +207,10 @@ class Tiket extends Model
         }
 
         $this->increment('reopened_count');
-        $this->update(['last_reopened_at' => now()]);
+        $this->update([
+            'last_reopened_at' => now(),
+            'penilaian'        => null,
+        ]);
 
         return $this;
     }

@@ -15,6 +15,7 @@ class OpdSeeder extends Seeder
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $data = [
+            ['kode_opd' => '9.99.0.00.0.00.00.0001', 'nama_opd' => 'OPD CONTOH UJI',                                           'kdunit' => '9.99.0.00.0.00.00.',      'parent_id' => null, 'is_bagian' => 'N', 'slug' => 'contoh1', 'user_email' => 'contoh1@gmail.com'],
             // === OPD BIASA ===
             ['kode_opd' => '1.01.2.22.0.00.01.0000', 'nama_opd' => 'DINAS PENDIDIKAN DAN KEBUDAYAAN',                               'kdunit' => '1.01.0.00.0.00.01.',      'parent_id' => null, 'is_bagian' => 'N', 'slug' => 'disdikbud'],
             ['kode_opd' => '1.02.0.00.0.00.01.0000', 'nama_opd' => 'DINAS KESEHATAN',                                               'kdunit' => '1.02.0.00.0.00.01.',      'parent_id' => null, 'is_bagian' => 'N', 'slug' => 'dinkes'],
@@ -84,9 +85,10 @@ class OpdSeeder extends Seeder
         $rows = [];
         foreach ($data as $item) {
             $slug = $item['slug'];
+            $userEmail = $item['user_email'] ?? ($slug . '@padang.go.id');
             $rows[] = [
                 'id'             => $idsBySlug[$slug],
-                'user_id'        => DB::table('users')->where('email', $slug . '@padang.go.id')->value('id'),
+                'user_id'        => DB::table('users')->where('email', $userEmail)->value('id'),
                 'kode_opd'       => $item['kode_opd'],
                 'nama_opd'       => $item['nama_opd'],
                 'kdunit'         => $item['kdunit'],

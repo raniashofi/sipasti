@@ -147,15 +147,11 @@
         $formAction  = $isEdit
             ? route('super_admin.pustaka.update', $article->id)
             : route('super_admin.pustaka.store');
-        $tagsCurrent = $isEdit
-            ? $article->tags->pluck('nama_tag')->implode(', ')
-            : '';
         $kodeArtikel = $isEdit
             ? 'KB-' . strtoupper(substr($article->id, 0, 8))
             : '—';
 
         // Pindahkan Data PHP ke JS Variable agar tidak merusak atribut HTML (Menghindari String Breaking)
-        $initialTags = $isEdit && $article->tags->count() ? $article->tags->pluck('nama_tag')->values()->toArray() : [];
         $initialNama = old('nama_artikel_sop', $article?->nama_artikel_sop ?? '');
         $initialDesc = old('deskripsi_singkat', $article?->deskripsi_singkat ?? '');
         $initialLampirans = $isEdit
@@ -169,7 +165,6 @@
 
     <script>
         window.kbData = {
-            tags: {!! json_encode($initialTags) !!},
             namaArtikel: {!! json_encode($initialNama) !!},
             deskripsiSingkat: {!! json_encode($initialDesc) !!},
             lampirans: {!! json_encode($initialLampirans) !!}
@@ -181,8 +176,6 @@
         x-data="{
             status: '{{ $article?->status_publikasi ?? 'draft' }}',
             visibility: '{{ $article?->visibilitas_akses ?? $visibility }}',
-            tags: window.kbData.tags,
-            tagInput: '',
             deleteConfirmOpen: false,
             previewModalOpen: false,
             headerPreview: '{{ $article?->header_image ? asset('storage/' . $article->header_image) : '' }}',
@@ -197,12 +190,6 @@
             toastType: 'error',
 
             init() {},
-            addTag() {
-                const t = this.tagInput.trim().toLowerCase().replace(/\s+/g, '-');
-                if (t && !this.tags.includes(t)) this.tags.push(t);
-                this.tagInput = '';
-            },
-            removeTag(i) { this.tags.splice(i, 1); },
             showErrorToast(message) {
                 this.toastMessage = message;
                 this.toastType = 'error';
@@ -243,8 +230,7 @@
                 setTimeout(() => {
                     document.getElementById('previewContent').innerHTML = quill.root.innerHTML;
                 }, 50);
-            },
-            get tagsRaw() { return this.tags.join(','); }
+            }
         }"
         @init="window.kbFormComponent = $el.__x.$data; $el.__x.$data.init();"
         x-cloak>
@@ -419,7 +405,7 @@
                 {{-- Hidden fields --}}
                 <input type="hidden" name="status_publikasi"  :value="status">
                 <input type="hidden" name="visibilitas_akses" :value="visibility">
-                <input type="hidden" name="tags_raw"          :value="tagsRaw">
+
                 @if(!empty($kategoriId))
                 <input type="hidden" name="kategori_artikel_id" value="{{ $kategoriId }}">
                 @endif
@@ -653,25 +639,9 @@
                             </label>
                         </div>
 
-                        {{-- Tags --}}
-                        <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
-                            <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Tag</p>
-                            <div class="flex flex-wrap gap-2 mb-3">
-                                <template x-for="(tag, i) in tags" :key="i">
-                                    <span class="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-blue-50 text-[#01458E] font-medium">
-                                        <span x-text="tag"></span>
-                                        <button type="button" @click="removeTag(i)" class="ml-0.5 text-[#01458E]/50 hover:text-[#01458E] transition-colors">×</button>
-                                    </span>
-                                </template>
-                            </div>
-                            <input type="text" x-model="tagInput"
-                                   @keydown.enter.prevent="addTag()"
-                                   placeholder="Ketik tag lalu Enter..."
-                                   class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#01458E]/20 focus:border-[#01458E] placeholder-gray-300">
-                            <p class="text-[10px] text-gray-300 mt-2">Pisahkan dengan Enter</p>
-                        </div>
 
                         {{-- Info Artikel (edit only) --}}
+
                         @if($isEdit)
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
                             <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">Informasi Artikel</p>
@@ -789,17 +759,9 @@
                         <p class="text-blue-900 text-sm" x-text="deskripsiSingkat"></p>
                     </div>
 
-                    {{-- Tags --}}
-                    <div x-show="tags.length > 0" class="mb-6">
-                        <p class="text-gray-500 text-xs mb-2">Tags:</p>
-                        <div class="flex flex-wrap gap-2">
-                            <template x-for="tag in tags" :key="tag">
-                                <span class="inline-block bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium" x-text="tag"></span>
-                            </template>
-                        </div>
-                    </div>
 
                     {{-- Konten Artikel --}}
+
                     <div id="previewContent" class="prose prose-sm max-w-none mb-6"></div>
 
                     {{-- Lampiran File --}}

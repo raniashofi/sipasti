@@ -84,27 +84,15 @@ class ManajemenTiketController extends Controller
             return $q;
         };
 
-        // 1. Tiket baru dari OPD: admin_id null, bidang sesuai, bukan tiket transfer
-        // Bidang penanganan berasal dari node solusi.
-        $queryBaru = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'buktiFoto', 'solutionNode'])
+        // 1. Tiket masuk: admin_id null, bidang_id sesuai admin, status verifikasi_admin
+        $queryMasuk = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'buktiFoto', 'solutionNode'])
             ->whereNull('admin_id')
-            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
-                ->where(fn($q2) => $q2->whereNull('catatan')->orWhere('catatan', 'not like', '[Transfer ke %]')));
-        if ($admin && $admin->bidang_id) {
-            $queryBaru->whereHas('solutionNode', fn($q) => $q->where('bidang_id', $admin->bidang_id));
-        }
-        $applyFilters($queryBaru);
+            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin'));
 
-        // 2. Tiket ditransfer masuk ke bidang admin ini
-        // PERBAIKAN: Izinkan admin_id sesuai dengan admin saat ini, karena saat transfer admin_id sudah diubah
-        $queryTransfer = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'buktiFoto', 'solutionNode'])
-            ->where(function($q) use ($admin) {
-                $q->whereNull('admin_id')
-                  ->orWhere('admin_id', $admin?->id);
-            })
-            ->whereHas('latestStatus', fn($q) => $q->where('status_tiket', 'verifikasi_admin')
-                ->where('catatan', 'like', $prefixTransfer . ($admin?->bidang_id ?? '') . ']%'));
-        $applyFilters($queryTransfer);
+        if ($admin && $admin->bidang_id) {
+            $queryMasuk->where('bidang_id', $admin->bidang_id);
+        }
+        $applyFilters($queryMasuk);
 
         // 3. Tiket dikembalikan teknisi: masih milik admin ini
         $queryKembali = Tiket::with(['opd', 'kategori', 'latestStatus', 'sopInternal', 'buktiFoto', 'solutionNode'])
@@ -137,8 +125,7 @@ class ManajemenTiketController extends Controller
             return $tiket;
         };
 
-        $tiketsVerif = $queryBaru->latest()->get()
-            ->merge($queryTransfer->latest()->get())
+        $tiketsVerif = $queryMasuk->latest()->get()
             ->map($mapTiket)
             ->sortByDesc(fn($t) => $t->rekomendasi_penanganan === 'eskalasi' ? 1 : 0)
             ->values();
@@ -151,7 +138,14 @@ class ManajemenTiketController extends Controller
         $bidangs  = Bidang::all();
         $teknisis = TimTeknis::with('bidang')
             ->where('bidang_id', $admin?->bidang_id)
-            ->withCount(['tiketTeknisi as tiket_aktif_count' => fn($q) => $q->where('status_tugas', 'aktif')])
+            ->withCount(['tiketTeknisi as tiket_aktif_count' => function ($q) {
+                $q->where('status_tugas', 'aktif')
+                  ->whereHas('tiket', function ($tq) {
+                      $tq->whereHas('latestStatus', function ($sq) {
+                          $sq->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']);
+                      });
+                  });
+            }])
             ->orderBy('nama_lengkap')
             ->get();
 
@@ -184,7 +178,7 @@ class ManajemenTiketController extends Controller
         $opdUserId = $tiket->opd?->user_id;
         if ($opdUserId) {
             $chatRoom->users()->syncWithoutDetaching([
-                $opdUserId => ['role_di_room' => 'opd', 'bidang_id' => $tiket->bidang_id],
+                $opdUserId => ['bidang_id' => $tiket->bidang_id],
             ]);
         }
 
@@ -198,12 +192,11 @@ class ManajemenTiketController extends Controller
                 if ($admin->user_id) {
                     // Get next sequence number
                     $lastSequence = $chatRoom->users()
-                        ->wherePivot('role_di_room', 'admin_helpdesk')
+                        ->where('users.role', 'admin_helpdesk')
                         ->max('sequence_number') ?? 0;
 
                     $chatRoom->users()->syncWithoutDetaching([
                         $admin->user_id => [
-                        'role_di_room'   => 'admin_helpdesk',
                         'bidang_id'      => $admin->bidang_id,
                         'sequence_number'=> $lastSequence + 1,
                         'started_at'     => now(),
@@ -217,12 +210,11 @@ class ManajemenTiketController extends Controller
         if (! $chatRoom->users()->wherePivot('user_id', $admin->user_id)->exists()) {
             if ($admin->user_id) {
                 $lastSequence = $chatRoom->users()
-                    ->wherePivot('role_di_room', 'admin_helpdesk')
+                    ->where('users.role', 'admin_helpdesk')
                     ->max('sequence_number') ?? 0;
 
                 $chatRoom->users()->syncWithoutDetaching([
                     $admin->user_id => [
-                        'role_di_room'   => 'admin_helpdesk',
                         'bidang_id'      => $admin->bidang_id,
                         'sequence_number'=> $lastSequence + 1,
                         'started_at'     => now(),
@@ -329,7 +321,10 @@ class ManajemenTiketController extends Controller
 
         // PERBAIKAN: admin_id di-SET NULL agar semua admin di bidang tujuan
         // bisa melihatnya di halaman Menunggu Verifikasi.
-        $tiket->update(['admin_id' => null]);
+        $tiket->update([
+            'admin_id' => null,
+            'bidang_id' => $request->bidang_id
+        ]);
 
         $this->logAktivitas('update', "Transfer tiket #{$tiket->id} ke bidang {$request->bidang_id} — {$instruksi}", 'tiket', $tiket->id);
 
@@ -373,10 +368,16 @@ class ManajemenTiketController extends Controller
         $allTeknisiIds = array_unique($allTeknisiIds);
 
         // 2. CEK BATAS MAKSIMAL TIKET (Maksimal 3 tiket aktif per teknisi)
+        // Hanya hitung tiket yang benar-benar masih aktif dikerjakan (perbaikan_teknis / dibuka_kembali).
+        // Tidak mengandalkan status_tugas saja karena bisa stale akibat race condition.
         $teknisiOverload = TimTeknis::whereIn('id', $allTeknisiIds)
             ->withCount(['tiketTeknisi as tiket_aktif_count' => function ($q) {
-                // Hanya hitung tiket yang status tugasnya masih aktif
-                $q->where('status_tugas', 'aktif');
+                $q->where('status_tugas', 'aktif')
+                  ->whereHas('tiket', function ($tq) {
+                      $tq->whereHas('latestStatus', function ($sq) {
+                          $sq->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']);
+                      });
+                  });
             }])
             ->get()
             ->filter(fn($t) => $t->tiket_aktif_count >= 3);
@@ -405,7 +406,7 @@ class ManajemenTiketController extends Controller
             $teknisPrincipal = TimTeknis::with('user')->find($request->teknisi_utama_id);
             if ($teknisPrincipal?->user_id) {
                 $chatRoom->users()->syncWithoutDetaching([
-                    $teknisPrincipal->user_id => ['role_di_room' => 'tim_teknis', 'bidang_id' => $tiket->bidang_id],
+                    $teknisPrincipal->user_id => ['bidang_id' => $tiket->bidang_id],
                 ]);
             }
 
@@ -418,7 +419,7 @@ class ManajemenTiketController extends Controller
                 foreach ($pendamping as $t) {
                     if ($t->user_id) {
                         $chatRoom->users()->syncWithoutDetaching([
-                            $t->user_id => ['role_di_room' => 'tim_teknis', 'bidang_id' => $tiket->bidang_id],
+                            $t->user_id => ['bidang_id' => $tiket->bidang_id],
                         ]);
                     }
                 }
@@ -468,7 +469,7 @@ class ManajemenTiketController extends Controller
         $tiket->load('opd');
         if ($tiket->opd?->user_id) {
             $teknisRoom->users()->syncWithoutDetaching([
-                $tiket->opd->user_id => ['role_di_room' => 'opd', 'bidang_id' => $tiket->bidang_id],
+                $tiket->opd->user_id => ['bidang_id' => $tiket->bidang_id],
             ]);
         }
 
@@ -476,7 +477,7 @@ class ManajemenTiketController extends Controller
         foreach ($teknisiDitugaskan as $t) {
             if ($t->user_id) {
                 $teknisRoom->users()->syncWithoutDetaching([
-                    $t->user_id => ['role_di_room' => 'tim_teknis', 'bidang_id' => $tiket->bidang_id],
+                    $t->user_id => ['bidang_id' => $tiket->bidang_id],
                 ]);
             }
         }
@@ -522,16 +523,13 @@ class ManajemenTiketController extends Controller
             'created_at'   => now(),
         ]);
 
-        // Kasus 2: tiket pernah dibuka kembali lewat jalur panduan remote → langsung tutup
-        $pernahDibukaKembaliRemote = StatusTiket::where('tiket_id', $tiket->id)
-            ->where('status_tiket', 'panduan_remote')
-            ->where('catatan', 'like', '[Dibuka Kembali oleh OPD]%')
-            ->exists();
-        if ($pernahDibukaKembaliRemote) {
+        // Kasus 2: tiket sudah mencapai batas maksimal pembukaan → langsung tutup
+        $tiket->refresh();
+        if (!$tiket->canBeReopened()) {
             StatusTiket::create([
                 'tiket_id'     => $tiket->id,
                 'status_tiket' => 'tiket_ditutup',
-                'catatan'      => 'Tiket ditutup otomatis setelah diselesaikan kembali oleh Admin Helpdesk.',
+                'catatan'      => 'Tiket ditutup otomatis setelah mencapai batas maksimal pembukaan (' . $tiket->reopened_count . 'x).',
                 'created_at'   => now(),
             ]);
         }
@@ -569,7 +567,18 @@ class ManajemenTiketController extends Controller
         $this->attachUnreadChatCounts($tikets->getCollection(), Auth::id(), 'admin');
         $opds     = Opd::orderBy('nama_opd')->get();
         $bidangs  = Bidang::orderBy('nama_bidang')->get();
-        $teknisis = TimTeknis::with('bidang')->where('bidang_id', $admin?->bidang_id)->orderBy('nama_lengkap')->get();
+        $teknisis = TimTeknis::with('bidang')
+            ->where('bidang_id', $admin?->bidang_id)
+            ->withCount(['tiketTeknisi as tiket_aktif_count' => function ($q) {
+                $q->where('status_tugas', 'aktif')
+                  ->whereHas('tiket', function ($tq) {
+                      $tq->whereHas('latestStatus', function ($sq) {
+                          $sq->whereIn('status_tiket', ['perbaikan_teknis', 'dibuka_kembali']);
+                      });
+                  });
+            }])
+            ->orderBy('nama_lengkap')
+            ->get();
 
         return view('admin_helpdesk.manajemen-tiket.panduan-remote', compact('tikets','opds','bidangs','teknisis','admin'));
     }

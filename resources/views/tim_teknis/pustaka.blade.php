@@ -181,7 +181,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z"/>
                         </svg>
                         <input type="text" name="search" value="{{ $search }}"
-                               placeholder="Cari judul artikel atau tag..."
+                               placeholder="Cari judul artikel..."
                                oninput="clearTimeout(window._stPustakaTeknis); window._stPustakaTeknis = setTimeout(() => document.getElementById('filterFormPustakaTeknis').submit(), 500)"
                                class="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm text-gray-700 bg-[#F0F4F8] focus:outline-none focus:ring-2 focus:ring-blue-200">
                     </div>
@@ -223,13 +223,6 @@
                             <span class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border border-yellow-200 text-yellow-600 bg-yellow-50 shrink-0">Draft</span>
                             @endif
                         </div>
-                        @if($article->tags->count())
-                        <div class="flex flex-wrap gap-1 mb-2">
-                            @foreach($article->tags->take(3) as $tag)
-                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{{ $tag->nama_tag }}</span>
-                            @endforeach
-                        </div>
-                        @endif
                         <div class="flex items-center justify-between mt-2">
                             <span class="text-xs text-gray-400">{{ $article->created_at?->format('d M Y') ?? '—' }}</span>
                             <a href="{{ route('tim_teknis.pustaka.show', $article->id) }}"
@@ -268,16 +261,6 @@
 
                             <td class="px-4 py-4">
                                 <p class="text-sm font-medium text-gray-900">{{ $article->nama_artikel_sop }}</p>
-                                @if($article->tags->count())
-                                <div class="flex flex-wrap gap-1 mt-1">
-                                    @foreach($article->tags->take(3) as $tag)
-                                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{{ $tag->nama_tag }}</span>
-                                    @endforeach
-                                    @if($article->tags->count() > 3)
-                                    <span class="text-[10px] text-gray-400">+{{ $article->tags->count() - 3 }}</span>
-                                    @endif
-                                </div>
-                                @endif
                             </td>
 
                             <td class="px-4 py-4">

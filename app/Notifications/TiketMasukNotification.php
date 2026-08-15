@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Support\IdGenerator;
 
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -18,6 +19,9 @@ class TiketMasukNotification extends Notification
         public readonly string $kodeTiket,
         public readonly string $namaOpd,
         public readonly string $url,
+        public readonly ?string $judul = null,
+        public readonly ?string $isi = null,
+        public readonly ?string $icon = null,
     ) {
         $this->id = IdGenerator::make('NTF');
     }
@@ -27,7 +31,17 @@ class TiketMasukNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', 'mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject("[SIPASTI] Tiket Baru Masuk — #{$this->kodeTiket}")
+            ->greeting("Halo, {$notifiable->name}!")
+            ->line("Tiket baru **#{$this->kodeTiket}** dari **{$this->namaOpd}** telah masuk dan menunggu verifikasi Anda.")
+            ->action('Lihat Tiket', $this->url)
+            ->salutation('Salam, Sistem SIPASTI');
     }
 
     /**
@@ -36,9 +50,9 @@ class TiketMasukNotification extends Notification
     public function toDatabase(object $notifiable): array
     {
         return [
-            'icon'  => 'tiket_masuk',
-            'title' => 'Tiket Baru Masuk',
-            'body'  => "Tiket #{$this->kodeTiket} dari {$this->namaOpd} menunggu verifikasi.",
+            'icon'  => $this->icon ?? 'tiket_masuk',
+            'title' => $this->judul ?? 'Tiket Baru Masuk',
+            'body'  => $this->isi ?? "Tiket #{$this->kodeTiket} dari {$this->namaOpd} menunggu verifikasi.",
             'url'   => $this->url,
         ];
     }
