@@ -40,7 +40,7 @@ class ChatRoom extends Model
     public function getActiveAdmin()
     {
         return $this->users()
-            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->where('users.role', 'admin_helpdesk')
             ->wherePivot('is_active', true)
             ->first();
     }
@@ -49,7 +49,7 @@ class ChatRoom extends Model
     public function getAdminHistory()
     {
         return $this->users()
-            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->where('users.role', 'admin_helpdesk')
             ->wherePivot('is_active', false)
             ->orderByPivot('sequence_number', 'desc')
             ->get();
@@ -59,7 +59,7 @@ class ChatRoom extends Model
     public function getAllAdmins()
     {
         return $this->users()
-            ->wherePivot('role_di_room', 'admin_helpdesk')
+            ->where('users.role', 'admin_helpdesk')
             ->orderByPivot('sequence_number')
             ->get();
     }

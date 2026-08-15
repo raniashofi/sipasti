@@ -68,31 +68,31 @@
             $mainCards = [
                 [
                     'label'  => 'Total Tiket',
-                    'value'  => number_format($totalTiket),
-                    'sub'    => number_format($tiketBulanIni) . ' masuk bulan ini',
+                    'value'  => number_format($totalTiketAllTime),
+                    'sub'    => 'Keseluruhan tiket masuk',
                     'color'  => '#01458E',
                     'bg'     => '#EEF3F9',
                     'icon'   => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
                 ],
                 [
                     'label'  => 'Tiket Aktif',
-                    'value'  => number_format($tiketAktif),
-                    'sub'    => 'Belum selesai ditangani',
+                    'value'  => number_format($tiketAktifAllTime),
+                    'sub'    => 'Status aktif keseluruhan',
                     'color'  => '#D97706',
                     'bg'     => '#FEF3C7',
                     'icon'   => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
                 ],
                 [
                     'label'  => 'Tiket Selesai',
-                    'value'  => number_format($tiketSelesai),
-                    'sub'    => number_format($selesaiBulanIni) . ' selesai bulan ini',
+                    'value'  => number_format($tiketSelesaiAllTime),
+                    'sub'    => 'Status selesai keseluruhan',
                     'color'  => '#059669',
                     'bg'     => '#D1FAE5',
                     'icon'   => 'M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z',
                 ],
                 [
                     'label'  => 'Rata-rata Kepuasan',
-                    'value'  => $avgKepuasan > 0 ? number_format($avgKepuasan, 1) : '—',
+                    'value'  => $avgKepuasanAllTime > 0 ? number_format($avgKepuasanAllTime, 1) : '—',
                     'sub'    => 'Dari 5 bintang maksimum',
                     'color'  => '#7C3AED',
                     'bg'     => '#EDE9FE',
@@ -215,6 +215,7 @@
 
                     {{-- FORM 1: FILTER PERIODE --}}
                     <form method="GET" action="{{ route('pimpinan.dashboard') }}" id="periodFilterForm">
+                        <input type="hidden" name="period" id="periodInput" value="{{ $period }}">
                         <div class="space-y-5">
                             {{-- Pilihan Periode --}}
                             <div>
@@ -231,23 +232,24 @@
                                     @endphp
 
                                     @foreach($periods as $key => $data)
-                                    <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all
-                                                  {{ $period === $key ? 'border-[#01458E] bg-[#EEF3F9]' : 'border-gray-200 hover:border-gray-300' }}">
-                                        <input type="radio" name="period" value="{{ $key }}"
-                                               {{ $period === $key ? 'checked' : '' }}
-                                               class="w-4 h-4 cursor-pointer"
-                                               onchange="document.getElementById('periodFilterForm').submit()">
-                                        <span class="text-sm font-semibold {{ $period === $key ? 'text-[#01458E]' : 'text-gray-700' }}">
+                                    <button type="button"
+                                            data-period-option="{{ $key }}"
+                                            class="period-option-btn flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 cursor-pointer transition-all text-left bg-white
+                                                   {{ $period === $key ? 'border-[#01458E] bg-[#EEF3F9]' : 'border-gray-200 hover:border-gray-300' }}">
+                                        <svg class="w-4 h-4 shrink-0 {{ $period === $key ? 'text-[#01458E]' : 'text-gray-400' }}"
+                                             fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="{{ $data['icon'] }}"/>
+                                        </svg>
+                                        <span class="text-sm font-semibold whitespace-nowrap {{ $period === $key ? 'text-[#01458E]' : 'text-gray-700' }}">
                                             {{ $data['label'] }}
                                         </span>
-                                    </label>
+                                    </button>
                                     @endforeach
                                 </div>
                             </div>
 
                             {{-- Custom date range --}}
-                            @if($period === 'custom')
-                            <div class="pt-4 border-t border-gray-100">
+                            <div id="customDateRange" class="pt-4 border-t border-gray-100 {{ $period === 'custom' ? '' : 'hidden' }}">
                                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Rentang Tanggal Custom</p>
                                 <div class="flex flex-wrap items-end gap-4">
                                     {{-- Dari tanggal --}}
@@ -280,7 +282,6 @@
                                     </button>
                                 </div>
                             </div>
-                            @endif
 
                             {{-- Informasi periode yang ditampilkan --}}
                             <div class="pt-4 border-t border-gray-100 bg-blue-50 rounded-lg p-4">
@@ -334,22 +335,8 @@
                 <div class="xl:col-span-3 bg-white rounded-2xl p-5 lg:p-7 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
                         <div>
-                            @if($period === 'daily')
-                            <h2 class="text-base font-bold text-gray-800">Tren Tiket — Harian (Per Jam)</h2>
-                            <p class="text-xs text-gray-400 mt-1">Perbandingan tiket masuk vs. diselesaikan per jam hari ini</p>
-                            @elseif($period === 'weekly')
-                            <h2 class="text-base font-bold text-gray-800">Tren Tiket — Mingguan (Per Hari)</h2>
-                            <p class="text-xs text-gray-400 mt-1">Perbandingan tiket masuk vs. diselesaikan per hari minggu ini</p>
-                            @elseif($period === 'monthly')
-                            <h2 class="text-base font-bold text-gray-800">Tren Tiket — Bulanan (Per Hari)</h2>
-                            <p class="text-xs text-gray-400 mt-1">Perbandingan tiket masuk vs. diselesaikan per hari bulan ini</p>
-                            @elseif($period === 'yearly')
-                            <h2 class="text-base font-bold text-gray-800">Tren Tiket — Tahunan (Per Bulan)</h2>
-                            <p class="text-xs text-gray-400 mt-1">Perbandingan tiket masuk vs. diselesaikan per bulan tahun ini</p>
-                            @else
-                            <h2 class="text-base font-bold text-gray-800">Tren Tiket — Custom Range</h2>
-                            <p class="text-xs text-gray-400 mt-1">Perbandingan tiket masuk vs. diselesaikan dalam rentang yang dipilih</p>
-                            @endif
+                            <h2 class="text-base font-bold text-gray-800">{{ $trendTitle }}</h2>
+                            <p class="text-xs text-gray-400 mt-1">{{ $trendSubtitle }}</p>
                         </div>
                         <div class="flex items-center gap-4 text-xs text-gray-500 shrink-0">
                             <span class="flex items-center gap-1.5">
@@ -607,7 +594,6 @@
                                 <tr class="border-b border-gray-100">
                                     <th class="px-5 py-3 text-left text-xs font-bold text-gray-500">Teknisi</th>
                                     <th class="px-4 py-3 text-left text-xs font-bold text-gray-500">Bidang</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500">Status</th>
                                     <th class="px-4 py-3 text-center text-xs font-bold text-gray-500">Aktif</th>
                                     <th class="px-4 py-3 text-center text-xs font-bold text-gray-500">Selesai</th>
                                     <th class="px-4 py-3 text-center text-xs font-bold text-gray-500">Tepat Waktu</th>
@@ -621,21 +607,6 @@
                                         <p class="text-sm font-semibold text-gray-800">{{ $teknis['nama'] }}</p>
                                     </td>
                                     <td class="px-4 py-3.5 text-xs text-gray-500">{{ $teknis['bidang'] }}</td>
-                                    <td class="px-4 py-3.5 text-center">
-                                        @if($teknis['status'] === 'online')
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-green-50 text-green-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span> Online
-                                        </span>
-                                        @elseif($teknis['status'] === 'busy')
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-600">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-400"></span> Sibuk
-                                        </span>
-                                        @else
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-50 text-gray-500">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span> Offline
-                                        </span>
-                                        @endif
-                                    </td>
                                     <td class="px-4 py-3.5 text-center">
                                         <span class="text-sm font-bold {{ $teknis['tugas_aktif'] > 3 ? 'text-red-600' : 'text-gray-800' }}">
                                             {{ $teknis['tugas_aktif'] }}
@@ -678,8 +649,35 @@
     <script>
     // ── Validasi Tanggal (Custom Range) ─────────────────────────────
     document.addEventListener('DOMContentLoaded', function() {
+        const periodInput = document.getElementById('periodInput');
+        const periodForm = document.getElementById('periodFilterForm');
+        const customDateRange = document.getElementById('customDateRange');
+        const periodButtons = document.querySelectorAll('[data-period-option]');
         const dateFrom = document.getElementById('dateFrom');
         const dateTo = document.getElementById('dateTo');
+
+        periodButtons.forEach(function(button) {
+            button.addEventListener('click', function() {
+                const selectedPeriod = this.getAttribute('data-period-option');
+
+                if (periodInput) {
+                    periodInput.value = selectedPeriod;
+                }
+
+                if (customDateRange) {
+                    customDateRange.classList.toggle('hidden', selectedPeriod !== 'custom');
+                }
+
+                if (selectedPeriod === 'custom') {
+                    if (dateFrom) {
+                        dateFrom.focus();
+                    }
+                    return;
+                }
+
+                periodForm.submit();
+            });
+        });
 
         if (dateFrom && dateTo) {
             // Ketika 'Dari Tanggal' diubah, perbarui batas minimal 'Sampai Tanggal'

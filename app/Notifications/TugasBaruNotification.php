@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Support\IdGenerator;
 
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -28,7 +29,19 @@ class TugasBaruNotification extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', 'mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject("[SIPASTI] Tugas Baru — Tiket #{$this->kodeTiket}")
+            ->greeting("Halo, {$notifiable->name}!")
+            ->line("Anda telah ditugaskan untuk menangani tiket **#{$this->kodeTiket}**.")
+            ->line("**Masalah:** {$this->judulMasalah}")
+            ->line('Segera tindak lanjuti tiket ini melalui aplikasi SIPASTI.')
+            ->action('Lihat Antrean', $this->url)
+            ->salutation('Salam, Sistem SIPASTI');
     }
 
     public function toDatabase(object $notifiable): array

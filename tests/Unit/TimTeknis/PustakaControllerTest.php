@@ -24,7 +24,7 @@ class PustakaControllerTest extends TestCase
     public function testIndexFilterPencarian(): void
     {
         $c = new FakeTTPustakaController();
-        $c->mockTeknis=(object)['id'=>'TT-001'];
+        $c->mockTeknis=(object)['id'=>'TT-001','bidang_id'=>null];
         $r=$c->index(Request::create('/p','GET',['search'=>'jaringan']));
         $this->assertSame('jaringan',$r['data']['search']);
         $this->assertSame('jaringan',$c->queriedSearch, 'index() — filter pencarian berfungsi');
@@ -43,7 +43,7 @@ class FakeTTPustakaController extends PustakaController{
     public $mockTeknis,$mockArticles,$mockKategoris,$mockArticle;
     public ?string $queriedSearch=null,$requestedId=null;
     protected function findTeknisProfile(){return $this->mockTeknis;}
-    protected function queryArticles(string $s,string $f){$this->queriedSearch=$s?:null;return $this->mockArticles??collect();}
+    protected function queryArticles(string $s,string $f,?string $bidangId=null){$this->queriedSearch=$s?:null;return $this->mockArticles??collect();}
     protected function allKategoris(){return $this->mockKategoris??collect();}
     protected function findArticleOrFail(string $id){$this->requestedId=$id;return $this->mockArticle;}
     protected function renderView(string $v,array $d){return['view'=>$v,'data'=>$d];}

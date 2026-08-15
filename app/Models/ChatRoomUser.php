@@ -15,7 +15,6 @@ class ChatRoomUser extends Model
     protected $fillable = [
         'room_id',
         'user_id',
-        'role_di_room',
         'bidang_id',
         'last_read_at',
         'sequence_number',

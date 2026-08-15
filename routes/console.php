@@ -11,7 +11,9 @@ Artisan::command('inspire', function () {
 
 Schedule::call(function () {
     DB::table('notifications')
-        ->whereNotNull('read_at') // Syarat 1: Hanya yang sudah dibaca
-        ->where('created_at', '<', now()->subDays(30)) // Syarat 2: Usianya lebih dari 30 hari
-        ->delete(); // Eksekusi hapus
+        ->whereNotNull('read_at')
+        ->where('created_at', '<', now()->subDays(30))
+        ->delete();
 })->dailyAt('00:00');
+
+Schedule::command('tiket:check-sla-breach')->dailyAt('08:00');

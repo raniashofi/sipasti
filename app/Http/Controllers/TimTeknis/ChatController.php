@@ -84,7 +84,6 @@ class ChatController extends Controller
 
         $tiket = Tiket::with(['opd', 'kategori', 'kb.kategori', 'latestStatus', 'statusTiket', 'buktiFoto'])
             ->findOrFail($tiketId);
-        $roomBidangId = $tiket->bidang_id ?? $teknis?->bidang_id;
 
         // ── Room Teknis ──
         $room = ChatRoom::firstOrCreate(
@@ -95,7 +94,7 @@ class ChatController extends Controller
         // Tambahkan teknisi (utama & pendamping) ke room agar bisa subscribe channel
         ChatRoomUser::firstOrCreate(
             ['room_id' => $room->id, 'user_id' => Auth::id()],
-            ['role_di_room' => 'tim_teknis', 'bidang_id' => $roomBidangId, 'last_read_at' => now()]
+            ['last_read_at' => now()]
         );
         // Update last_read_at setiap kali mengakses
         DB::table('chat_room_users')
@@ -107,8 +106,7 @@ class ChatController extends Controller
         $opdUserId = $tiket->opd?->user_id;
         if ($opdUserId) {
             ChatRoomUser::firstOrCreate(
-                ['room_id' => $room->id, 'user_id' => $opdUserId],
-                ['role_di_room' => 'opd', 'bidang_id' => $roomBidangId]
+                ['room_id' => $room->id, 'user_id' => $opdUserId]
             );
         }
 
@@ -119,7 +117,7 @@ class ChatController extends Controller
         if ($adminRoom) {
             ChatRoomUser::firstOrCreate(
                 ['room_id' => $adminRoom->id, 'user_id' => Auth::id()],
-                ['role_di_room' => 'tim_teknis', 'bidang_id' => $roomBidangId, 'last_read_at' => now()]
+                ['last_read_at' => now()]
             );
         }
         $adminMessages = $adminRoom ? $this->loadMessages($adminRoom->id) : collect();

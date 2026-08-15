@@ -516,7 +516,7 @@
                             </template>
                         </div>
                     </div>
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
+                        {{-- <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
                             <span style="font-size:12px;color:#9ca3af;white-space:nowrap;">Rekomendasi</span>
                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold"
                                   :style="rekomendasiBadge(selectedTiket?.rekomendasi_penanganan)">
@@ -524,7 +524,7 @@
                                 <svg x-show="selectedTiket?.rekomendasi_penanganan === 'admin'" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                                 <span x-text="rekomendasiLabel(selectedTiket?.rekomendasi_penanganan)"></span>
                             </span>
-                        </div>
+                        </div> --}}
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;">
                             <span style="font-size:12px;color:#9ca3af;white-space:nowrap;">OPD</span>
                             <span style="font-size:12px;font-weight:600;color:#111827;text-align:right;max-width:240px;" x-text="selectedTiket?.opd_nama ?? '—'"></span>
@@ -543,7 +543,20 @@
                         </div>
                     </div>
 
-                    {{-- PENAMBAHAN UI: Tim Teknisi yang Bertugas --}}
+                    {{-- Catatan dari Admin Helpdesk --}}
+                    <template x-if="selectedTiket?.catatan_admin">
+                        <div style="margin-bottom:16px;border-left:3px solid #01458E;padding:12px 12px 12px 14px;background:#EEF3F9;border-radius:0 10px 10px 0;">
+                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #bfdbfe;">
+                                <svg width="13" height="13" style="color:#01458E;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
+                                </svg>
+                                <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#01458E;">Catatan dari Admin Helpdesk</span>
+                            </div>
+                            <p style="font-size:12px;color:#1e3a5f;line-height:1.65;word-break:break-word;white-space:pre-wrap;" x-text="selectedTiket?.catatan_admin"></p>
+                        </div>
+                    </template>
+
+                    {{-- Tim Teknisi yang Bertugas --}}
                     <template x-if="selectedTiket?.all_teknisi && selectedTiket?.all_teknisi?.length > 0">
                         <div style="margin-bottom:20px;">
                             <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f3f4f6;">Tim Teknisi yang Bertugas</div>
@@ -639,19 +652,6 @@
                             </div>
                         </template>
                     </div>
-
-                    {{-- Catatan dari Admin Helpdesk --}}
-                    <template x-if="selectedTiket?.catatan_admin">
-                        <div style="margin-bottom:16px;border-left:3px solid #01458E;padding:12px 12px 12px 14px;background:#EEF3F9;border-radius:0 10px 10px 0;">
-                            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid #bfdbfe;">
-                                <svg width="13" height="13" style="color:#01458E;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/>
-                                </svg>
-                                <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#01458E;">Catatan dari Admin Helpdesk</span>
-                            </div>
-                            <p style="font-size:12px;color:#1e3a5f;line-height:1.65;word-break:break-word;white-space:pre-wrap;" x-text="selectedTiket?.catatan_admin"></p>
-                        </div>
-                    </template>
 
                     {{-- Laporan OPD Membuka Kembali Tiket --}}
                     <template x-if="selectedTiket?.pernah_dibuka_kembali_opd">

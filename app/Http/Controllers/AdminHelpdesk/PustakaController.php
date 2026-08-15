@@ -45,11 +45,10 @@ class PustakaController extends Controller
 
     protected function queryArticles(?string $bidangId, string $search, string $statusFilter)
     {
-        $query = SopInternal::with('tags')->where('bidang_id', $bidangId);
+        $query = SopInternal::where('bidang_id', $bidangId);
         if ($search) {
             $query->where(fn($q) =>
                 $q->where('judul', 'like', "%{$search}%")
-                  ->orWhereHas('tags', fn($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
             );
         }
         if ($statusFilter) { $query->where('status_publikasi', $statusFilter); }
@@ -63,7 +62,7 @@ class PustakaController extends Controller
 
     protected function findArticleForAdmin(string $id, ?string $bidangId)
     {
-        return SopInternal::with('tags', 'lampirans')
+        return SopInternal::with('lampirans')
             ->where('id', $id)
             ->where('bidang_id', $bidangId)
             ->firstOrFail();

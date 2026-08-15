@@ -12,6 +12,7 @@ return new class extends Migration
             $table->string('id', 36)->primary();
             $table->string('opd_id', 36);
             $table->string('admin_id', 36)->nullable();
+            $table->string('bidang_id', 36);
             $table->string('node_diagnosis_id', 36);
             $table->enum('rekomendasi_penanganan', ['admin', 'eskalasi'])->nullable();
             $table->unsignedTinyInteger('reopened_count')->default(1);
@@ -26,6 +27,7 @@ return new class extends Migration
 
             $table->foreign('opd_id')->references('id')->on('opd')->onDelete('cascade');
             $table->foreign('admin_id')->references('id')->on('admin_helpdesk')->onDelete('set null');
+            $table->foreign('bidang_id')->references('id')->on('bidang')->restrictOnDelete();
             $table->foreign('node_diagnosis_id')->references('id')->on('node_diagnosis')->restrictOnDelete();
             $table->index('node_diagnosis_id');
         });

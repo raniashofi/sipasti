@@ -117,9 +117,8 @@ class BantuanController extends Controller
             ->where(fn($q) =>
                 $q->where('judul', 'like', "%{$search}%")
                   ->orWhere('deskripsi_singkat', 'like', "%{$search}%")
-                  ->orWhereHas('tags', fn($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
             )
-            ->with('kategoriArtikel', 'tags')
+            ->with('kategoriArtikel')
             ->limit(20)
             ->get();
     }
@@ -138,7 +137,6 @@ class BantuanController extends Controller
             $query->where(fn($q) =>
                 $q->where('judul', 'like', "%{$search}%")
                   ->orWhere('deskripsi_singkat', 'like', "%{$search}%")
-                  ->orWhereHas('tags', fn($qt) => $qt->where('nama_tag', 'like', "%{$search}%"))
             );
         }
 

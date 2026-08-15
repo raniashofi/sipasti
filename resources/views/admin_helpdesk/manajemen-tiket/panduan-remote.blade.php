@@ -12,7 +12,6 @@
         * { font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
 
-        /* Perbaikan Style SOP Modal agar responsif dan tidak berantakan */
         #sopPreviewContent { font-size: 0.875rem; line-height: 1.8; color: #1f2937; word-wrap: break-word; overflow-wrap: break-word; }
         #sopPreviewContent h1, #sopPreviewContent h2, #sopPreviewContent h3, #sopPreviewContent h4, #sopPreviewContent h5, #sopPreviewContent h6 { font-weight: 700; margin: 1.25rem 0 0.75rem; color: #111827; line-height: 1.3; }
         #sopPreviewContent h1 { font-size: 1.5rem; } #sopPreviewContent h2 { font-size: 1.25rem; } #sopPreviewContent h3 { font-size: 1.125rem; }
@@ -217,7 +216,7 @@
                                     <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Subjek Masalah</th>
                                     <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Pengirim (OPD)</th>
                                     <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Kategori</th>
-                                    <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status Chat</th>
+                                    {{-- <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Status Chat</th> --}}
                                     <th class="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Waktu Masuk</th>
                                     <th class="px-5 py-4 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Aksi</th>
                                 </tr>
@@ -280,7 +279,7 @@
                                             {{ $kategoriNama }}
                                         </span>
                                     </td>
-                                    <td class="px-5 py-4 whitespace-nowrap">
+                                    {{-- <td class="px-5 py-4 whitespace-nowrap">
                                         @if($hasChat)
                                         <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border border-blue-200" style="background:#EFF6FF;color:#1D4ED8;">
                                             <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse shrink-0"></span>Aktif
@@ -290,7 +289,7 @@
                                             Belum Ada Chat
                                         </span>
                                         @endif
-                                    </td>
+                                    </td> --}}
                                     <td class="px-5 py-4 text-gray-500 whitespace-nowrap">
                                         <p class="text-xs font-semibold text-gray-700">{{ $tiket->created_at?->translatedFormat('d M Y') }}</p>
                                         <p class="text-[11px] text-gray-400 mt-0.5">{{ $tiket->created_at?->format('H:i:s') }} WIB</p>
@@ -677,7 +676,7 @@
                                  x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
                                  class="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-[110] max-h-44 overflow-y-auto"
                                  style="display:none;">
-                                <template x-for="bidang in bidangList.filter(b => String(b.id) !== String(selectedTiket?.bidang_id))" :key="'bidang-' + bidang.id">
+                                <template x-for="bidang in bidangList.filter(b => String(b.id) !== String(bidangAdminId))" :key="'bidang-' + bidang.id">
                                     <div @click="bidangId = bidang.id; bidangOpen = false"
                                          class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
                                          :class="bidangId === bidang.id ? 'bg-blue-50/50 hover:bg-blue-50/80' : ''">
@@ -692,7 +691,7 @@
                                         </div>
                                     </div>
                                 </template>
-                                <div x-show="bidangList.filter(b => String(b.id) !== String(selectedTiket?.bidang_id)).length === 0"
+                                <div x-show="bidangList.filter(b => String(b.id) !== String(bidangAdminId)).length === 0"
                                      class="px-4 py-4 text-xs text-gray-400 text-center">
                                     Tidak ada bidang lain tersedia
                                 </div>
@@ -1075,6 +1074,7 @@
 
             // Variabel AlpineJS untuk Bidang (Transfer)
             bidangList: @json($bidangListData),
+            bidangAdminId: @json($admin?->bidang_id),
             bidangId: '',
             bidangOpen: false,
 

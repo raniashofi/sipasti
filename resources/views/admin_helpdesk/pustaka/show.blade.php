@@ -123,18 +123,9 @@
 
                 {{-- KANAN: Sidebar --}}
                 <div class="w-full lg:w-80 shrink-0 flex flex-col gap-4">
-                    @if($article->tags->count())
-                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Tag</p>
-                        <div class="flex flex-wrap gap-2">
-                            @foreach($article->tags as $tag)
-                            <span class="text-[11px] px-2.5 py-1 rounded-lg bg-blue-50 text-[#01458E] font-bold border border-blue-100">{{ $tag->nama_tag }}</span>
-                            @endforeach
-                        </div>
-                    </div>
-                    @endif
 
                     @if($article->lampirans->count())
+
                     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Unduhan</p>
                         <div class="space-y-2">

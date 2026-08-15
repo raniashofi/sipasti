@@ -29,19 +29,18 @@ class ChatController extends Controller
         $latest = $tiket->statusTiket->sortByDesc('created_at')->first();
         $currentStatus = $latest?->status_tiket ?? 'verifikasi_admin';
         $chatIsActive = $currentStatus === 'panduan_remote';
-        $roomBidangId = $tiket->bidang_id ?? $admin?->bidang_id;
 
         $room = $chatIsActive
-            ? $this->firstOrCreateRoom($tiket->id, $roomBidangId)
+            ? $this->firstOrCreateRoom($tiket->id)
             : $this->findExistingRoom($tiket->id);
 
         $userId = $this->authenticatedUserId();
-        $this->ensureRoomUser($room->id, $userId, 'admin_helpdesk', $roomBidangId);
+        $this->ensureRoomUser($room->id, $userId);
         $this->markRoomAsRead($room->id, $userId);
 
         $opdUserId = $tiket->opd?->user_id;
         if ($opdUserId) {
-            $this->ensureRoomUser($room->id, $opdUserId, 'opd', $roomBidangId);
+            $this->ensureRoomUser($room->id, $opdUserId);
         }
 
         $messages = $this->loadRoomMessages($room->id);
@@ -126,7 +125,7 @@ class ChatController extends Controller
             ->where('admin_id', $adminId)->findOrFail($tiketId);
     }
 
-    protected function firstOrCreateRoom(string $tiketId, ?string $bidangId)
+    protected function firstOrCreateRoom(string $tiketId)
     {
         return ChatRoom::firstOrCreate(
             ['tiket_id' => $tiketId, 'nama_roomchat' => 'admin'],
@@ -139,11 +138,10 @@ class ChatController extends Controller
         return ChatRoom::where('tiket_id', $tiketId)->where('nama_roomchat', 'admin')->firstOrFail();
     }
 
-    protected function ensureRoomUser(string $roomId, string $userId, string $role, ?string $bidangId): void
+    protected function ensureRoomUser(string $roomId, string $userId): void
     {
         ChatRoomUser::firstOrCreate(
-            ['room_id' => $roomId, 'user_id' => $userId],
-            ['role_di_room' => $role, 'bidang_id' => $bidangId]
+            ['room_id' => $roomId, 'user_id' => $userId]
         );
     }
 

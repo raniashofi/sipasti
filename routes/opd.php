@@ -19,6 +19,7 @@ Route::prefix('opd')->name('opd.')->middleware(['auth', 'role:opd'])->group(func
         Route::get('/{kategoriId}/mulai',       [DiagnosisMandiriController::class, 'mulai'])->name('mulai');
         Route::get('/node/{nodeId}',            [DiagnosisMandiriController::class, 'showNode'])->name('node');
         Route::get('/tiket',                    [DiagnosisMandiriController::class, 'showTiket'])->name('tiket');
+        Route::post('/tiket/check-duplicate',   [DiagnosisMandiriController::class, 'checkDuplicate'])->name('tiket.checkDuplicate');
         Route::post('/tiket',                   [DiagnosisMandiriController::class, 'storeTiket'])->name('tiket.store');
     });
 

@@ -172,13 +172,6 @@
                             </span>
                             @endif
                         </div>
-                        @if($article->tags->count())
-                        <div class="flex flex-wrap gap-1 mb-2">
-                            @foreach($article->tags->take(3) as $tag)
-                            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{{ $tag->nama_tag }}</span>
-                            @endforeach
-                        </div>
-                        @endif
                         <div class="flex items-center justify-between mt-2">
                             <span class="text-xs text-gray-400">{{ $article->created_at?->format('d M Y') ?? '—' }}</span>
                             <a href="{{ route('admin_helpdesk.pustaka.show', $article->id) }}"
@@ -219,16 +212,6 @@
 
                                 <td class="px-4 py-4 min-w-[250px] max-w-sm">
                                     <p class="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">{{ $article->nama_artikel_sop }}</p>
-                                    @if($article->tags->count())
-                                    <div class="flex flex-wrap gap-1.5 mt-2">
-                                        @foreach($article->tags->take(3) as $tag)
-                                        <span class="text-[10px] font-medium px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200">{{ $tag->nama_tag }}</span>
-                                        @endforeach
-                                        @if($article->tags->count() > 3)
-                                        <span class="text-[10px] font-medium px-1.5 py-0.5 text-gray-400">+{{ $article->tags->count() - 3 }}</span>
-                                        @endif
-                                    </div>
-                                    @endif
                                 </td>
 
                                 <td class="px-4 py-4 whitespace-nowrap">

@@ -180,7 +180,7 @@ class PengaduanSayaController extends Controller
             return back()->with('error', 'Tiket tidak dalam status selesai.');
         }
 
-        // Cek apakah masih bisa dibuka kembali (max 3x: 1 awal + 2 ulang)
+        // Cek apakah masih bisa dibuka kembali (max 3x total: 1 awal + 2 ulang)
         if (!$tiket->canBeReopened()) {
             return back()->with('error', 'Tiket ini sudah mencapai batas maksimal pembukaan (' .
                               $tiket->reopened_count . 'x). Silakan buat tiket baru untuk melaporkan masalah.');

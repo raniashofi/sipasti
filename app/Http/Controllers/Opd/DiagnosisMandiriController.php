@@ -116,6 +116,38 @@ class DiagnosisMandiriController extends Controller
         ));
     }
 
+    /**
+     * AJAX endpoint: cek apakah ada tiket serupa yang masih aktif.
+     * Dipanggil via fetch sebelum form benar-benar di-submit,
+     * supaya halaman tidak reload dan foto-foto di Alpine.js tetap aman.
+     */
+    public function checkDuplicate(Request $request)
+    {
+        $request->validate([
+            'subjek_masalah'    => 'required|string|max:255',
+            'detail_masalah'    => 'required|string',
+            'node_diagnosis_id' => 'required|string',
+        ]);
+
+        $opd = Auth::user()->opd;
+        if (!$opd) {
+            return response()->json(['duplicate' => false]);
+        }
+
+        $duplicateTiket = $this->findSimilarActiveTiket($opd->id, $request);
+
+        if ($duplicateTiket) {
+            return response()->json([
+                'duplicate' => true,
+                'id'        => $duplicateTiket->id,
+                'subjek'    => $duplicateTiket->subjek_masalah,
+                'url'       => route('opd.tiket.show', $duplicateTiket->id),
+            ]);
+        }
+
+        return response()->json(['duplicate' => false]);
+    }
+
     public function storeTiket(Request $request)
     {
         $request->validate([
@@ -141,19 +173,6 @@ class DiagnosisMandiriController extends Controller
         $opd = Auth::user()->opd;
         if (!$opd) {
             abort(403, 'Data OPD tidak ditemukan.');
-        }
-
-        $duplicateTiket = $this->findSimilarActiveTiket($opd->id, $request);
-        if ($duplicateTiket && $request->input('force_submit_duplicate') !== $duplicateTiket->id) {
-            return back()
-                ->withInput($request->except('foto_bukti'))
-                ->with('duplicate_tiket_warning', [
-                    'id'         => $duplicateTiket->id,
-                    'subjek'     => $duplicateTiket->subjek_masalah,
-                    'status'     => $duplicateTiket->latestStatus?->status_tiket,
-                    'created_at' => $duplicateTiket->created_at?->translatedFormat('d M Y H:i'),
-                    'url'        => route('opd.tiket.show', $duplicateTiket->id),
-                ]);
         }
 
         $fotoPaths = [];

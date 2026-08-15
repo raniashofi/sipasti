@@ -63,7 +63,7 @@ class FakeAdminChatController extends ChatController{
     protected function findTiketForAdmin(string $t,?string $a){return $this->mockTiket;}
     protected function firstOrCreateRoom(string $t,?string $b){return $this->mockRoom;}
     protected function findExistingRoom(string $t){return $this->mockRoom;}
-    protected function ensureRoomUser(string $r,string $u,string $role,?string $b):void{$this->roomUserCreated=true;}
+    protected function ensureRoomUser(string $r,string $u,?string $b):void{$this->roomUserCreated=true;}
     protected function markRoomAsRead(string $r,string $u):void{$this->roomRead=true;}
     protected function loadRoomMessages(string $r){return $this->mockMessages??collect();}
     protected function createMessage(array $a){$this->createdMsg=$a;return(object)array_merge($a,['created_at'=>'2026-05-17 20:00:00']);}

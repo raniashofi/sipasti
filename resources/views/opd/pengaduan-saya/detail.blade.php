@@ -141,9 +141,7 @@
     $teknisRoomId = $tiket->teknis_room_id ?? null;
 
     /* ── Re-open limit ── */
-    $jumlahSelesai  = $allStatuses->where('status_tiket', 'selesai')->count();
-    $maxSelesai     = 3;
-    $bisaBukaKembali = $currentStatus === 'selesai' && $jumlahSelesai < $maxSelesai;
+    $bisaBukaKembali = $currentStatus === 'selesai' && $tiket->canBeReopened();
 
     /* ── Cek apakah tiket ditutup otomatis atau manual OPD ── */
     $ditutupOtomatis = false;
@@ -167,11 +165,54 @@
     {{-- ── Banner Peringatan Deadline Konfirmasi ── --}}
     @if($tampilkanPeringatan)
     @php
+        $sudahMaksimalBuka = !$tiket->canBeReopened();
         $warnaPeringatan = $sisaHari <= 1
             ? ['bg' => '#FEF2F2', 'border' => '#FECACA', 'text' => '#991B1B', 'icon' => '#DC2626', 'label' => '#DC2626']
             : ($sisaHari <= 3
                 ? ['bg' => '#FFF7ED', 'border' => '#FED7AA', 'text' => '#92400E', 'icon' => '#EA580C', 'label' => '#EA580C']
                 : ['bg' => '#FEFCE8', 'border' => '#FDE68A', 'text' => '#713F12', 'icon' => '#CA8A04', 'label' => '#CA8A04']);
+    @endphp
+
+    @if($sudahMaksimalBuka)
+    {{-- Tiket sudah mencapai batas maksimal pembukaan kembali --}}
+    <div class="rounded-2xl border-2 px-5 py-4 mb-6 flex items-start gap-4"
+         style="background:linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border-color:#93C5FD;">
+        <div class="shrink-0 mt-0.5">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:#3B82F6;">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                </svg>
+            </div>
+        </div>
+        <div class="flex-1">
+            <p class="text-sm font-bold mb-1" style="color:#1E40AF;">
+                Batas Pembukaan Kembali Telah Tercapai
+            </p>
+            <p class="text-sm leading-relaxed" style="color:#1E3A5F;">
+                Tiket ini telah <strong>dibuka kembali sebanyak {{ $tiket->reopened_count }}x</strong> (batas maksimal 3x),
+                sehingga <strong>tidak dapat dibuka kembali lagi</strong>.
+                Silakan konfirmasi tiket dengan memberikan <strong>penilaian layanan</strong> di bawah ini.
+            </p>
+            @if($deadlineKonfirmasi)
+            <div class="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg inline-flex" style="background:rgba(59,130,246,0.1);">
+                <svg class="w-3.5 h-3.5" style="color:#3B82F6;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs font-semibold" style="color:#1E40AF;">
+                    Batas waktu konfirmasi: {{ $deadlineKonfirmasi->locale('id')->isoFormat('D MMM YYYY, HH:mm') }} WIB
+                    @if($sisaHari !== null)
+                        ({{ $sisaHari <= 0 ? 'hari ini' : 'sisa ' . $sisaHari . ' hari' }})
+                    @endif
+                </p>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    @else
+    {{-- Tiket masih bisa dibuka kembali — tampilkan peringatan deadline biasa --}}
+    @php
         $pesanSisa = $sisaHari <= 0
             ? 'Batas konfirmasi hampir habis! Tiket akan ditutup otomatis hari ini.'
             : ($sisaHari === 1
@@ -202,6 +243,8 @@
             @endif
         </div>
     </div>
+    @endif
+
     @endif
 
     {{-- ── Banner Tiket Ditutup ── --}}
@@ -798,8 +841,8 @@
                     <p class="text-sm text-green-800 font-semibold">Tiket telah dikonfirmasi dan ditutup oleh Anda.</p>
                 </div>
 
-                @elseif($sudahPernahDibukakembali)
-                {{-- Tiket selesai ke-2: langsung beri penilaian --}}
+                @elseif(!$tiket->canBeReopened())
+                {{-- Tiket sudah mencapai batas buka kembali, hanya penilaian yang bisa dikirim --}}
                 <div class="bg-white rounded-2xl border border-blue-100 shadow-sm px-6 py-5"
                      x-data="{ rating: 0, ratingHover: 0 }">
                     <div class="text-center mb-5">
@@ -810,8 +853,7 @@
                         </div>
                         <p class="text-sm font-bold text-gray-800 mb-1">Tiket Selesai Diperbaiki</p>
                         <p class="text-xs text-gray-500 leading-relaxed">
-                            Tiket ini telah ditangani kembali oleh Tim Teknis dan dinyatakan selesai.
-                            Jika perangkat masih mengalami gangguan, kami sarankan untuk mengajukan tiket pengaduan baru.
+                            Tiket ini sudah mencapai batas pembukaan kembali. Silakan berikan penilaian layanan.
                         </p>
                     </div>
                     <form action="{{ route('opd.tiket.konfirm', $tiket->id) }}" method="POST">

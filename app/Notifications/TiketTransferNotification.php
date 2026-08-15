@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Support\IdGenerator;
 
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -28,7 +29,18 @@ class TiketTransferNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', 'mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+            ->subject("[SIPASTI] Tiket Ditransfer ke Bidang Anda — #{$this->kodeTiket}")
+            ->greeting("Halo, {$notifiable->name}!")
+            ->line("Tiket **#{$this->kodeTiket}** dari **{$this->namaOpd}** telah ditransfer ke bidang Anda.")
+            ->line("**Pesan:** {$this->instruksi}")
+            ->action('Lihat Tiket', $this->url)
+            ->salutation('Salam, Sistem SIPASTI');
     }
 
     /**

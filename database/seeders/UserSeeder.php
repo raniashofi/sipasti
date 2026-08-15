@@ -84,8 +84,9 @@ class UserSeeder extends Seeder
             'role'     => 'pimpinan',
         ];
 
-        // password = slug + 123, contoh: disdikbud123, dinkes123, dst.
+        // password default = slug + 123, kecuali akun uji yang sengaja diset khusus.
         $opds = [
+            ['slug' => 'contoh1',          'email' => 'contoh1@gmail.com',          'password' => 'contoh1'],
             ['slug' => 'disdikbud',         'email' => 'disdikbud@padang.go.id'],
             ['slug' => 'dinkes',             'email' => 'dinkes@padang.go.id'],
             ['slug' => 'rsud-rasidin',       'email' => 'rsud-rasidin@padang.go.id'],
@@ -144,7 +145,7 @@ class UserSeeder extends Seeder
 
         foreach ($opds as $opd) {
             $slug     = $opd['slug'];
-            $password = $slug . '123'; // <-- password plaintext terlihat di sini
+            $password = $opd['password'] ?? ($slug . '123');
 
             $this->command->line("  email: {$opd['email']} | password: {$password}");
 

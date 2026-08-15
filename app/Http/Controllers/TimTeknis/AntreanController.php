@@ -228,15 +228,13 @@ class AntreanController extends Controller
             ->where('status_tugas', 'aktif')
             ->update(['status_tugas' => 'selesai']);
 
-        // Kasus: tiket pernah dibuka kembali → langsung tutup tanpa menunggu 7 hari
-        $pernahDibukaKembali = StatusTiket::where('tiket_id', $tiket->id)
-            ->where('status_tiket', 'dibuka_kembali')
-            ->exists();
-        if ($pernahDibukaKembali) {
+        // Kasus: tiket sudah mencapai batas maksimal pembukaan → langsung tutup
+        $tiket->refresh();
+        if (!$tiket->canBeReopened()) {
             StatusTiket::create([
                 'tiket_id'     => $tiket->id,
                 'status_tiket' => 'tiket_ditutup',
-                'catatan'      => 'Tiket ditutup otomatis setelah diselesaikan kembali oleh Tim Teknis.',
+                'catatan'      => 'Tiket ditutup otomatis setelah mencapai batas maksimal pembukaan (' . $tiket->reopened_count . 'x).',
                 'created_at'   => now(),
             ]);
         }
@@ -291,15 +289,13 @@ class AntreanController extends Controller
                 ->where('status_tugas', 'aktif')
                 ->update(['status_tugas' => 'selesai']);
 
-        // Jika tidak ada pendamping aktif dan pernah dibuka kembali → langsung tutup
-            $pernahDibukaKembali = StatusTiket::where('tiket_id', $tiket->id)
-                ->where('status_tiket', 'dibuka_kembali')
-                ->exists();
-            if ($pernahDibukaKembali) {
+        // Jika tiket sudah mencapai batas maksimal pembukaan → langsung tutup
+            $tiket->refresh();
+            if (!$tiket->canBeReopened()) {
                 StatusTiket::create([
                     'tiket_id'     => $tiket->id,
                     'status_tiket' => 'tiket_ditutup',
-                    'catatan'      => 'Tiket ditutup otomatis setelah ditangani kembali oleh Tim Teknis.',
+                    'catatan'      => 'Tiket ditutup otomatis setelah mencapai batas maksimal pembukaan (' . $tiket->reopened_count . 'x).',
                     'created_at'   => now(),
                 ]);
             }
@@ -435,6 +431,9 @@ class AntreanController extends Controller
                     kodeTiket : $tiket->id,
                     namaOpd   : 'Tim Teknis',
                     url       : route('admin_helpdesk.tiket.menunggu'),
+                judul     : 'Tiket Dikembalikan ke Admin Helpdesk',
+                isi       : "Tiket #{$tiket->id} dikembalikan oleh Tim Teknis. Alasan: {$request->alasan_kembalikan}",
+                icon      : 'tiket_transfer',
                 ));
         } else {
                 // Admin belum assign → kirim ke semua admin bidang yang sesuai
@@ -446,6 +445,9 @@ class AntreanController extends Controller
                     kodeTiket : $tiket->id,
                     namaOpd   : 'Tim Teknis',
                     url       : route('admin_helpdesk.tiket.menunggu'),
+                    judul     : 'Tiket Dikembalikan ke Admin Helpdesk',
+                    isi       : "Tiket #{$tiket->id} dikembalikan oleh Tim Teknis. Alasan: {$request->alasan_kembalikan}",
+                    icon      : 'tiket_transfer',
                 )));
         }
 
